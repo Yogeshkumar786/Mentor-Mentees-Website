@@ -1,6 +1,6 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-interface CareerDetails extends Document {
+interface CareerDetails {
     hobbies: string[];
     strengths: string[];
     areas_to_improve: string[];
@@ -81,7 +81,7 @@ const CareerDetailsSchema: Schema<CareerDetails> = new mongoose.Schema(
     { timestamps: true }
 );
 
-const CareerDetailsModel = mongoose.model < CareerDetails > (
+const CareerDetailsModel = mongoose.model<CareerDetails>(
     "CareerDetails",
     CareerDetailsSchema
 );

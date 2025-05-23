@@ -1,6 +1,6 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Model } from "mongoose";
 
-interface IProject extends Document {
+interface IProject{
   semester: number;
   title: string;
   description: string;

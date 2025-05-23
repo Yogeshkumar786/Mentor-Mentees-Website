@@ -1,6 +1,6 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-interface PersonalProblem extends Document {
+interface PersonalProblem {
   stress?: boolean;
   anger?: boolean;
   emotional_problem?: boolean;

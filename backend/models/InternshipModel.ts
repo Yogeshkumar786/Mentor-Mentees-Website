@@ -1,6 +1,6 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-interface Internship extends Document {
+interface Internship {
   semester: number;
   type: string;
   organisation: string;

@@ -1,6 +1,6 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
+import mongoose, { Schema, Types } from "mongoose";
 
-export interface IStudent extends Document {
+export interface IStudent  {
   name: string;
   aadhar: number;
   phone: {
@@ -39,6 +39,8 @@ export interface IStudent extends Document {
   careerDetails?: Types.ObjectId;
   coCurriculars: Types.ObjectId[];
   semesters: Types.ObjectId[];
+  mentors: Types.ObjectId[];
+  messages: Types.ObjectId[];
 }
 
 const studentSchema = new Schema<IStudent>(
@@ -187,6 +189,14 @@ const studentSchema = new Schema<IStudent>(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Semester"
     }],
+    mentors:[{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Mentor"
+    }],
+    messages:[{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message"
+    }]
   },
   { timestamps: true }
 );

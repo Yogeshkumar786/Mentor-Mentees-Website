@@ -1,6 +1,6 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-interface CoCurricular extends Document {
+interface CoCurricular {
   sem: number;
   date: Date;
   eventDetails: string;
