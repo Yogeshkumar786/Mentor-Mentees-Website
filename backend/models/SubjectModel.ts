@@ -1,6 +1,6 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Model } from "mongoose";
 
-interface ISubject extends Document {
+interface ISubject {
   subjectName: string;
   subjectCode: string;
   minor1: number;

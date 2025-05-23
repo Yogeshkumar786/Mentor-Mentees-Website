@@ -1,6 +1,6 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Model } from "mongoose";
 
-interface ISemester extends Document {
+interface ISemester {
   semester: number;
   subjects: mongoose.Types.ObjectId[];
   sgpa: number;
