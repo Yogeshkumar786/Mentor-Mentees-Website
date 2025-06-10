@@ -1,6 +1,7 @@
 import mongoose, { Schema, Types } from "mongoose";
 
 export interface IStudent  {
+  password:string;
   name: string;
   aadhar: number;
   phone: {
@@ -45,6 +46,10 @@ export interface IStudent  {
 
 const studentSchema = new Schema<IStudent>(
   {
+    password: {
+      type: String,
+      required: true
+    },
     name: {
       type: String, required: true
     },
@@ -191,7 +196,7 @@ const studentSchema = new Schema<IStudent>(
     }],
     mentors:[{
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Mentor"
+      ref: "Faculty"
     }],
     messages:[{
       type: mongoose.Schema.Types.ObjectId,
