@@ -2,6 +2,7 @@ import mongoose, { Schema, Model } from "mongoose";
 
 interface IFaculty {
   employeeId: string;
+  password:string;
   name: string;
   phone1: number;
   phone2: number;
@@ -21,6 +22,10 @@ const FacultySchema: Schema<IFaculty> = new Schema(
       type: String,
       required: true,
       unique: true,
+    },
+    password: {
+      type: String,
+      required: true,
     },
     name: {
       type: String,
