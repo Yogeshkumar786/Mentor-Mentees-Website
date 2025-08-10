@@ -1,0 +1,307 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Student {
+  id                  String   @id @default(cuid())
+  password           String
+  name               String
+  aadhar             Int      @unique
+  phoneNumber        String
+  phoneCode          Int
+  registrationNumber Int      @unique
+  rollNumber         Int      @unique
+  passPort           String   @default("Not Available")
+  emergencyContact   Int
+  personalEmail      String   @unique
+  collegeEmail       String   @unique
+  dob                DateTime
+  address            String
+  program            String
+  branch             String
+  bloodGroup         String
+  dayScholar         Boolean
+  fatherName         String
+  fatherOccupation   String?
+  fatherAadhar       Int?
+  fatherNumber       Int?
+  motherName         String
+  motherOccupation   String?
+  motherAadhar       Int?
+  motherNumber       Int?
+  gender             Gender
+  community          Community
+  xMarks             Int
+  xiiMarks           Int
+  jeeMains           Int
+  jeeAdvanced        Int?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relations
+  internships        Internship[]
+  personalProblem    PersonalProblem?
+  projects           Project[]
+  careerDetails      CareerDetails?
+  coCurriculars      CoCurricular[]
+  semesters          Semester[]
+  mentors            Faculty[] @relation("StudentMentors")
+  messages           Message[] @relation("StudentMessages")
+  meetings           Meeting[]
+
+  @@map("students")
+}
+
+model Faculty {
+  id            String   @id @default(cuid())
+  employeeId    String   @unique
+  password      String
+  name          String
+  phone1        Int
+  phone2        Int?
+  personalEmail String   @unique
+  collegeEmail  String   @unique
+  department    String
+  mtech         String?
+  phd           String?
+  office        String
+  officeHours   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  mentoringStudents Student[] @relation("StudentMentors")
+  hod               HOD?
+  meetings          Meeting[] @relation("FacultyMeetings")
+  messages          Message[] @relation("FacultyMessages")
+
+  @@map("faculty")
+}
+
+model HOD {
+  id         String   @id @default(cuid())
+  facultyId  String   @unique
+  email      String   @unique
+  password   String
+  department String
+  startDate  DateTime
+  endDate    DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  faculty   Faculty @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  meetings  Meeting[] @relation("HODMeetings")
+
+  @@map("hods")
+}
+
+model Meeting {
+  id          String   @id @default(cuid())
+  hodId       String?
+  facultyId   String?
+  date        DateTime
+  time        String
+  description String?
+  facultyReview String?
+  hodReview    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  hod      HOD?     @relation("HODMeetings", fields: [hodId], references: [id])
+  faculty  Faculty? @relation("FacultyMeetings", fields: [facultyId], references: [id])
+  students Student[]
+
+  @@map("meetings")
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  message    String
+  date       DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  sender   Faculty @relation("FacultyMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver Student @relation("StudentMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model CareerDetails {
+  id               String   @id @default(cuid())
+  hobbies          String[]
+  strengths        String[]
+  areasToImprove   String[]
+  core             String[]
+  it               String[]
+  higherEducation  String[]
+  startup          String[]
+  familyBusiness   String[]
+  otherInterests   String[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String @unique
+
+  @@map("career_details")
+}
+
+model PersonalProblem {
+  id                              String   @id @default(cuid())
+  stress                          Boolean?
+  anger                           Boolean?
+  emotionalProblem                Boolean?
+  lowSelfEsteem                   Boolean?
+  examinationAnxiety              Boolean?
+  negativeThoughts                Boolean?
+  examPhobia                      Boolean?
+  stammering                      Boolean?
+  financialProblem                Boolean?
+  moodSwings                      Boolean?
+  disturbedRelationshipWithParents Boolean?
+  disturbedRelationshipWithTeachers Boolean?
+  disturbedRelationshipWithFriends Boolean?
+  disciplinaryProblemsInCollege   Boolean?
+  poorCommandOfEnglish            Boolean?
+  tobaccoOrAlcoholUse             Boolean?
+  suicidalAttemptsOrThoughts      Boolean?
+  disappointmentWithCourses        Boolean?
+  timeManagementProblem            Boolean?
+  relationshipProblem              Boolean?
+  lowSelfMotivation               Boolean?
+  conflicts                        Boolean?
+  procrastination                 Boolean?
+  frustration                     Boolean?
+  poorDecisivePower               Boolean?
+  adjustmentProblem               Boolean?
+  lackOfExpression                Boolean?
+  poorConcentration               Boolean?
+  stagePhobia                     Boolean?
+  worriesAboutFuture              Boolean?
+  poorMemoryProblem               Boolean?
+  migraineHeadache                Boolean?
+  fearOfPublicSpeaking            Boolean?
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String @unique
+
+  @@map("personal_problems")
+}
+
+model Internship {
+  id           String   @id @default(cuid())
+  semester     Int
+  type         String
+  organisation String
+  stipend      Int
+  duration     String
+  location     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  students Student[]
+
+  @@map("internships")
+}
+
+model Project {
+  id           String   @id @default(cuid())
+  semester     Int
+  title        String
+  description  String
+  technologies String[]
+  mentor       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  students Student[]
+
+  @@map("projects")
+}
+
+model CoCurricular {
+  id                  String   @id @default(cuid())
+  sem                 Int
+  date                DateTime
+  eventDetails        String
+  participationDetails String
+  awards              String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  students Student[]
+
+  @@map("co_curriculars")
+}
+
+model Semester {
+  id        String   @id @default(cuid())
+  semester  Int
+  sgpa      Float
+  cgpa      Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  students Student[]
+  subjects Subject[]
+
+  @@map("semesters")
+}
+
+model Subject {
+  id                    String   @id @default(cuid())
+  subjectName           String
+  subjectCode           String
+  minor1                Float
+  midExam               Float
+  minor2                Float
+  endExam               Float
+  total                 Float
+  conductedHours        Int
+  attendedHours         Int
+  attendancePercentage  Float
+  remarks               String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  semesters Semester[]
+
+  @@map("subjects")
+}
+
+// Enums
+enum Gender {
+  Male
+  Female
+}
+
+enum Community {
+  General
+  OBC
+  SC
+  ST
+  EWS
+} 

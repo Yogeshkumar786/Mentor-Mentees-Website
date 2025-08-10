@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Notification</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #007bff;
+        }
+        .header h1 {
+            color: #007bff;
+            margin: 0;
+            font-size: 28px;
+        }
+        .meeting-details {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+        .detail-row {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        .label {
+            font-weight: bold;
+            min-width: 120px;
+            color: #495057;
+        }
+        .value {
+            color: #212529;
+            margin-left: 10px;
+        }
+        .important {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .important strong {
+            color: #856404;
+        }
+        ul {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📅 Meeting Notification</h1>
+        </div>
+
+        <p>Hello <%= recipientName %>,</p>
+
+        <p>A new meeting has been scheduled and you are invited to attend.</p>
+
+        <div class="meeting-details">
+            <h3>Meeting Details:</h3>
+
+            <div class="detail-row">
+                <span class="label">Date:</span>
+                <span class="value"><%= meetingDate %></span>
+            </div>
+
+            <div class="detail-row">
+                <span class="label">Time:</span>
+                <span class="value"><%= meetingTime %></span>
+            </div>
+
+            <div class="detail-row">
+                <span class="label">Description:</span>
+                <span class="value"><%= meetingDescription %></span>
+            </div>
+
+            <div class="detail-row">
+                <span class="label">Organized by:</span>
+                <span class="value"><%= organizerName %></span>
+            </div>
+
+            <% if (isHODIncluded && hodName) { %>
+            <div class="detail-row">
+                <span class="value"><%= hodName %></span>
+            </div>
+            <% } else { %>
+            <div class="detail-row">
+                <span class="label">HOD:</span>
+                <span class="value">Not included in this meeting</span>
+            </div>
+            <% } %>
+        </div>
+
+        <div class="important">
+            <strong>📋 Participants:</strong>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <% participants.forEach(function(participant) { %>
+                    <li><%= participant.name %> (<%= participant.role %>)</li>
+                <% }); %>
+            </ul>
+        </div>
+
+        <p>Please make sure to:</p>
+        <ul>
+            <li>Mark your calendar for this meeting</li>
+            <li>Prepare any necessary materials</li>
+            <li>Arrive on time</li>
+        </ul>
+
+        <p>If you have any questions or need to reschedule, please contact the meeting organizer.</p>
+
+        <div class="footer">
+            <p>This is an automated notification from the Mentor-Mentees System</p>
+            <p>© <%= new Date().getFullYear() %> NIT Andhra Pradesh</p>
+        </div>
+    </div>
+</body>
+</html>

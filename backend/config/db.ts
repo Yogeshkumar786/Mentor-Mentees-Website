@@ -1,13 +1,14 @@
-import mongoose from 'mongoose';
+import { PrismaClient } from '@prisma/client';
 
-const MONGO_URI = 'mongodb://localhost:27017/mentor-mentee';
+const prisma = new PrismaClient();
 
-mongoose.connect(MONGO_URI)
+// Test the connection
+prisma.$connect()
   .then(() => {
-    console.log('MongoDB connected successfully');
+    console.log('PostgreSQL connected successfully via Prisma');
   })
   .catch((err: Error) => {
-    console.error('MongoDB connection error:', err);
+    console.error('PostgreSQL connection error:', err);
   });
 
-export default mongoose;
+export default prisma;
