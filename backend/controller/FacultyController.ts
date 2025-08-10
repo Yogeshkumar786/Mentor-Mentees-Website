@@ -16,9 +16,9 @@ interface AuthenticatedRequest extends Request {
 // Change password function
 const changePassword = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
   const { currentPassword, newPassword } = req.body;
-  const hodId = req.user?.id;
+  const facultyId = req.user?.id;
 
-  if (!hodId) {
+  if (!facultyId) {
     return res.status(401).json({ message: "User not authenticated" });
   }
 
@@ -26,16 +26,16 @@ const changePassword = TryCatch(async (req: AuthenticatedRequest, res: Response)
     return res.status(400).json({ message: "Current password and new password are required" });
   }
 
-  const hod = await prisma.hOD.findUnique({
-    where: { id: hodId }
+  const faculty = await prisma.faculty.findUnique({
+    where: { id: facultyId }
   });
 
-  if (!hod) {
-    return res.status(404).json({ message: "HOD not found" });
+  if (!faculty) {
+    return res.status(404).json({ message: "Faculty not found" });
   }
 
   // Verify current password
-  const isCurrentPasswordValid = await bcrypt.compare(currentPassword, hod.password);
+  const isCurrentPasswordValid = await bcrypt.compare(currentPassword, faculty.password);
   if (!isCurrentPasswordValid) {
     return res.status(400).json({ message: "Current password is incorrect" });
   }
@@ -44,8 +44,8 @@ const changePassword = TryCatch(async (req: AuthenticatedRequest, res: Response)
   const hashedNewPassword = await bcrypt.hash(newPassword, 12);
 
   // Update password
-  await prisma.hOD.update({
-    where: { id: hodId },
+  await prisma.faculty.update({
+    where: { id: facultyId },
     data: { password: hashedNewPassword }
   });
 
@@ -55,19 +55,22 @@ const changePassword = TryCatch(async (req: AuthenticatedRequest, res: Response)
 const signin = TryCatch(async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-  const hod = await prisma.hOD.findFirst({
+  const faculty = await prisma.faculty.findFirst({
     where: {
-      email: email
+      OR: [
+        { personalEmail: email },
+        { collegeEmail: email }
+      ]
     }
   });
   
-  if (!hod) return res.status(404).json({ message: "HOD not found" });
+  if (!faculty) return res.status(404).json({ message: "Faculty not found" });
 
-  const isMatch = await bcrypt.compare(password, hod.password);
+  const isMatch = await bcrypt.compare(password, faculty.password);
   if (!isMatch) return res.status(401).json({ message: "Invalid password" });
 
-  GenerateToken(hod.id, res);
-  return res.json({ message: "Signed in", hodId: hod.id });
+  GenerateToken(faculty.id, res);
+  return res.json({ message: "Signed in", facultyId: faculty.id });
 });
 
 const createNewMeeting = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
@@ -76,64 +79,67 @@ const createNewMeeting = TryCatch(async (req: AuthenticatedRequest, res: Respons
     date, 
     time, 
     description, 
-    facultyId
+    isHOD = false 
   } = req.body;
 
-  // Get hodId from authenticated user
-  const hodId = req.user?.id;
-  if (!hodId) {
+  // Get facultyId from authenticated user
+  const facultyId = req.user?.id;
+  if (!facultyId) {
     return res.status(401).json({ message: "User not authenticated" });
   }
 
   // Validate required fields
-  if (!studentIds || !date || !time || !description || !facultyId) {
+  if (!studentIds || !date || !time || !description) {
     return res.status(400).json({ 
-      message: "Missing required fields: studentIds, date, time, description, facultyId" 
+      message: "Missing required fields: studentIds, date, time, description" 
     });
   }
 
   // Get faculty details to find department
   const faculty = await prisma.faculty.findUnique({
     where: { id: facultyId },
-    select: { department: true, name: true, collegeEmail: true, personalEmail: true }
+    select: { department: true, name: true }
   });
 
   if (!faculty) {
     return res.status(404).json({ message: "Faculty not found" });
   }
 
-  // Get HOD for the faculty's department and verify it's the authenticated HOD
-  const hod = await prisma.hOD.findFirst({
-    where: {
-      id: hodId,
-      department: faculty.department,
-      endDate: null // Only active HODs
-    },
-    include: {
-      faculty: {
-        select: { name: true, collegeEmail: true, personalEmail: true }
-      }
+  let meetingData: any = {
+    facultyId,
+    date: new Date(date),
+    time,
+    description,
+    students: {
+      connect: studentIds.map((id: string) => ({ id }))
     }
-  });
+  };
 
-  if (!hod) {
-    return res.status(404).json({ 
-      message: `HOD not found or not authorized for department: ${faculty.department}` 
+  let hod = null;
+  // If HOD is required, find and add the HOD for the faculty's department
+  if (isHOD) {
+    hod = await prisma.hOD.findFirst({
+      where: {
+        department: faculty.department,
+        endDate: null // Only active HODs
+      },
+      include: {
+        faculty: true
+      }
     });
+
+    if (hod) {
+      meetingData.hodId = hod.id;
+    } else {
+      return res.status(404).json({ 
+        message: `No active HOD found for department: ${faculty.department}` 
+      });
+    }
   }
 
-  // Create the meeting with HOD included
+  // Create the meeting
   const meeting = await prisma.meeting.create({
-    data: {
-      facultyId,
-      hodId: hod.id,
-      date: new Date(date),
-      time,
-      description,
-      students: {
-        connect: studentIds.map((id: string) => ({ id }))
-      }
-    },
+    data: meetingData,
     include: {
       students: true,
       faculty: true,
@@ -159,14 +165,17 @@ const createNewMeeting = TryCatch(async (req: AuthenticatedRequest, res: Respons
         name: student.name,
         role: 'Student',
         email: student.collegeEmail || student.personalEmail
-      })),
-      // Add HOD
-      {
+      }))
+    ];
+
+    // Add HOD if included
+    if (hod && hod.faculty) {
+      participants.push({
         name: hod.faculty.name,
         role: 'HOD',
         email: hod.faculty.collegeEmail || hod.faculty.personalEmail
-      }
-    ];
+      });
+    }
 
     const emailData = {
       date: new Date(date).toLocaleDateString('en-US', {
@@ -177,9 +186,9 @@ const createNewMeeting = TryCatch(async (req: AuthenticatedRequest, res: Respons
       }),
       time,
       description,
-      organizerName: hod.faculty.name,
-      hodName: hod.faculty.name,
-      isHODIncluded: true,
+      organizerName: faculty.name,
+      hodName: hod?.faculty?.name,
+      isHODIncluded: isHOD,
       participants
     };
 
@@ -193,31 +202,36 @@ const createNewMeeting = TryCatch(async (req: AuthenticatedRequest, res: Respons
     // Don't fail the meeting creation if emails fail
   }
 
+  const responseMessage = isHOD 
+    ? "Meeting created successfully with HOD" 
+    : "Meeting created successfully (HOD is not there in meeting)";
+    
   return res.status(201).json({ 
-    message: "Meeting created successfully with HOD", 
+    message: responseMessage, 
     meeting,
-    isHODIncluded: true
+    isHODIncluded: isHOD,
+    hodStatus: isHOD ? "HOD included" : "HOD not included"
   });
 });
 
 // Add review to meeting
 const addReview = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
   const { meetingId, review } = req.body;
-  const hodId = req.user?.id;
-  if (!hodId) { return res.status(401).json({ message: "User not authenticated" }); }
+  const facultyId = req.user?.id;
+  if (!facultyId) { return res.status(401).json({ message: "User not authenticated" }); }
   if (!meetingId || !review) { return res.status(400).json({ message: "Meeting ID and review are required" }); }
 
   try {
-    // Check if HOD is part of this meeting
+    // Check if faculty is the organizer of this meeting
     const meeting = await prisma.meeting.findFirst({
-      where: { id: meetingId, hodId }
+      where: { id: meetingId, facultyId }
     });
     if (!meeting) { return res.status(404).json({ message: "Meeting not found or you are not authorized to review it" }); }
 
-    // Update the meeting with HOD review
+    // Update the meeting with faculty review
     const updatedMeeting = await prisma.meeting.update({
       where: { id: meetingId },
-      data: { hodReview: review },
+      data: { facultyReview: review },
       include: {
         students: { select: { name: true, rollNumber: true } },
         faculty: { select: { name: true, employeeId: true } },
