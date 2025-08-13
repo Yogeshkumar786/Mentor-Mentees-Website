@@ -93,7 +93,6 @@ const getMyProfile = TryCatch(async (req: AuthenticatedRequest, res: Response) =
         }
       },
       mentors: true,
-      messages: true,
       meetings: true
     }
   });
@@ -130,7 +129,6 @@ const getStudentByRollNo = TryCatch(async (req: AuthenticatedRequest, res: Respo
         }
       },
       mentors: true,
-      messages: true
       // meetings excluded as requested
     }
   });

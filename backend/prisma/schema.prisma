@@ -68,6 +68,7 @@ model Faculty {
   personalEmail String   @unique
   collegeEmail  String   @unique
   department    String
+  btech         String?
   mtech         String?
   phd           String?
   office        String
@@ -76,9 +77,9 @@ model Faculty {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  mentoringStudents Student[]? @relation("StudentMentors")
+  mentoringStudents Student[] @relation("StudentMentors")
   hod               HOD?
-  meetings          Meeting[]? @relation("FacultyMeetings")
+  meetings          Meeting[] @relation("FacultyMeetings")
 
   @@map("faculty")
 }

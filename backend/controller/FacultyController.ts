@@ -258,7 +258,7 @@ const updateFacultyDetails = TryCatch(async (req: AuthenticatedRequest, res: Res
   // Only allow specific fields to be updated
   const allowedFields = [
     'name', 'phone1', 'phone2', 'personalEmail', 'collegeEmail',
-    'department', 'mtech', 'phd', 'office', 'officeHours'
+    'department', 'btech', 'mtech', 'phd', 'office', 'officeHours'
   ];
   
   const filteredData: any = {};
@@ -306,6 +306,7 @@ const updateFacultyDetails = TryCatch(async (req: AuthenticatedRequest, res: Res
         personalEmail: true,
         collegeEmail: true,
         department: true,
+        btech: true,
         mtech: true,
         phd: true,
         office: true,
