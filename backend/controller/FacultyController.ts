@@ -98,7 +98,7 @@ const createNewMeeting = TryCatch(async (req: AuthenticatedRequest, res: Respons
   // Get faculty details to find department
   const faculty = await prisma.faculty.findUnique({
     where: { id: facultyId },
-    select: { department: true, name: true }
+    select: { department: true, name: true, collegeEmail: true, personalEmail: true }
   });
 
   if (!faculty) {
@@ -246,4 +246,95 @@ const addReview = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
-export default { changePassword, signin, createNewMeeting, addReview };
+// Update faculty details
+const updateFacultyDetails = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
+  const facultyId = req.user?.id;
+  if (!facultyId) {
+    return res.status(401).json({ message: "User not authenticated" });
+  }
+
+  const updateData = req.body;
+  
+  // Only allow specific fields to be updated
+  const allowedFields = [
+    'name', 'phone1', 'phone2', 'personalEmail', 'collegeEmail',
+    'department', 'mtech', 'phd', 'office', 'officeHours'
+  ];
+  
+  const filteredData: any = {};
+  allowedFields.forEach(field => {
+    if (updateData[field] !== undefined) {
+      filteredData[field] = updateData[field];
+    }
+  });
+
+  // Validate required fields if they're being updated
+  if (filteredData.phone1 !== undefined && !filteredData.phone1) {
+    return res.status(400).json({ message: "Phone number is required" });
+  }
+
+  if (filteredData.personalEmail !== undefined && !filteredData.personalEmail) {
+    return res.status(400).json({ message: "Personal email is required" });
+  }
+
+  if (filteredData.collegeEmail !== undefined && !filteredData.collegeEmail) {
+    return res.status(400).json({ message: "College email is required" });
+  }
+
+  if (filteredData.department !== undefined && !filteredData.department) {
+    return res.status(400).json({ message: "Department is required" });
+  }
+
+  if (filteredData.office !== undefined && !filteredData.office) {
+    return res.status(400).json({ message: "Office is required" });
+  }
+
+  if (filteredData.officeHours !== undefined && !filteredData.officeHours) {
+    return res.status(400).json({ message: "Office hours are required" });
+  }
+
+  try {
+    const updatedFaculty = await prisma.faculty.update({
+      where: { id: facultyId },
+      data: filteredData,
+      select: {
+        id: true,
+        employeeId: true,
+        name: true,
+        phone1: true,
+        phone2: true,
+        personalEmail: true,
+        collegeEmail: true,
+        department: true,
+        mtech: true,
+        phd: true,
+        office: true,
+        officeHours: true,
+        updatedAt: true
+      }
+    });
+
+    return res.json({
+      message: "Faculty details updated successfully",
+      faculty: updatedFaculty
+    });
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'P2002') {
+      return res.status(400).json({ 
+        message: "Personal email or college email already exists" 
+      });
+    }
+    return res.status(500).json({ 
+      message: "Failed to update faculty details",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+export default { 
+  changePassword, 
+  signin, 
+  createNewMeeting, 
+  addReview,
+  updateFacultyDetails
+};

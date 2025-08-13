@@ -1,0 +1,213 @@
+MENTOR-MENTEES WEBSITE DATABASE SCHEMA (UPDATED)
+================================================
+
+1. STUDENTS TABLE
+-----------------
+| Column Name        | Data Type | Nullable | Constraints |
+|--------------------|-----------|----------|-------------|
+| id                 | String    | No       | PK, CUID    |
+| password           | String    | No       | -           |
+| name               | String    | No       | -           |
+| aadhar             | Int       | No       | Unique      |
+| phoneNumber        | String    | No       | -           |
+| phoneCode          | Int       | No       | -           |
+| registrationNumber | Int       | No       | Unique, Indexed |
+| rollNumber         | Int       | No       | Unique, Indexed |
+| passPort           | String    | No       | Default `"Not Available"` |
+| emergencyContact   | Int       | No       | -           |
+| personalEmail      | String    | No       | Unique      |
+| collegeEmail       | String    | No       | Unique      |
+| dob                | DateTime  | No       | -           |
+| address            | String    | No       | -           |
+| program            | String    | No       | -           |
+| branch             | String    | No       | -           |
+| bloodGroup         | String    | No       | -           |
+| dayScholar         | Boolean   | No       | -           |
+| fatherName         | String    | No       | -           |
+| fatherOccupation   | String    | Yes      | -           |
+| fatherAadhar       | Int       | Yes      | -           |
+| fatherNumber       | Int       | Yes      | -           |
+| motherName         | String    | No       | -           |
+| motherOccupation   | String    | Yes      | -           |
+| motherAadhar       | Int       | Yes      | -           |
+| motherNumber       | Int       | Yes      | -           |
+| gender             | Gender    | No       | Enum        |
+| community          | Community | No       | Enum        |
+| xMarks             | Int       | No       | -           |
+| xiiMarks           | Int       | No       | -           |
+| jeeMains           | Int       | No       | -           |
+| jeeAdvanced        | Int       | Yes      | -           |
+| createdAt          | DateTime  | No       | Default     |
+| updatedAt          | DateTime  | No       | Auto        |
+
+2. FACULTY TABLE
+----------------
+| Column Name    | Data Type | Nullable | Constraints |
+|----------------|-----------|----------|-------------|
+| id             | String    | No       | PK, CUID    |
+| employeeId     | String    | No       | Unique      |
+| password       | String    | No       | -           |
+| name           | String    | No       | -           |
+| phone1         | Int       | No       | -           |
+| phone2         | Int       | Yes      | -           |
+| personalEmail  | String    | No       | Unique      |
+| collegeEmail   | String    | No       | Unique      |
+| department     | String    | No       | -           |
+| mtech          | String    | Yes      | -           |
+| phd            | String    | Yes      | -           |
+| office         | String    | No       | -           |
+| officeHours    | String    | No       | -           |
+| createdAt      | DateTime  | No       | Default     |
+| updatedAt      | DateTime  | No       | Auto        |
+
+3. HODS TABLE
+-------------
+| Column Name | Data Type | Nullable | Constraints |
+|-------------|-----------|----------|-------------|
+| id          | String    | No       | PK, CUID    |
+| facultyId   | String    | No       | FK, Unique  |
+| email       | String    | No       | Unique      |
+| password    | String    | No       | -           |
+| department  | String    | No       | -           |
+| startDate   | DateTime  | No       | -           |
+| endDate     | DateTime  | Yes      | -           |
+| createdAt   | DateTime  | No       | Default     |
+| updatedAt   | DateTime  | No       | Auto        |
+
+4. MEETINGS TABLE
+-----------------
+| Column Name    | Data Type | Nullable | Constraints |
+|----------------|-----------|----------|-------------|
+| id             | String    | No       | PK, CUID    |
+| hodId          | String    | Yes      | FK          |
+| facultyId      | String    | Yes      | FK          |
+| date           | DateTime  | No       | -           |
+| time           | String    | No       | -           |
+| description    | String    | Yes      | -           |
+| facultyReview  | String    | Yes      | -           |
+| hodReview      | String    | Yes      | -           |
+| createdAt      | DateTime  | No       | Default     |
+| updatedAt      | DateTime  | No       | Auto        |
+
+5. MESSAGES TABLE
+-----------------
+| Column Name | Data Type | Nullable | Constraints |
+|-------------|-----------|----------|-------------|
+| id          | String    | No       | PK, CUID    |
+| senderId    | String    | No       | FK          |
+| receiverId  | String    | No       | FK          |
+| message     | String    | No       | -           |
+| date        | DateTime  | No       | -           |
+| createdAt   | DateTime  | No       | Default     |
+| updatedAt   | DateTime  | No       | Auto        |
+
+6. CAREER_DETAILS TABLE
+-----------------------
+| Column Name      | Data Type | Nullable | Constraints |
+|------------------|-----------|----------|-------------|
+| id               | String    | No       | PK, CUID    |
+| hobbies          | String[]  | No       | Default `[]` |
+| strengths        | String[]  | No       | Default `[]` |
+| areasToImprove   | String[]  | No       | Default `[]` |
+| core             | String[]  | No       | Default `[]` |
+| it               | String[]  | No       | Default `[]` |
+| higherEducation  | String[]  | No       | Default `[]` |
+| startup          | String[]  | No       | Default `[]` |
+| familyBusiness   | String[]  | No       | Default `[]` |
+| otherInterests   | String[]  | No       | Default `[]` |
+| createdAt        | DateTime  | No       | Default     |
+| updatedAt        | DateTime  | No       | Auto        |
+| studentId        | String    | No       | FK, Unique  |
+
+7. PERSONAL_PROBLEMS TABLE
+--------------------------
+| Column Name | Data Type | Nullable | Constraints |
+|-------------|-----------|----------|-------------|
+| id          | String    | No       | PK, CUID    |
+| stress ... fearOfPublicSpeaking | Boolean | Yes | - |
+| createdAt   | DateTime  | No       | Default     |
+| updatedAt   | DateTime  | No       | Auto        |
+| studentId   | String    | No       | FK, Unique  |
+
+8. INTERNSHIPS TABLE
+--------------------
+| Column Name  | Data Type | Nullable | Constraints |
+|--------------|-----------|----------|-------------|
+| id           | String    | No       | PK, CUID    |
+| semester     | Int       | No       | -           |
+| type         | String    | No       | -           |
+| organisation | String    | No       | -           |
+| stipend      | Int       | No       | -           |
+| duration     | String    | No       | -           |
+| location     | String    | No       | -           |
+| createdAt    | DateTime  | No       | Default     |
+| updatedAt    | DateTime  | No       | Auto        |
+
+9. PROJECTS TABLE
+-----------------
+| Column Name  | Data Type | Nullable | Constraints |
+|--------------|-----------|----------|-------------|
+| id           | String    | No       | PK, CUID    |
+| semester     | Int       | No       | -           |
+| title        | String    | No       | -           |
+| description  | String    | No       | -           |
+| technologies | String[]  | No       | Default `[]` |
+| mentor       | String    | No       | -           |
+| createdAt    | DateTime  | No       | Default     |
+| updatedAt    | DateTime  | No       | Auto        |
+
+10. CO_CURRICULARS TABLE
+------------------------
+| Column Name          | Data Type | Nullable | Constraints |
+|----------------------|-----------|----------|-------------|
+| id                   | String    | No       | PK, CUID    |
+| sem                  | Int       | No       | -           |
+| date                 | DateTime  | No       | -           |
+| eventDetails         | String    | No       | -           |
+| participationDetails | String    | No       | -           |
+| awards               | String    | No       | -           |
+| createdAt            | DateTime  | No       | Default     |
+| updatedAt            | DateTime  | No       | Auto        |
+
+11. SEMESTERS TABLE
+-------------------
+| Column Name | Data Type | Nullable | Constraints |
+|-------------|-----------|----------|-------------|
+| id          | String    | No       | PK, CUID    |
+| semester    | Int       | No       | -           |
+| sgpa        | Float     | No       | -           |
+| cgpa        | Float     | No       | -           |
+| createdAt   | DateTime  | No       | Default     |
+| updatedAt   | DateTime  | No       | Auto        |
+
+12. SUBJECTS TABLE
+------------------
+| Column Name         | Data Type | Nullable | Constraints |
+|---------------------|-----------|----------|-------------|
+| id                  | String    | No       | PK, CUID    |
+| subjectName         | String    | No       | -           |
+| subjectCode         | String    | No       | -           |
+| minor1              | Float     | No       | -           |
+| midExam             | Float     | No       | -           |
+| minor2              | Float     | No       | -           |
+| endExam             | Float     | No       | -           |
+| total               | Float     | No       | -           |
+| conductedHours      | Int       | No       | -           |
+| attendedHours       | Int       | No       | -           |
+| attendancePercentage| Float     | No       | -           |
+| remarks             | String    | No       | -           |
+| createdAt           | DateTime  | No       | Default     |
+| updatedAt           | DateTime  | No       | Auto        |
+
+ENUMS
+=====
+Gender:
+- Male
+- Female
+
+Community:
+- General
+- OBC
+- SC
+- ST
+- EWS

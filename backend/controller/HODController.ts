@@ -27,7 +27,12 @@ const changePassword = TryCatch(async (req: AuthenticatedRequest, res: Response)
   }
 
   const hod = await prisma.hOD.findUnique({
-    where: { id: hodId }
+    where: { id: hodId },
+    include: {
+      faculty: {
+        select: { name: true, collegeEmail: true, personalEmail: true }
+      }
+    }
   });
 
   if (!hod) {
@@ -57,7 +62,16 @@ const signin = TryCatch(async (req: Request, res: Response) => {
 
   const hod = await prisma.hOD.findFirst({
     where: {
-      email: email
+      OR: [
+        { email: email },
+        { faculty: { collegeEmail: email } },
+        { faculty: { personalEmail: email } }
+      ]
+    },
+    include: {
+      faculty: {
+        select: { name: true, collegeEmail: true, personalEmail: true }
+      }
     }
   });
   
@@ -232,4 +246,125 @@ const addReview = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
-export default { changePassword, signin, createNewMeeting, addReview };
+// Add new faculty member (HOD only)
+const addFaculty = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
+  const hodId = req.user?.id;
+  if (!hodId) {
+    return res.status(401).json({ message: "User not authenticated" });
+  }
+
+  // Verify the authenticated user is an active HOD
+  const hod = await prisma.hOD.findUnique({
+    where: { id: hodId },
+    include: {
+      faculty: {
+        select: { department: true, name: true }
+      }
+    }
+  });
+
+  if (!hod) {
+    return res.status(403).json({ message: "Access denied. Only HODs can add faculty members." });
+  }
+
+  // Check if HOD is active (endDate is null)
+  if (hod.endDate) {
+    return res.status(403).json({ message: "Access denied. Only active HODs can add faculty members." });
+  }
+
+  const {
+    employeeId,
+    password,
+    name,
+    phone1,
+    phone2,
+    personalEmail,
+    collegeEmail,
+    department,
+    mtech,
+    phd,
+    office,
+    officeHours
+  } = req.body;
+
+  // Validate required fields based on schema
+  if (!employeeId || !password || !name || !phone1 || !personalEmail || !collegeEmail || !department || !office || !officeHours) {
+    return res.status(400).json({ 
+      message: "Missing required fields: employeeId, password, name, phone1, personalEmail, collegeEmail, department, office, officeHours" 
+    });
+  }
+
+  // Validate that HOD can only add faculty to their own department
+  if (department !== hod.faculty.department) {
+    return res.status(403).json({ 
+      message: `You can only add faculty members to your own department: ${hod.faculty.department}` 
+    });
+  }
+
+  try {
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Create new faculty member
+    const newFaculty = await prisma.faculty.create({
+      data: {
+        employeeId,
+        password: hashedPassword,
+        name,
+        phone1,
+        phone2: phone2 || null,
+        personalEmail,
+        collegeEmail,
+        department,
+        mtech: mtech || null,
+        phd: phd || null,
+        office,
+        officeHours,
+        // mentoringStudents and meetings are optional relations, so they can be null
+        // Prisma will handle this automatically
+      },
+      select: {
+        id: true,
+        employeeId: true,
+        name: true,
+        phone1: true,
+        phone2: true,
+        personalEmail: true,
+        collegeEmail: true,
+        department: true,
+        mtech: true,
+        phd: true,
+        office: true,
+        officeHours: true,
+        createdAt: true
+      }
+    });
+
+    return res.status(201).json({
+      message: "Faculty member added successfully",
+      faculty: newFaculty,
+      addedBy: hod.faculty.name,
+      department: hod.faculty.department
+    });
+
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'P2002') {
+      return res.status(400).json({ 
+        message: "Employee ID, personal email, or college email already exists" 
+      });
+    }
+    
+    return res.status(500).json({
+      message: "Failed to add faculty member",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+export default { 
+  changePassword, 
+  signin, 
+  createNewMeeting, 
+  addReview,
+  addFaculty
+};
