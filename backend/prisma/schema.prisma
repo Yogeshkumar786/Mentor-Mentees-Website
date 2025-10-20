@@ -102,13 +102,13 @@ model Student {
   id                  String   @id @default(cuid())
   userId              String   @unique
   name                String
-  aadhar              Int      @unique
+  aadhar              BigInt   @unique
   phoneNumber         String
   phoneCode           Int
   registrationNumber  Int      @unique
   rollNumber          Int      @unique
   passPort            String   @default("Not Available")
-  emergencyContact    Int
+  emergencyContact    BigInt
   personalEmail       String   @unique
   collegeEmail        String   @unique
   dob                 DateTime
@@ -119,12 +119,12 @@ model Student {
   dayScholar          Boolean
   fatherName          String
   fatherOccupation    String?
-  fatherAadhar        Int?
-  fatherNumber        Int?
+  fatherAadhar        BigInt?
+  fatherNumber        BigInt?
   motherName          String
   motherOccupation    String?
-  motherAadhar        Int?
-  motherNumber        Int?
+  motherAadhar        BigInt?
+  motherNumber        BigInt?
   gender              Gender
   community           Community
   xMarks              Int
@@ -157,8 +157,8 @@ model Faculty {
   userId        String   @unique
   employeeId    String   @unique
   name          String
-  phone1        Int
-  phone2        Int?
+  phone1        BigInt
+  phone2        BigInt?
   personalEmail String   @unique
   collegeEmail  String   @unique
   department    String

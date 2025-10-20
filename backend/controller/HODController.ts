@@ -1,4 +1,4 @@
-import { prisma } from "../lib/prisma";
+import prisma from "../config/db";
 import { Request, Response } from "express";
 import TryCatch from "../utils/TryCatch";
 import bcrypt from "bcrypt";
