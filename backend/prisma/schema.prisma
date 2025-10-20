@@ -1,3 +1,36 @@
+// Request status enum
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Request type enum
+enum RequestType {
+  INTERNSHIP
+  PROJECT
+  PERFORMANCE
+  CO_CURRICULAR
+}
+
+model Request {
+  id           String        @id @default(cuid())
+  studentId    String
+  type         RequestType
+  targetId     String        // ID of the related entity (internship, project, etc.)
+  status       RequestStatus @default(PENDING)
+  remarks      String?
+  feedback     String?       // HOD's feedback on approval/rejection
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  // Relations
+  student      Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  hodId        String?
+  hod          HOD?          @relation(fields: [hodId], references: [id])
+
+  @@map("requests")
+}
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,9 +40,67 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Optional: User profile picture
+  profilePicture String?
+  // Account status (for future use)
+  accountStatus  UserAccountStatus @default(ACTIVE)
+
+  // Relations
+  student  Student?
+  faculty  Faculty?
+  hod      HOD?
+  admin    Admin?
+
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+
+  @@map("users")
+  @@index([accountStatus])
+}
+
+enum UserAccountStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+model Message {
+  id          String   @id @default(cuid())
+  senderId    String
+  receiverId  String
+  subject     String
+  content     String
+  createdAt   DateTime @default(now())
+  read        Boolean  @default(false)
+  deleted     Boolean  @default(false)
+  parentMessageId String?
+
+  // Relations
+  sender   User   @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User   @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  parentMessage Message? @relation("ParentMessage", fields: [parentMessageId], references: [id])
+  replies       Message[] @relation("ParentMessage")
+
+  @@map("messages")
+  @@index([createdAt])
+  @@index([deleted])
+}
+
+enum StudentStatus {
+  PURSUING
+  PASSEDOUT
+}
+
 model Student {
   id                  String   @id @default(cuid())
-  password            String
+  userId              String   @unique
   name                String
   aadhar              Int      @unique
   phoneNumber         String
@@ -40,10 +131,12 @@ model Student {
   xiiMarks            Int
   jeeMains            Int
   jeeAdvanced         Int?
+  status              StudentStatus @default(PURSUING)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
   // Relations
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   internships         Internship[]
   personalProblem     PersonalProblem?
   projects            Project[]
@@ -52,6 +145,7 @@ model Student {
   semesters           Semester[]
   mentors             Faculty[] @relation("StudentMentors")
   meetings            Meeting[]
+  requests            Request[]
 
   @@map("students")
   @@index([registrationNumber])
@@ -60,8 +154,8 @@ model Student {
 
 model Faculty {
   id            String   @id @default(cuid())
+  userId        String   @unique
   employeeId    String   @unique
-  password      String
   name          String
   phone1        Int
   phone2        Int?
@@ -77,6 +171,7 @@ model Faculty {
   updatedAt     DateTime @updatedAt
 
   // Relations
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   mentoringStudents Student[] @relation("StudentMentors")
   hod               HOD?
   meetings          Meeting[] @relation("FacultyMeetings")
@@ -86,9 +181,8 @@ model Faculty {
 
 model HOD {
   id         String   @id @default(cuid())
+  userId     String   @unique
   facultyId  String   @unique
-  email      String   @unique
-  password   String
   department String
   startDate  DateTime
   endDate    DateTime?
@@ -96,10 +190,32 @@ model HOD {
   updatedAt  DateTime @updatedAt
 
   // Relations
-  faculty   Faculty @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  faculty  Faculty @relation(fields: [facultyId], references: [id], onDelete: Cascade)
   meetings  Meeting[] @relation("HODMeetings")
+  requests  Request[]
 
   @@map("hods")
+}
+
+model Admin {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  employeeId    String   @unique
+  name          String
+  phone         String
+  personalEmail String   @unique
+  collegeEmail  String   @unique
+  department    String?
+  designation   String
+  office        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admins")
 }
 
 model Meeting {
@@ -254,21 +370,14 @@ model Semester {
   @@map("semesters")
 }
 
+
 model Subject {
-  id                   String   @id @default(cuid())
-  subjectName          String
-  subjectCode          String
-  minor1               Float
-  midExam              Float
-  minor2               Float
-  endExam              Float
-  total                Float
-  conductedHours       Int
-  attendedHours        Int
-  attendancePercentage Float
-  remarks              String
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id           String   @id @default(cuid())
+  subjectName  String
+  subjectCode  String
+  grade        String   // Only grade is stored
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
   semesters Semester[]
@@ -276,7 +385,15 @@ model Subject {
   @@map("subjects")
 }
 
-// Enums
+// Enums & Validation Notes
+// Note: Prisma does not enforce complex validation (e.g., email format, password strength). Handle these in backend logic.
+enum UserRole {
+  STUDENT
+  FACULTY
+  HOD
+  ADMIN
+}
+
 enum Gender {
   Male
   Female

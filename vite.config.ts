@@ -22,7 +22,8 @@ import path from "path";
 export default defineConfig({
   server: {
     host: "::",
-    port: 8080,
+    port: 3001,
+    strictPort: false, // If port 3001 is busy, automatically try 3002, 3003, etc.
   },
   plugins: [react()],
   build: {
