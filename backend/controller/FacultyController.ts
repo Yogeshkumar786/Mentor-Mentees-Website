@@ -1,78 +1,9 @@
 import prisma from "../config/db";
 import { Request, Response } from "express";
 import TryCatch from "../utils/TryCatch";
-import bcrypt from "bcrypt";
-import GenerateToken from "../utils/GenerateToken";
 import { sendMeetingNotificationsToAll } from "../utils/emailService";
 
 // Extend Request type to include authenticated user
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    email?: string;
-  };
-}
-
-// Change password function
-const changePassword = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
-  const { currentPassword, newPassword } = req.body;
-  const facultyId = req.user?.id;
-
-  if (!facultyId) {
-    return res.status(401).json({ message: "User not authenticated" });
-  }
-
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({ message: "Current password and new password are required" });
-  }
-
-  const faculty = await prisma.faculty.findUnique({
-    where: { id: facultyId }
-  });
-
-  if (!faculty) {
-    return res.status(404).json({ message: "Faculty not found" });
-  }
-
-  // Verify current password
-  const isCurrentPasswordValid = await bcrypt.compare(currentPassword, faculty.password);
-  if (!isCurrentPasswordValid) {
-    return res.status(400).json({ message: "Current password is incorrect" });
-  }
-
-  // Hash new password
-  const hashedNewPassword = await bcrypt.hash(newPassword, 12);
-
-  // Update password
-  await prisma.faculty.update({
-    where: { id: facultyId },
-    data: { password: hashedNewPassword }
-  });
-
-  return res.json({ message: "Password changed successfully" });
-});
-
-const signin = TryCatch(async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-
-  const faculty = await prisma.faculty.findFirst({
-    where: {
-      OR: [
-        { personalEmail: email },
-        { collegeEmail: email }
-      ]
-    }
-  });
-  
-  if (!faculty) return res.status(404).json({ message: "Faculty not found" });
-
-  const isMatch = await bcrypt.compare(password, faculty.password);
-  if (!isMatch) return res.status(401).json({ message: "Invalid password" });
-
-  GenerateToken(faculty.id, res);
-  return res.json({ message: "Signed in", facultyId: faculty.id });
-});
-
 const createNewMeeting = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
   const { 
     studentIds, 
@@ -105,7 +36,14 @@ const createNewMeeting = TryCatch(async (req: AuthenticatedRequest, res: Respons
     return res.status(404).json({ message: "Faculty not found" });
   }
 
-  let meetingData: any = {
+  const meetingData: {
+    facultyId: string;
+    date: Date;
+    time: string;
+    description: string;
+    students: { connect: { id: string }[] };
+    hodId?: string;
+  } = {
     facultyId,
     date: new Date(date),
     time,
@@ -161,7 +99,7 @@ const createNewMeeting = TryCatch(async (req: AuthenticatedRequest, res: Respons
         email: faculty.collegeEmail || faculty.personalEmail
       },
       // Add students
-      ...meeting.students.map((student: any) => ({
+      ...meeting.students.map((student) => ({
         name: student.name,
         role: 'Student',
         email: student.collegeEmail || student.personalEmail
@@ -261,7 +199,7 @@ const updateFacultyDetails = TryCatch(async (req: AuthenticatedRequest, res: Res
     'department', 'btech', 'mtech', 'phd', 'office', 'officeHours'
   ];
   
-  const filteredData: any = {};
+  const filteredData: Record<string, unknown> = {};
   allowedFields.forEach(field => {
     if (updateData[field] !== undefined) {
       filteredData[field] = updateData[field];
@@ -333,8 +271,6 @@ const updateFacultyDetails = TryCatch(async (req: AuthenticatedRequest, res: Res
 });
 
 export default { 
-  changePassword, 
-  signin, 
   createNewMeeting, 
   addReview,
   updateFacultyDetails

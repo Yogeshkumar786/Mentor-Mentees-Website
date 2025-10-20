@@ -2,7 +2,6 @@ import prisma from "../config/db";
 import { Request, Response } from "express";
 import TryCatch from "../utils/TryCatch";
 import bcrypt from "bcrypt";
-import GenerateToken from "../utils/GenerateToken";
 import { sendMeetingNotificationsToAll } from "../utils/emailService";
 
 // Extend Request type to include authenticated user
@@ -12,77 +11,6 @@ interface AuthenticatedRequest extends Request {
     email?: string;
   };
 }
-
-// Change password function
-const changePassword = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
-  const { currentPassword, newPassword } = req.body;
-  const hodId = req.user?.id;
-
-  if (!hodId) {
-    return res.status(401).json({ message: "User not authenticated" });
-  }
-
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({ message: "Current password and new password are required" });
-  }
-
-  const hod = await prisma.hOD.findUnique({
-    where: { id: hodId },
-    include: {
-      faculty: {
-        select: { name: true, collegeEmail: true, personalEmail: true }
-      }
-    }
-  });
-
-  if (!hod) {
-    return res.status(404).json({ message: "HOD not found" });
-  }
-
-  // Verify current password
-  const isCurrentPasswordValid = await bcrypt.compare(currentPassword, hod.password);
-  if (!isCurrentPasswordValid) {
-    return res.status(400).json({ message: "Current password is incorrect" });
-  }
-
-  // Hash new password
-  const hashedNewPassword = await bcrypt.hash(newPassword, 12);
-
-  // Update password
-  await prisma.hOD.update({
-    where: { id: hodId },
-    data: { password: hashedNewPassword }
-  });
-
-  return res.json({ message: "Password changed successfully" });
-});
-
-const signin = TryCatch(async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-
-  const hod = await prisma.hOD.findFirst({
-    where: {
-      OR: [
-        { email: email },
-        { faculty: { collegeEmail: email } },
-        { faculty: { personalEmail: email } }
-      ]
-    },
-    include: {
-      faculty: {
-        select: { name: true, collegeEmail: true, personalEmail: true }
-      }
-    }
-  });
-  
-  if (!hod) return res.status(404).json({ message: "HOD not found" });
-
-  const isMatch = await bcrypt.compare(password, hod.password);
-  if (!isMatch) return res.status(401).json({ message: "Invalid password" });
-
-  GenerateToken(hod.id, res);
-  return res.json({ message: "Signed in", hodId: hod.id });
-});
 
 const createNewMeeting = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
   const { 
@@ -169,7 +97,7 @@ const createNewMeeting = TryCatch(async (req: AuthenticatedRequest, res: Respons
         email: faculty.collegeEmail || faculty.personalEmail
       },
       // Add students
-      ...meeting.students.map((student: any) => ({
+      ...meeting.students.map((student) => ({
         name: student.name,
         role: 'Student',
         email: student.collegeEmail || student.personalEmail
@@ -306,46 +234,54 @@ const addFaculty = TryCatch(async (req: AuthenticatedRequest, res: Response) => 
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create new faculty member
-    const newFaculty = await prisma.faculty.create({
+    // Create User first, then Faculty
+    const newUser = await prisma.user.create({
       data: {
-        employeeId,
+        email: collegeEmail,
         password: hashedPassword,
-        name,
-        phone1,
-        phone2: phone2 || null,
-        personalEmail,
-        collegeEmail,
-        department,
-        btech: btech || null,
-        mtech: mtech || null,
-        phd: phd || null,
-        office,
-        officeHours,
-        // mentoringStudents and meetings are optional relations, so they can be null
-        // Prisma will handle this automatically
+        role: 'FACULTY',
+        faculty: {
+          create: {
+            employeeId,
+            name,
+            phone1,
+            phone2: phone2 || null,
+            personalEmail,
+            collegeEmail,
+            department,
+            btech: btech || null,
+            mtech: mtech || null,
+            phd: phd || null,
+            office,
+            officeHours,
+          }
+        }
       },
-      select: {
-        id: true,
-        employeeId: true,
-        name: true,
-        phone1: true,
-        phone2: true,
-        personalEmail: true,
-        collegeEmail: true,
-        department: true,
-        btech: true,
-        mtech: true,
-        phd: true,
-        office: true,
-        officeHours: true,
-        createdAt: true
+      include: {
+        faculty: {
+          select: {
+            id: true,
+            employeeId: true,
+            name: true,
+            phone1: true,
+            phone2: true,
+            personalEmail: true,
+            collegeEmail: true,
+            department: true,
+            btech: true,
+            mtech: true,
+            phd: true,
+            office: true,
+            officeHours: true,
+            createdAt: true
+          }
+        }
       }
     });
 
     return res.status(201).json({
       message: "Faculty member added successfully",
-      faculty: newFaculty,
+      faculty: newUser.faculty,
       addedBy: hod.faculty.name,
       department: hod.faculty.department
     });
@@ -365,8 +301,6 @@ const addFaculty = TryCatch(async (req: AuthenticatedRequest, res: Response) => 
 });
 
 export default { 
-  changePassword, 
-  signin, 
   createNewMeeting, 
   addReview,
   addFaculty
