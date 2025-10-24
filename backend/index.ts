@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import AuthRoutes from './routes/AuthRoutes';
 // import { testEmailConnection } from './utils/emailService';
 import { seedDatabase } from './utils/seedDatabase';
+import { Response, Request } from 'express';
 
 
 dotenv.config();
@@ -22,10 +23,10 @@ const app = express();
 
 // CORS configuration with credentials support
 app.use(cors({
-    origin: 'http://localhost:3001',
-    credentials: true, // Important: This allows cookies to be sent
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+  origin: 'http://localhost:3001',
+  credentials: true, // Important: This allows cookies to be sent
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
@@ -42,16 +43,11 @@ app.use(cookieParser()); // Add this line to enable cookie parsing
 // app.use('/api/hod', HODRoutes);
 app.use('/api/auth', AuthRoutes);
 
-app.get("/logout", (req, res) => {
-  res.clearCookie("token");
-  res.json({ message: "Logged out successfully" });
-});
-
 // Health check and seed endpoint
 // app.get("/health", async (req, res) => {
 //   try {
 //     const seedParam = req.query.seed;
-    
+
 //     if (seedParam === 'true') {
 //       // Seed the database
 //       const result = await seedDatabase();
@@ -82,5 +78,5 @@ app.get("/logout", (req, res) => {
 // });
 
 app.listen(process.env.PORT, () => {
-    console.log('Server started on port 3000');
+  console.log('Server started on port 3000');
 });
