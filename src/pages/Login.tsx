@@ -11,7 +11,7 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, userRole } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,13 +26,17 @@ const Login = () => {
     try {
       const success = await login(email, password);
       if (success) {
-        // Navigate based on email domain
-        if (email.includes('student')) {
+        // Navigate based on user role from backend
+        if (userRole === 'STUDENT') {
           navigate('/student');
-        } else if (email.includes('faculty')) {
+        } else if (userRole === 'FACULTY') {
           navigate('/faculty');
-        } else if (email.includes('hod')) {
+        } else if (userRole === 'HOD') {
           navigate('/hod');
+        } else if (userRole === 'ADMIN') {
+          navigate('/admin');
+        } else {
+          navigate('/');
         }
       }
     } finally {

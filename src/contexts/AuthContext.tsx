@@ -1,29 +1,14 @@
 
 import React, { createContext, useContext, useState } from "react";
 import { toast } from "sonner";
-
-// Mock user data with different roles
-const mockUsers = [
-  { email: "student1@student.nitandhra.ac.in", password: "password123", role: "student" },
-  { email: "student2@student.nitandhra.ac.in", password: "password123", role: "student" },
-  { email: "student3@student.nitandhra.ac.in", password: "password123", role: "student" },
-  { email: "student4@student.nitandhra.ac.in", password: "password123", role: "student" },
-  { email: "student5@student.nitandhra.ac.in", password: "password123", role: "student" },
-  { email: "student6@student.nitandhra.ac.in", password: "password123", role: "student" },
-  { email: "student7@student.nitandhra.ac.in", password: "password123", role: "student" },
-  { email: "student8@student.nitandhra.ac.in", password: "password123", role: "student" },
-  { email: "faculty1@faculty.nitandhra.ac.in", password: "password123", role: "faculty", name: "Dr. Ramesh Kumar" },
-  { email: "faculty2@faculty.nitandhra.ac.in", password: "password123", role: "faculty", name: "Dr. Sunita Mishra" },
-  { email: "faculty3@faculty.nitandhra.ac.in", password: "password123", role: "faculty", name: "Dr. Venkat Rao" },
-  { email: "faculty4@faculty.nitandhra.ac.in", password: "password123", role: "faculty", name: "Dr. Priya Sharma" },
-  { email: "hod@hod.nitandhra.ac.in", password: "password123", role: "hod", name: "Dr. Rajesh Verma" }
-];
+import { authAPI } from "@/lib/api";
 
 interface AuthContextType {
   isAuthenticated: boolean;
   userRole: string | null;
   login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  changePassword: (oldPassword: string, newPassword: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,34 +18,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userRole, setUserRole] = useState<string | null>(null);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Find the user in our mock data
-    const user = mockUsers.find(user => user.email === email);
-    
-    if (user && user.password === password) {
-      setIsAuthenticated(true);
-      setUserRole(user.role);
-      toast.success(`Logged in successfully as ${user.role}`);
-      return true;
-    } else {
-      toast.error("Invalid email or password");
+    try {
+      const response = await authAPI.login(email, password);
+      
+      if (response.success && response.data) {
+        setIsAuthenticated(true);
+        
+        // Get role from backend response
+        const userData = response.data as { user?: { role?: string } };
+        const role = userData.user?.role?.toLowerCase() || "student";
+        setUserRole(role);
+        
+        toast.success("Logged in successfully");
+        return true;
+      } else {
+        toast.error(response.error || "Login failed");
+        return false;
+      }
+    } catch (error) {
+      toast.error("Network error. Please try again.");
       return false;
     }
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
-    setUserRole(null);
-    toast.info("Logged out successfully");
+  const logout = async () => {
+    try {
+      await authAPI.logout();
+      setIsAuthenticated(false);
+      setUserRole(null);
+      toast.info("Logged out successfully");
+    } catch (error) {
+      toast.error("Logout failed");
+    }
+  };
+
+  const changePassword = async (oldPassword: string, newPassword: string): Promise<boolean> => {
+    try {
+      const response = await authAPI.changePassword(oldPassword, newPassword);
+      
+      if (response.success) {
+        toast.success("Password changed successfully");
+        return true;
+      } else {
+        toast.error(response.error || "Failed to change password");
+        return false;
+      }
+    } catch (error) {
+      toast.error("Network error. Please try again.");
+      return false;
+    }
   };
 
   const value = {
     isAuthenticated,
     userRole,
     login,
-    logout
+    logout,
+    changePassword
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -3,7 +3,7 @@
 
 const API_BASE_URL = 'http://localhost:3000/api';
 
-interface ApiResponse<T = any> {
+interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
@@ -51,25 +51,9 @@ async function apiRequest<T>(
 
 // Authentication API functions
 export const authAPI = {
-  // Student login
-  studentLogin: async (email: string, password: string) => {
-    return apiRequest('/student/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
-  },
-
-  // Faculty login
-  facultyLogin: async (email: string, password: string) => {
-    return apiRequest('/faculty/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
-  },
-
-  // HOD login
-  hodLogin: async (email: string, password: string) => {
-    return apiRequest('/hod/login', {
+  // Unified login for all user types
+  login: async (email: string, password: string) => {
+    return apiRequest('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
@@ -77,8 +61,16 @@ export const authAPI = {
 
   // Logout (clears cookie)
   logout: async () => {
-    return apiRequest('/logout', {
-      method: 'GET',
+    return apiRequest('/auth/logout', {
+      method: 'POST',
+    });
+  },
+
+  // Change password
+  changePassword: async (oldPassword: string, newPassword: string) => {
+    return apiRequest('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ oldPassword, newPassword }),
     });
   },
 };
