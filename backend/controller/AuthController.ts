@@ -5,7 +5,6 @@ import GenerateToken from "../utils/GenerateToken";
 
 const login = async (req: Request, res: Response) => {
     try {
-        console.log("received");
 
         const { email, password } = req.body;
         const user = await prisma.user.findUnique({ where: { email } });
@@ -13,7 +12,6 @@ const login = async (req: Request, res: Response) => {
         if (!user) {
             return res.status(401).json({ message: "Invalid email or password" });
         }
-        console.log(bcryptjs.hashSync(password, 10));
         const isPasswordValid = await bcryptjs.compare(password, user.password);
         if (!isPasswordValid) {
             return res.status(401).json({ message: "Invalid email or password" });

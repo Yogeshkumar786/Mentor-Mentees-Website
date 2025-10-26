@@ -4,3 +4,5 @@ backend/dist
 node_modules
 .env
 dist
+frontend
+frontend/*

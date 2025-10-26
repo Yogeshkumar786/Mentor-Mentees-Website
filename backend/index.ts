@@ -7,7 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 // import HODRoutes from './routes/HODRoutes';
 // import FacultyRoutes from './routes/FacultyRoutes';
-// import StudentRoutes from './routes/StudentRoutes';
+import StudentRoutes from './routes/StudentRoutes';
 import AuthRoutes from './routes/AuthRoutes';
 // import { testEmailConnection } from './utils/emailService';
 import { seedDatabase } from './utils/seedDatabase';
@@ -38,7 +38,7 @@ app.use(cookieParser()); // Add this line to enable cookie parsing
 
 // Routes commented out temporarily due to schema changes
 // TODO: Update controllers to use User model for authentication
-// app.use('/api/student',StudentRoutes);
+app.use('/api/student', StudentRoutes);
 // app.use('/api/faculty', FacultyRoutes);
 // app.use('/api/hod', HODRoutes);
 app.use('/api/auth', AuthRoutes);
