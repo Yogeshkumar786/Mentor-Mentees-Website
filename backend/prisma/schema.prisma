@@ -59,9 +59,6 @@ model User {
   hod      HOD?
   admin    Admin?
 
-  sentMessages     Message[] @relation("SentMessages")
-  receivedMessages Message[] @relation("ReceivedMessages")
-
   @@map("users")
   @@index([accountStatus])
 }
@@ -70,27 +67,6 @@ enum UserAccountStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
-}
-model Message {
-  id          String   @id @default(cuid())
-  senderId    String
-  receiverId  String
-  subject     String
-  content     String
-  createdAt   DateTime @default(now())
-  read        Boolean  @default(false)
-  deleted     Boolean  @default(false)
-  parentMessageId String?
-
-  // Relations
-  sender   User   @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver User   @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
-  parentMessage Message? @relation("ParentMessage", fields: [parentMessageId], references: [id])
-  replies       Message[] @relation("ParentMessage")
-
-  @@map("messages")
-  @@index([createdAt])
-  @@index([deleted])
 }
 
 enum StudentStatus {
@@ -143,9 +119,12 @@ model Student {
   careerDetails       CareerDetails?
   coCurriculars       CoCurricular[]
   semesters           Semester[]
-  mentors             Faculty[] @relation("StudentMentors")
-  meetings            Meeting[]
   requests            Request[]
+  
+  // Mentor relationships - one current mentor, many past mentors
+  currentMentorId     String?  @unique
+  currentMentor       Mentor?  @relation("StudentCurrentMentor", fields: [currentMentorId], references: [id])
+  pastMentors         Mentor[] @relation("StudentPastMentors")
 
   @@map("students")
   @@index([registrationNumber])
@@ -172,9 +151,11 @@ model Faculty {
 
   // Relations
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mentoringStudents Student[] @relation("StudentMentors")
   hod               HOD?
-  meetings          Meeting[] @relation("FacultyMeetings")
+  
+  // Mentor relationships - many current students, many past students
+  currentMentorships Mentor[] @relation("FacultyCurrentMentorships")
+  pastMentorships    Mentor[] @relation("FacultyPastMentorships")
 
   @@map("faculty")
 }
@@ -192,7 +173,6 @@ model HOD {
   // Relations
   user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   faculty  Faculty @relation(fields: [facultyId], references: [id], onDelete: Cascade)
-  meetings  Meeting[] @relation("HODMeetings")
   requests  Request[]
 
   @@map("hods")
@@ -220,22 +200,47 @@ model Admin {
 
 model Meeting {
   id           String   @id @default(cuid())
-  hodId        String?
-  facultyId    String?
+  mentorId     String
   date         DateTime
   time         String
   description  String?
   facultyReview String?
-  hodReview    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   // Relations
-  hod      HOD?     @relation("HODMeetings", fields: [hodId], references: [id])
-  faculty  Faculty? @relation("FacultyMeetings", fields: [facultyId], references: [id])
-  students Student[]
+  mentor  Mentor @relation(fields: [mentorId], references: [id], onDelete: Cascade)
 
   @@map("meetings")
+}
+
+model Mentor {
+  id          String    @id @default(cuid())
+  facultyId   String
+  studentId   String
+  year        Int       // Academic year (e.g., 1, 2, 3, 4)
+  semester    Int       // Semester (e.g., 1-8)
+  startDate   DateTime  @default(now())
+  endDate     DateTime?
+  isActive    Boolean   @default(true)
+  comments    String[]  @default([])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  faculty          Faculty  @relation("FacultyCurrentMentorships", fields: [facultyId], references: [id], onDelete: Cascade)
+  meetings         Meeting[]
+  
+  // Student relations - one student per mentor record
+  currentStudent   Student? @relation("StudentCurrentMentor")
+  pastStudents     Student[] @relation("StudentPastMentors")
+
+  @@map("mentors")
+  @@index([facultyId])
+  @@index([studentId])
+  @@index([isActive])
+  @@index([year])
+  @@index([semester])
 }
 
 

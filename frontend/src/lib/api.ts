@@ -1,7 +1,7 @@
 // API utility functions for making authenticated requests
 // Uses cookies instead of Authorization headers
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = process.env.API || '/api';
 
 interface ApiResponse<T = unknown> {
   success: boolean;

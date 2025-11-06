@@ -1,6 +1,7 @@
 "use client"
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { studentAPI } from "@/lib/api";
 
 // Types for student data
 interface BasicInfo {
@@ -280,7 +281,21 @@ const initialCoCurricularActivities: CoCurricularActivity[] = [
 const initialMentorQuestions: MentorQuestion[] = [];
 
 export const StudentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [basicInfo] = useState<BasicInfo>(initialBasicInfo);
+  const [basicInfo, setBasicInfo] = useState<BasicInfo>(initialBasicInfo);
+  // On mount, fetch student profile from backend and update context
+  useEffect(() => {
+    studentAPI.getProfile().then(res => {
+      if (res.success && res.data) {
+        // Accept either res.data.student or res.data directly
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const profile = (res.data as any).student || res.data;
+        setBasicInfo({
+          ...initialBasicInfo,
+          ...profile
+        });
+      }
+    });
+  }, []);
   const [educationMarks] = useState<EducationMarks>(initialEducationMarks);
   const [semesters] = useState<Semester[]>(initialSemesters);
   const [currentSemesterDetails] = useState({
