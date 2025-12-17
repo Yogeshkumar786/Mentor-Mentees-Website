@@ -1,36 +1,3 @@
-// Request status enum
-enum RequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-// Request type enum
-enum RequestType {
-  INTERNSHIP
-  PROJECT
-  PERFORMANCE
-  CO_CURRICULAR
-}
-
-model Request {
-  id           String        @id @default(cuid())
-  studentId    String
-  type         RequestType
-  targetId     String        // ID of the related entity (internship, project, etc.)
-  status       RequestStatus @default(PENDING)
-  remarks      String?
-  feedback     String?       // HOD's feedback on approval/rejection
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-
-  // Relations
-  student      Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  hodId        String?
-  hod          HOD?          @relation(fields: [hodId], references: [id])
-
-  @@map("requests")
-}
 generator client {
   provider = "prisma-client-js"
 }
@@ -38,6 +5,77 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RequestType {
+  INTERNSHIP
+  PROJECT
+  PERFORMANCE
+  CO_CURRICULAR
+}
+
+enum UserRole {
+  STUDENT
+  FACULTY
+  HOD
+  ADMIN
+}
+
+enum UserAccountStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum StudentStatus {
+  PURSUING
+  PASSEDOUT
+}
+
+enum Gender {
+  Male
+  Female
+}
+
+enum Community {
+  General
+  OBC
+  SC
+  ST
+  EWS
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+model Request {
+  id        String        @id @default(cuid())
+  studentId String
+  type      RequestType
+  targetId  String // ID of the related entity (internship, project, etc.)
+  status    RequestStatus @default(PENDING)
+  remarks   String?
+  feedback  String? // HOD's feedback on approval/rejection
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  hodId   String?
+  hod     HOD?    @relation(fields: [hodId], references: [id])
+
+  @@map("requests")
 }
 
 model User {
@@ -54,81 +92,70 @@ model User {
   accountStatus  UserAccountStatus @default(ACTIVE)
 
   // Relations
-  student  Student?
-  faculty  Faculty?
-  hod      HOD?
-  admin    Admin?
+  student Student?
+  faculty Faculty?
+  hod     HOD?
+  admin   Admin?
 
-  @@map("users")
   @@index([accountStatus])
-}
-
-enum UserAccountStatus {
-  ACTIVE
-  INACTIVE
-  SUSPENDED
-}
-
-enum StudentStatus {
-  PURSUING
-  PASSEDOUT
+  @@map("users")
 }
 
 model Student {
-  id                  String   @id @default(cuid())
-  userId              String   @unique
-  name                String
-  aadhar              BigInt   @unique
-  phoneNumber         String
-  phoneCode           Int
-  registrationNumber  Int      @unique
-  rollNumber          Int      @unique
-  passPort            String   @default("Not Available")
-  emergencyContact    BigInt
-  personalEmail       String   @unique
-  collegeEmail        String   @unique
-  dob                 DateTime
-  address             String
-  program             String
-  branch              String
-  bloodGroup          String
-  dayScholar          Boolean
-  fatherName          String
-  fatherOccupation    String?
-  fatherAadhar        BigInt?
-  fatherNumber        BigInt?
-  motherName          String
-  motherOccupation    String?
-  motherAadhar        BigInt?
-  motherNumber        BigInt?
-  gender              Gender
-  community           Community
-  xMarks              Int
-  xiiMarks            Int
-  jeeMains            Int
-  jeeAdvanced         Int?
-  status              StudentStatus @default(PURSUING)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                 String        @id @default(cuid())
+  userId             String        @unique
+  name               String
+  aadhar             BigInt        @unique
+  phoneNumber        String
+  phoneCode          Int
+  registrationNumber Int           @unique
+  rollNumber         Int           @unique
+  passPort           String        @default("Not Available")
+  emergencyContact   BigInt
+  personalEmail      String        @unique
+  collegeEmail       String        @unique
+  dob                DateTime
+  address            String
+  program            String
+  branch             String
+  bloodGroup         String
+  dayScholar         Boolean
+  fatherName         String
+  fatherOccupation   String?
+  fatherAadhar       BigInt?
+  fatherNumber       BigInt?
+  motherName         String
+  motherOccupation   String?
+  motherAadhar       BigInt?
+  motherNumber       BigInt?
+  gender             Gender
+  community          Community
+  xMarks             Int
+  xiiMarks           Int
+  jeeMains           Int
+  jeeAdvanced        Int?
+  status             StudentStatus @default(PURSUING)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   // Relations
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  internships         Internship[]
-  personalProblem     PersonalProblem?
-  projects            Project[]
-  careerDetails       CareerDetails?
-  coCurriculars       CoCurricular[]
-  semesters           Semester[]
-  requests            Request[]
-  
-  // Mentor relationships - one current mentor, many past mentors
-  currentMentorId     String?  @unique
-  currentMentor       Mentor?  @relation("StudentCurrentMentor", fields: [currentMentorId], references: [id])
-  pastMentors         Mentor[] @relation("StudentPastMentors")
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  internships     Internship[]
+  personalProblem PersonalProblem?
+  projects        Project[]
+  careerDetails   CareerDetails?
+  coCurriculars   CoCurricular[]
+  semesters       Semester[]
+  requests        Request[]
 
-  @@map("students")
+  // Mentor relationships - one current mentor, many past mentors
+  currentMentorId String?  @unique
+  currentMentor   Mentor?  @relation("StudentCurrentMentor", fields: [currentMentorId], references: [id])
+  pastMentors     Mentor[] @relation("StudentPastMentors")
+
   @@index([registrationNumber])
   @@index([rollNumber])
+  @@map("students")
 }
 
 model Faculty {
@@ -150,30 +177,29 @@ model Faculty {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hod               HOD?
-  
-  // Mentor relationships - many current students, many past students
-  currentMentorships Mentor[] @relation("FacultyCurrentMentorships")
-  pastMentorships    Mentor[] @relation("FacultyPastMentorships")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hod  HOD?
+
+  // Mentor relationships
+  mentorships Mentor[] @relation("FacultyMentorships")
 
   @@map("faculty")
 }
 
 model HOD {
-  id         String   @id @default(cuid())
-  userId     String   @unique
-  facultyId  String   @unique
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  facultyId  String    @unique
   department String
   startDate  DateTime
   endDate    DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   // Relations
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  faculty  Faculty @relation(fields: [facultyId], references: [id], onDelete: Cascade)
-  requests  Request[]
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  faculty  Faculty   @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  requests Request[]
 
   @@map("hods")
 }
@@ -199,65 +225,63 @@ model Admin {
 }
 
 model Meeting {
-  id           String   @id @default(cuid())
-  mentorId     String
-  date         DateTime
-  time         String
-  description  String?
+  id            String   @id @default(cuid())
+  mentorId      String
+  date          DateTime
+  time          String
+  description   String?
   facultyReview String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relations
-  mentor  Mentor @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  mentor Mentor @relation(fields: [mentorId], references: [id], onDelete: Cascade)
 
   @@map("meetings")
 }
 
 model Mentor {
-  id          String    @id @default(cuid())
-  facultyId   String
-  studentId   String
-  year        Int       // Academic year (e.g., 1, 2, 3, 4)
-  semester    Int       // Semester (e.g., 1-8)
-  startDate   DateTime  @default(now())
-  endDate     DateTime?
-  isActive    Boolean   @default(true)
-  comments    String[]  @default([])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String    @id @default(cuid())
+  facultyId String
+  studentId String
+  year      Int // Academic year (e.g., 1, 2, 3, 4)
+  semester  Int // Semester (e.g., 1-8)
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+  isActive  Boolean   @default(true)
+  comments  String[]  @default([])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Relations
-  faculty          Faculty  @relation("FacultyCurrentMentorships", fields: [facultyId], references: [id], onDelete: Cascade)
-  meetings         Meeting[]
-  
-  // Student relations - one student per mentor record
-  currentStudent   Student? @relation("StudentCurrentMentor")
-  pastStudents     Student[] @relation("StudentPastMentors")
+  faculty  Faculty   @relation("FacultyMentorships", fields: [facultyId], references: [id], onDelete: Cascade)
+  meetings Meeting[]
 
-  @@map("mentors")
+  // Student relations - one student per mentor record
+  currentStudent Student?  @relation("StudentCurrentMentor")
+  pastStudents   Student[] @relation("StudentPastMentors")
+
   @@index([facultyId])
   @@index([studentId])
   @@index([isActive])
   @@index([year])
   @@index([semester])
+  @@map("mentors")
 }
 
-
-
 model CareerDetails {
-  id               String   @id @default(cuid())
-  hobbies          String[] @default([])
-  strengths        String[] @default([])
-  areasToImprove   String[] @default([])
-  core             String[] @default([])
-  it               String[] @default([])
-  higherEducation  String[] @default([])
-  startup          String[] @default([])
-  familyBusiness   String[] @default([])
-  otherInterests   String[] @default([])
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              String   @id @default(cuid())
+  hobbies         String[] @default([])
+  strengths       String[] @default([])
+  areasToImprove  String[] @default([])
+  core            String[] @default([])
+  it              String[] @default([])
+  higherEducation String[] @default([])
+  startup         String[] @default([])
+  familyBusiness  String[] @default([])
+  otherInterests  String[] @default([])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
   student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -267,42 +291,42 @@ model CareerDetails {
 }
 
 model PersonalProblem {
-  id                               String   @id @default(cuid())
-  stress                           Boolean?
-  anger                            Boolean?
-  emotionalProblem                 Boolean?
-  lowSelfEsteem                    Boolean?
-  examinationAnxiety               Boolean?
-  negativeThoughts                 Boolean?
-  examPhobia                       Boolean?
-  stammering                       Boolean?
-  financialProblem                 Boolean?
-  moodSwings                       Boolean?
-  disturbedRelationshipWithParents Boolean?
+  id                                String   @id @default(cuid())
+  stress                            Boolean?
+  anger                             Boolean?
+  emotionalProblem                  Boolean?
+  lowSelfEsteem                     Boolean?
+  examinationAnxiety                Boolean?
+  negativeThoughts                  Boolean?
+  examPhobia                        Boolean?
+  stammering                        Boolean?
+  financialProblem                  Boolean?
+  moodSwings                        Boolean?
+  disturbedRelationshipWithParents  Boolean?
   disturbedRelationshipWithTeachers Boolean?
-  disturbedRelationshipWithFriends Boolean?
-  disciplinaryProblemsInCollege    Boolean?
-  poorCommandOfEnglish             Boolean?
-  tobaccoOrAlcoholUse              Boolean?
-  suicidalAttemptsOrThoughts       Boolean?
-  disappointmentWithCourses        Boolean?
-  timeManagementProblem            Boolean?
+  disturbedRelationshipWithFriends  Boolean?
+  disciplinaryProblemsInCollege     Boolean?
+  poorCommandOfEnglish              Boolean?
+  tobaccoOrAlcoholUse               Boolean?
+  suicidalAttemptsOrThoughts        Boolean?
+  disappointmentWithCourses         Boolean?
+  timeManagementProblem             Boolean?
   relationshipProblem               Boolean?
-  lowSelfMotivation                Boolean?
-  conflicts                        Boolean?
-  procrastination                  Boolean?
-  frustration                      Boolean?
-  poorDecisivePower                Boolean?
-  adjustmentProblem                Boolean?
-  lackOfExpression                 Boolean?
-  poorConcentration                Boolean?
-  stagePhobia                      Boolean?
-  worriesAboutFuture               Boolean?
-  poorMemoryProblem                Boolean?
-  migraineHeadache                 Boolean?
-  fearOfPublicSpeaking             Boolean?
-  createdAt                        DateTime @default(now())
-  updatedAt                        DateTime @updatedAt
+  lowSelfMotivation                 Boolean?
+  conflicts                         Boolean?
+  procrastination                   Boolean?
+  frustration                       Boolean?
+  poorDecisivePower                 Boolean?
+  adjustmentProblem                 Boolean?
+  lackOfExpression                  Boolean?
+  poorConcentration                 Boolean?
+  stagePhobia                       Boolean?
+  worriesAboutFuture                Boolean?
+  poorMemoryProblem                 Boolean?
+  migraineHeadache                  Boolean?
+  fearOfPublicSpeaking              Boolean?
+  createdAt                         DateTime @default(now())
+  updatedAt                         DateTime @updatedAt
 
   // Relations
   student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -375,39 +399,16 @@ model Semester {
   @@map("semesters")
 }
 
-
 model Subject {
-  id           String   @id @default(cuid())
-  subjectName  String
-  subjectCode  String
-  grade        String   // Only grade is stored
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(cuid())
+  subjectName String
+  subjectCode String
+  grade       String // Only grade is stored
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
   semesters Semester[]
 
   @@map("subjects")
-}
-
-// Enums & Validation Notes
-// Note: Prisma does not enforce complex validation (e.g., email format, password strength). Handle these in backend logic.
-enum UserRole {
-  STUDENT
-  FACULTY
-  HOD
-  ADMIN
-}
-
-enum Gender {
-  Male
-  Female
-}
-
-enum Community {
-  General
-  OBC
-  SC
-  ST
-  EWS
 }

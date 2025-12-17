@@ -1,213 +1,414 @@
-MENTOR-MENTEES WEBSITE DATABASE SCHEMA (UPDATED)
-================================================
+generator client {
+  provider = "prisma-client-js"
+}
 
-1. STUDENTS TABLE
------------------
-| Column Name        | Data Type | Nullable | Constraints |
-|--------------------|-----------|----------|-------------|
-| id                 | String    | No       | PK, CUID    |
-| password           | String    | No       | -           |
-| name               | String    | No       | -           |
-| aadhar             | Int       | No       | Unique      |
-| phoneNumber        | String    | No       | -           |
-| phoneCode          | Int       | No       | -           |
-| registrationNumber | Int       | No       | Unique, Indexed |
-| rollNumber         | Int       | No       | Unique, Indexed |
-| passPort           | String    | No       | Default `"Not Available"` |
-| emergencyContact   | Int       | No       | -           |
-| personalEmail      | String    | No       | Unique      |
-| collegeEmail       | String    | No       | Unique      |
-| dob                | DateTime  | No       | -           |
-| address            | String    | No       | -           |
-| program            | String    | No       | -           |
-| branch             | String    | No       | -           |
-| bloodGroup         | String    | No       | -           |
-| dayScholar         | Boolean   | No       | -           |
-| fatherName         | String    | No       | -           |
-| fatherOccupation   | String    | Yes      | -           |
-| fatherAadhar       | Int       | Yes      | -           |
-| fatherNumber       | Int       | Yes      | -           |
-| motherName         | String    | No       | -           |
-| motherOccupation   | String    | Yes      | -           |
-| motherAadhar       | Int       | Yes      | -           |
-| motherNumber       | Int       | Yes      | -           |
-| gender             | Gender    | No       | Enum        |
-| community          | Community | No       | Enum        |
-| xMarks             | Int       | No       | -           |
-| xiiMarks           | Int       | No       | -           |
-| jeeMains           | Int       | No       | -           |
-| jeeAdvanced        | Int       | Yes      | -           |
-| createdAt          | DateTime  | No       | Default     |
-| updatedAt          | DateTime  | No       | Auto        |
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
-2. FACULTY TABLE
-----------------
-| Column Name    | Data Type | Nullable | Constraints |
-|----------------|-----------|----------|-------------|
-| id             | String    | No       | PK, CUID    |
-| employeeId     | String    | No       | Unique      |
-| password       | String    | No       | -           |
-| name           | String    | No       | -           |
-| phone1         | Int       | No       | -           |
-| phone2         | Int       | Yes      | -           |
-| personalEmail  | String    | No       | Unique      |
-| collegeEmail   | String    | No       | Unique      |
-| department     | String    | No       | -           |
-| mtech          | String    | Yes      | -           |
-| phd            | String    | Yes      | -           |
-| office         | String    | No       | -           |
-| officeHours    | String    | No       | -           |
-| createdAt      | DateTime  | No       | Default     |
-| updatedAt      | DateTime  | No       | Auto        |
+// ============================================
+// ENUMS
+// ============================================
 
-3. HODS TABLE
--------------
-| Column Name | Data Type | Nullable | Constraints |
-|-------------|-----------|----------|-------------|
-| id          | String    | No       | PK, CUID    |
-| facultyId   | String    | No       | FK, Unique  |
-| email       | String    | No       | Unique      |
-| password    | String    | No       | -           |
-| department  | String    | No       | -           |
-| startDate   | DateTime  | No       | -           |
-| endDate     | DateTime  | Yes      | -           |
-| createdAt   | DateTime  | No       | Default     |
-| updatedAt   | DateTime  | No       | Auto        |
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
 
-4. MEETINGS TABLE
------------------
-| Column Name    | Data Type | Nullable | Constraints |
-|----------------|-----------|----------|-------------|
-| id             | String    | No       | PK, CUID    |
-| hodId          | String    | Yes      | FK          |
-| facultyId      | String    | Yes      | FK          |
-| date           | DateTime  | No       | -           |
-| time           | String    | No       | -           |
-| description    | String    | Yes      | -           |
-| facultyReview  | String    | Yes      | -           |
-| hodReview      | String    | Yes      | -           |
-| createdAt      | DateTime  | No       | Default     |
-| updatedAt      | DateTime  | No       | Auto        |
+enum RequestType {
+  INTERNSHIP
+  PROJECT
+  PERFORMANCE
+  CO_CURRICULAR
+}
 
-5. MESSAGES TABLE
------------------
-| Column Name | Data Type | Nullable | Constraints |
-|-------------|-----------|----------|-------------|
-| id          | String    | No       | PK, CUID    |
-| senderId    | String    | No       | FK          |
-| receiverId  | String    | No       | FK          |
-| message     | String    | No       | -           |
-| date        | DateTime  | No       | -           |
-| createdAt   | DateTime  | No       | Default     |
-| updatedAt   | DateTime  | No       | Auto        |
+enum UserRole {
+  STUDENT
+  FACULTY
+  HOD
+  ADMIN
+}
 
-6. CAREER_DETAILS TABLE
------------------------
-| Column Name      | Data Type | Nullable | Constraints |
-|------------------|-----------|----------|-------------|
-| id               | String    | No       | PK, CUID    |
-| hobbies          | String[]  | No       | Default `[]` |
-| strengths        | String[]  | No       | Default `[]` |
-| areasToImprove   | String[]  | No       | Default `[]` |
-| core             | String[]  | No       | Default `[]` |
-| it               | String[]  | No       | Default `[]` |
-| higherEducation  | String[]  | No       | Default `[]` |
-| startup          | String[]  | No       | Default `[]` |
-| familyBusiness   | String[]  | No       | Default `[]` |
-| otherInterests   | String[]  | No       | Default `[]` |
-| createdAt        | DateTime  | No       | Default     |
-| updatedAt        | DateTime  | No       | Auto        |
-| studentId        | String    | No       | FK, Unique  |
+enum UserAccountStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
 
-7. PERSONAL_PROBLEMS TABLE
---------------------------
-| Column Name | Data Type | Nullable | Constraints |
-|-------------|-----------|----------|-------------|
-| id          | String    | No       | PK, CUID    |
-| stress ... fearOfPublicSpeaking | Boolean | Yes | - |
-| createdAt   | DateTime  | No       | Default     |
-| updatedAt   | DateTime  | No       | Auto        |
-| studentId   | String    | No       | FK, Unique  |
+enum StudentStatus {
+  PURSUING
+  PASSEDOUT
+}
 
-8. INTERNSHIPS TABLE
---------------------
-| Column Name  | Data Type | Nullable | Constraints |
-|--------------|-----------|----------|-------------|
-| id           | String    | No       | PK, CUID    |
-| semester     | Int       | No       | -           |
-| type         | String    | No       | -           |
-| organisation | String    | No       | -           |
-| stipend      | Int       | No       | -           |
-| duration     | String    | No       | -           |
-| location     | String    | No       | -           |
-| createdAt    | DateTime  | No       | Default     |
-| updatedAt    | DateTime  | No       | Auto        |
+enum Gender {
+  Male
+  Female
+}
 
-9. PROJECTS TABLE
------------------
-| Column Name  | Data Type | Nullable | Constraints |
-|--------------|-----------|----------|-------------|
-| id           | String    | No       | PK, CUID    |
-| semester     | Int       | No       | -           |
-| title        | String    | No       | -           |
-| description  | String    | No       | -           |
-| technologies | String[]  | No       | Default `[]` |
-| mentor       | String    | No       | -           |
-| createdAt    | DateTime  | No       | Default     |
-| updatedAt    | DateTime  | No       | Auto        |
+enum Community {
+  General
+  OBC
+  SC
+  ST
+  EWS
+}
 
-10. CO_CURRICULARS TABLE
-------------------------
-| Column Name          | Data Type | Nullable | Constraints |
-|----------------------|-----------|----------|-------------|
-| id                   | String    | No       | PK, CUID    |
-| sem                  | Int       | No       | -           |
-| date                 | DateTime  | No       | -           |
-| eventDetails         | String    | No       | -           |
-| participationDetails | String    | No       | -           |
-| awards               | String    | No       | -           |
-| createdAt            | DateTime  | No       | Default     |
-| updatedAt            | DateTime  | No       | Auto        |
+// ============================================
+// MODELS
+// ============================================
 
-11. SEMESTERS TABLE
--------------------
-| Column Name | Data Type | Nullable | Constraints |
-|-------------|-----------|----------|-------------|
-| id          | String    | No       | PK, CUID    |
-| semester    | Int       | No       | -           |
-| sgpa        | Float     | No       | -           |
-| cgpa        | Float     | No       | -           |
-| createdAt   | DateTime  | No       | Default     |
-| updatedAt   | DateTime  | No       | Auto        |
+model Request {
+  id        String        @id @default(cuid())
+  studentId String
+  type      RequestType
+  targetId  String // ID of the related entity (internship, project, etc.)
+  status    RequestStatus @default(PENDING)
+  remarks   String?
+  feedback  String? // HOD's feedback on approval/rejection
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
-12. SUBJECTS TABLE
-------------------
-| Column Name         | Data Type | Nullable | Constraints |
-|---------------------|-----------|----------|-------------|
-| id                  | String    | No       | PK, CUID    |
-| subjectName         | String    | No       | -           |
-| subjectCode         | String    | No       | -           |
-| minor1              | Float     | No       | -           |
-| midExam             | Float     | No       | -           |
-| minor2              | Float     | No       | -           |
-| endExam             | Float     | No       | -           |
-| total               | Float     | No       | -           |
-| conductedHours      | Int       | No       | -           |
-| attendedHours       | Int       | No       | -           |
-| attendancePercentage| Float     | No       | -           |
-| remarks             | String    | No       | -           |
-| createdAt           | DateTime  | No       | Default     |
-| updatedAt           | DateTime  | No       | Auto        |
+  // Relations
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  hodId   String?
+  hod     HOD?    @relation(fields: [hodId], references: [id])
 
-ENUMS
-=====
-Gender:
-- Male
-- Female
+  @@map("requests")
+}
 
-Community:
-- General
-- OBC
-- SC
-- ST
-- EWS
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Optional: User profile picture
+  profilePicture String?
+  // Account status (for future use)
+  accountStatus  UserAccountStatus @default(ACTIVE)
+
+  // Relations
+  student Student?
+  faculty Faculty?
+  hod     HOD?
+  admin   Admin?
+
+  @@index([accountStatus])
+  @@map("users")
+}
+
+model Student {
+  id                 String        @id @default(cuid())
+  userId             String        @unique
+  name               String
+  aadhar             BigInt        @unique
+  phoneNumber        String
+  phoneCode          Int
+  registrationNumber Int           @unique
+  rollNumber         Int           @unique
+  passPort           String        @default("Not Available")
+  emergencyContact   BigInt
+  personalEmail      String        @unique
+  collegeEmail       String        @unique
+  dob                DateTime
+  address            String
+  program            String
+  branch             String
+  bloodGroup         String
+  dayScholar         Boolean
+  fatherName         String
+  fatherOccupation   String?
+  fatherAadhar       BigInt?
+  fatherNumber       BigInt?
+  motherName         String
+  motherOccupation   String?
+  motherAadhar       BigInt?
+  motherNumber       BigInt?
+  gender             Gender
+  community          Community
+  xMarks             Int
+  xiiMarks           Int
+  jeeMains           Int
+  jeeAdvanced        Int?
+  status             StudentStatus @default(PURSUING)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  // Relations
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  internships     Internship[]
+  personalProblem PersonalProblem?
+  projects        Project[]
+  careerDetails   CareerDetails?
+  coCurriculars   CoCurricular[]
+  semesters       Semester[]
+  requests        Request[]
+
+  // Mentor relationships - one current mentor, many past mentors
+  currentMentorId String?  @unique
+  currentMentor   Mentor?  @relation("StudentCurrentMentor", fields: [currentMentorId], references: [id])
+  pastMentors     Mentor[] @relation("StudentPastMentors")
+
+  @@index([registrationNumber])
+  @@index([rollNumber])
+  @@map("students")
+}
+
+model Faculty {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  employeeId    String   @unique
+  name          String
+  phone1        BigInt
+  phone2        BigInt?
+  personalEmail String   @unique
+  collegeEmail  String   @unique
+  department    String
+  btech         String?
+  mtech         String?
+  phd           String?
+  office        String
+  officeHours   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hod  HOD?
+
+  // Mentor relationships
+  mentorships Mentor[] @relation("FacultyMentorships")
+
+  @@map("faculty")
+}
+
+model HOD {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  facultyId  String    @unique
+  department String
+  startDate  DateTime
+  endDate    DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  // Relations
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  faculty  Faculty   @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  requests Request[]
+
+  @@map("hods")
+}
+
+model Admin {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  employeeId    String   @unique
+  name          String
+  phone         String
+  personalEmail String   @unique
+  collegeEmail  String   @unique
+  department    String?
+  designation   String
+  office        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admins")
+}
+
+model Meeting {
+  id            String   @id @default(cuid())
+  mentorId      String
+  date          DateTime
+  time          String
+  description   String?
+  facultyReview String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  mentor Mentor @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@map("meetings")
+}
+
+model Mentor {
+  id        String    @id @default(cuid())
+  facultyId String
+  studentId String
+  year      Int // Academic year (e.g., 1, 2, 3, 4)
+  semester  Int // Semester (e.g., 1-8)
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+  isActive  Boolean   @default(true)
+  comments  String[]  @default([])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  faculty  Faculty   @relation("FacultyMentorships", fields: [facultyId], references: [id], onDelete: Cascade)
+  meetings Meeting[]
+
+  // Student relations - one student per mentor record
+  currentStudent Student?  @relation("StudentCurrentMentor")
+  pastStudents   Student[] @relation("StudentPastMentors")
+
+  @@index([facultyId])
+  @@index([studentId])
+  @@index([isActive])
+  @@index([year])
+  @@index([semester])
+  @@map("mentors")
+}
+
+model CareerDetails {
+  id              String   @id @default(cuid())
+  hobbies         String[] @default([])
+  strengths       String[] @default([])
+  areasToImprove  String[] @default([])
+  core            String[] @default([])
+  it              String[] @default([])
+  higherEducation String[] @default([])
+  startup         String[] @default([])
+  familyBusiness  String[] @default([])
+  otherInterests  String[] @default([])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String  @unique
+
+  @@map("career_details")
+}
+
+model PersonalProblem {
+  id                                String   @id @default(cuid())
+  stress                            Boolean?
+  anger                             Boolean?
+  emotionalProblem                  Boolean?
+  lowSelfEsteem                     Boolean?
+  examinationAnxiety                Boolean?
+  negativeThoughts                  Boolean?
+  examPhobia                        Boolean?
+  stammering                        Boolean?
+  financialProblem                  Boolean?
+  moodSwings                        Boolean?
+  disturbedRelationshipWithParents  Boolean?
+  disturbedRelationshipWithTeachers Boolean?
+  disturbedRelationshipWithFriends  Boolean?
+  disciplinaryProblemsInCollege     Boolean?
+  poorCommandOfEnglish              Boolean?
+  tobaccoOrAlcoholUse               Boolean?
+  suicidalAttemptsOrThoughts        Boolean?
+  disappointmentWithCourses         Boolean?
+  timeManagementProblem             Boolean?
+  relationshipProblem               Boolean?
+  lowSelfMotivation                 Boolean?
+  conflicts                         Boolean?
+  procrastination                   Boolean?
+  frustration                       Boolean?
+  poorDecisivePower                 Boolean?
+  adjustmentProblem                 Boolean?
+  lackOfExpression                  Boolean?
+  poorConcentration                 Boolean?
+  stagePhobia                       Boolean?
+  worriesAboutFuture                Boolean?
+  poorMemoryProblem                 Boolean?
+  migraineHeadache                  Boolean?
+  fearOfPublicSpeaking              Boolean?
+  createdAt                         DateTime @default(now())
+  updatedAt                         DateTime @updatedAt
+
+  // Relations
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String  @unique
+
+  @@map("personal_problems")
+}
+
+model Internship {
+  id           String   @id @default(cuid())
+  semester     Int
+  type         String
+  organisation String
+  stipend      Int
+  duration     String
+  location     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  students Student[]
+
+  @@map("internships")
+}
+
+model Project {
+  id           String   @id @default(cuid())
+  semester     Int
+  title        String
+  description  String
+  technologies String[] @default([])
+  mentor       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  students Student[]
+
+  @@map("projects")
+}
+
+model CoCurricular {
+  id                   String   @id @default(cuid())
+  sem                  Int
+  date                 DateTime
+  eventDetails         String
+  participationDetails String
+  awards               String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  students Student[]
+
+  @@map("co_curriculars")
+}
+
+model Semester {
+  id        String   @id @default(cuid())
+  semester  Int
+  sgpa      Float
+  cgpa      Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  students Student[]
+  subjects Subject[]
+
+  @@map("semesters")
+}
+
+model Subject {
+  id          String   @id @default(cuid())
+  subjectName String
+  subjectCode String
+  grade       String // Only grade is stored
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  semesters Semester[]
+
+  @@map("subjects")
+}
