@@ -36,46 +36,33 @@ app.use(cookieParser()); // Add this line to enable cookie parsing
 // app.set('view engine', 'ejs');
 // app.set('views', path.join(__dirname, 'views'));
 
+// Add dummy data endpoint
+app.get("/add", async (req: Request, res: Response) => {
+  try {
+    const result = await seedDatabase();
+    res.json({
+      status: 'success',
+      message: 'Dummy data added successfully',
+      data: result,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({
+      status: 'error',
+      message: 'Error adding dummy data',
+      error: errorMessage,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // Routes commented out temporarily due to schema changes
 // TODO: Update controllers to use User model for authentication
-app.use('/api/student', StudentRoutes);
+// app.use('/api/student', StudentRoutes);
 // app.use('/api/faculty', FacultyRoutes);
 // app.use('/api/hod', HODRoutes);
-app.use('/api/auth', AuthRoutes);
-
-// Health check and seed endpoint
-// app.get("/health", async (req, res) => {
-//   try {
-//     const seedParam = req.query.seed;
-
-//     if (seedParam === 'true') {
-//       // Seed the database
-//       const result = await seedDatabase();
-//       res.json({
-//         status: 'healthy',
-//         message: 'Database seeded successfully',
-//         data: result,
-//         timestamp: new Date().toISOString(),
-//       });
-//     } else {
-//       // Just health check
-//       res.json({
-//         status: 'healthy',
-//         message: 'Server is running',
-//         timestamp: new Date().toISOString(),
-//         info: 'Add ?seed=true to seed the database with dummy data',
-//       });
-//     }
-//   } catch (error) {
-//     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-//     res.status(500).json({
-//       status: 'unhealthy',
-//       message: 'Error during operation',
-//       error: errorMessage,
-//       timestamp: new Date().toISOString(),
-//     });
-//   }
-// });
+// app.use('/api/auth', AuthRoutes);
 
 app.listen(process.env.PORT, () => {
   console.log('Server started on port 3000');

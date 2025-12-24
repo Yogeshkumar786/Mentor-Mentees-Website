@@ -95,6 +95,10 @@ export async function seedDatabase() {
     const faculty1 = await prisma.faculty.findUnique({
       where: { userId: facultyUser1.id },
     });
+    
+    const faculty2 = await prisma.faculty.findUnique({
+      where: { userId: facultyUser2.id },
+    });
 
     // 3. Create HOD User
     console.log('Creating HOD...');
@@ -358,62 +362,129 @@ export async function seedDatabase() {
       },
     });
 
-    // 12. Create Messages
-    console.log('Creating Messages...');
-    await prisma.message.create({
+    // 12. Create Mentors
+    console.log('Creating Mentor Relationships...');
+    const mentor1 = await prisma.mentor.create({
       data: {
-        senderId: studentUser1.id,
-        receiverId: facultyUser1.id,
-        subject: 'Meeting Request',
-        content: 'Hello Sir, I would like to schedule a meeting to discuss my project.',
-        read: false,
+        facultyId: faculty1!.id,
+        studentId: student1!.id,
+        year: 2,
+        semester: 3,
+        startDate: new Date('2024-07-01'),
+        isActive: true,
+        comments: ['Good progress in academics', 'Active participation in events'],
       },
     });
 
-    await prisma.message.create({
+    const mentor2 = await prisma.mentor.create({
       data: {
-        senderId: facultyUser1.id,
-        receiverId: studentUser1.id,
-        subject: 'Re: Meeting Request',
-        content: 'Sure, let\'s meet on Monday at 3 PM.',
-        read: true,
+        facultyId: faculty1!.id,
+        studentId: student2!.id,
+        year: 2,
+        semester: 3,
+        startDate: new Date('2024-07-01'),
+        isActive: true,
+        comments: ['Excellent academic performance', 'Needs improvement in communication'],
       },
+    });
+
+    // Create past mentorship (inactive)
+    const mentor3 = await prisma.mentor.create({
+      data: {
+        facultyId: faculty2!.id,
+        studentId: student1!.id,
+        year: 1,
+        semester: 1,
+        startDate: new Date('2023-07-01'),
+        endDate: new Date('2024-06-30'),
+        isActive: false,
+        comments: ['Completed first year mentorship', 'Student adapted well to college life'],
+      },
+    });
+
+    const mentor4 = await prisma.mentor.create({
+      data: {
+        facultyId: faculty2!.id,
+        studentId: student2!.id,
+        year: 1,
+        semester: 2,
+        startDate: new Date('2023-07-01'),
+        endDate: new Date('2024-06-30'),
+        isActive: false,
+        comments: ['First year mentorship completed', 'Good academic performance'],
+      },
+    });
+
+    // Set current mentor for students
+    await prisma.student.update({
+      where: { id: student1!.id },
+      data: { currentMentorId: mentor1.id },
+    });
+
+    await prisma.student.update({
+      where: { id: student2!.id },
+      data: { currentMentorId: mentor2.id },
     });
 
     // 13. Create Meetings
     console.log('Creating Meetings...');
     await prisma.meeting.create({
       data: {
-        hodId: hod!.id,
-        facultyId: faculty1!.id,
+        mentorId: mentor1.id,
         date: new Date('2024-10-25'),
         time: '10:00 AM',
-        description: 'Monthly review meeting',
-        facultyReview: 'Student is performing well',
-        hodReview: 'Keep up the good work',
-        students: {
-          connect: [{ id: student1!.id }],
-        },
+        description: 'Monthly review meeting - discussing project progress',
+        facultyReview: 'Student is performing well in academics and project work',
       },
     });
 
-    // 14. Connect Students to Faculty (Mentoring relationship)
-    console.log('Creating Mentoring Relationships...');
-    await prisma.student.update({
-      where: { id: student1!.id },
+    await prisma.meeting.create({
       data: {
-        mentors: {
-          connect: [{ id: faculty1!.id }],
-        },
+        mentorId: mentor2.id,
+        date: new Date('2024-10-26'),
+        time: '2:00 PM',
+        description: 'Career guidance session',
+        facultyReview: 'Discussed career options and higher education plans',
       },
     });
 
-    await prisma.student.update({
-      where: { id: student2!.id },
+    await prisma.meeting.create({
       data: {
-        mentors: {
-          connect: [{ id: faculty1!.id }],
-        },
+        mentorId: mentor1.id,
+        date: new Date('2024-11-15'),
+        time: '11:00 AM',
+        description: 'Mid-semester academic review',
+        facultyReview: 'Discussed exam preparation strategies. Student showing consistent improvement.',
+      },
+    });
+
+    await prisma.meeting.create({
+      data: {
+        mentorId: mentor2.id,
+        date: new Date('2024-11-20'),
+        time: '3:30 PM',
+        description: 'Internship preparation and planning',
+        facultyReview: 'Guided student on internship applications and resume building',
+      },
+    });
+
+    await prisma.meeting.create({
+      data: {
+        mentorId: mentor3.id,
+        date: new Date('2023-09-10'),
+        time: '2:00 PM',
+        description: 'First year orientation meeting',
+        facultyReview: 'Introduced to college systems and academic expectations',
+      },
+    });
+
+    await prisma.meeting.create({
+      data: {
+        mentorId: mentor4.id,
+        date: new Date('2023-10-05'),
+        time: '4:00 PM',
+        description: 'Academic performance review - Semester 1',
+        facultyReview: 'Excellent start. Keep up the good work',
       },
     });
 
@@ -429,8 +500,8 @@ export async function seedDatabase() {
     console.log('- 1 Semester with 2 Subjects created');
     console.log('- Career details and personal problems added');
     console.log('- 2 Requests created');
-    console.log('- 2 Messages created');
-    console.log('- 1 Meeting created');
+    console.log('- 4 Mentor relationships created (2 active, 2 past)');
+    console.log('- 6 Meetings created');
     console.log('\n🔑 Login Credentials:');
     console.log('All users: password123');
     console.log('Admin: admin@nitandhra.ac.in');
@@ -447,6 +518,8 @@ export async function seedDatabase() {
         faculty: 2,
         hod: 1,
         admin: 1,
+        mentors: 4,
+        meetings: 6,
       },
     };
   } catch (error) {
