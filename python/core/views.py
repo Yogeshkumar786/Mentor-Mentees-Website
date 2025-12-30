@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from .models import User
 from django.conf import settings
 import os
-from .middleware import require_auth
+from .middleware import require_auth, require_role
 
 
 # Get JWT secret from environment or settings
@@ -400,6 +400,385 @@ def get_user_role(request):
         
     except Exception as e:
         print(f"Get user details error: {str(e)}")
+        return JsonResponse(
+            {'message': 'Server error'},
+            status=500
+        )
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role('HOD')
+def assign_mentor(request):
+    """
+    HOD assigns a faculty member as mentor to a student
+    Required fields: studentRollNumber, facultyEmployeeId, year, semester
+    """
+    try:
+        data = json.loads(request.body)
+        student_roll_number = data.get('studentRollNumber')
+        faculty_employee_id = data.get('facultyEmployeeId')
+        year = data.get('year')
+        semester = data.get('semester')
+        
+        # Validate required fields
+        if not all([student_roll_number, faculty_employee_id, year, semester]):
+            return JsonResponse(
+                {'message': 'Missing required fields: studentRollNumber, facultyEmployeeId, year, semester'},
+                status=400
+            )
+        
+        # Get HOD user ID from request (set by middleware)
+        hod_user_id = request.user_id
+        
+        # Find the student by roll number
+        from .models import Student, Faculty, HOD, Mentor
+        
+        try:
+            student = Student.objects.select_related('user').get(rollNumber=int(student_roll_number))
+        except Student.DoesNotExist:
+            return JsonResponse(
+                {'message': 'Student not found with the provided roll number'},
+                status=404
+            )
+        
+        # Find the faculty by employee ID
+        try:
+            faculty = Faculty.objects.get(employeeId=faculty_employee_id)
+        except Faculty.DoesNotExist:
+            return JsonResponse(
+                {'message': 'Faculty not found with the provided employee ID'},
+                status=404
+            )
+        
+        # Verify that the HOD is authorized for this department
+        try:
+            hod = HOD.objects.select_related('faculty').get(
+                user_id=hod_user_id,
+                department=faculty.department,
+                endDate__isnull=True  # Only active HODs
+            )
+        except HOD.DoesNotExist:
+            return JsonResponse(
+                {'message': f'You are not authorized to assign mentors in the {faculty.department} department'},
+                status=403
+            )
+        
+        # If student already has an active mentor, deactivate it
+        previous_mentor_name = None
+        if student.currentMentorId:
+            try:
+                previous_mentor = Mentor.objects.select_related('faculty').get(id=student.currentMentorId)
+                previous_mentor.isActive = False
+                previous_mentor.endDate = datetime.now()
+                previous_mentor.save()
+                # Add student to pastStudents many-to-many relationship
+                previous_mentor.pastStudents.add(student)
+                previous_mentor_name = previous_mentor.faculty.name
+            except Mentor.DoesNotExist:
+                pass
+        
+        # Create new mentor assignment
+        mentor_assignment = Mentor.objects.create(
+            faculty=faculty,
+            student=student,
+            year=int(year),
+            semester=int(semester),
+            isActive=True,
+            startDate=datetime.now()
+        )
+        
+        # Update student's currentMentorId
+        student.currentMentorId = mentor_assignment.id
+        student.save()
+        
+        return JsonResponse({
+            'message': 'Mentor assigned successfully',
+            'assignment': {
+                'id': mentor_assignment.id,
+                'student': {
+                    'name': student.name,
+                    'rollNumber': student.rollNumber,
+                    'branch': student.branch
+                },
+                'mentor': {
+                    'name': faculty.name,
+                    'employeeId': faculty.employeeId,
+                    'department': faculty.department
+                },
+                'year': mentor_assignment.year,
+                'semester': mentor_assignment.semester,
+                'startDate': mentor_assignment.startDate.isoformat(),
+                'assignedBy': hod.faculty.name if hod.faculty else 'HOD'
+            },
+            'previousMentor': previous_mentor_name
+        }, status=201)
+        
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {'message': 'Invalid JSON in request body'},
+            status=400
+        )
+    except ValueError as e:
+        return JsonResponse(
+            {'message': f'Invalid data format: {str(e)}'},
+            status=400
+        )
+    except Exception as e:
+        print(f"Assign mentor error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse(
+            {'message': 'Server error'},
+            status=500
+        )
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role('HOD')
+def assign_mentor_bulk(request):
+    """
+    HOD assigns a faculty member as mentor to multiple students at once
+    Required fields: studentRollNumbers (array), facultyEmployeeId, year, semester
+    """
+    try:
+        data = json.loads(request.body)
+        student_roll_numbers = data.get('studentRollNumbers')
+        faculty_employee_id = data.get('facultyEmployeeId')
+        year = data.get('year')
+        semester = data.get('semester')
+        
+        # Validate required fields
+        if not student_roll_numbers or not isinstance(student_roll_numbers, list) or len(student_roll_numbers) == 0:
+            return JsonResponse(
+                {'message': 'studentRollNumbers must be a non-empty array'},
+                status=400
+            )
+        
+        if not faculty_employee_id or not year or not semester:
+            return JsonResponse(
+                {'message': 'Missing required fields: facultyEmployeeId, year, semester'},
+                status=400
+            )
+        
+        # Get HOD user ID from request (set by middleware)
+        hod_user_id = request.user_id
+        
+        # Find the faculty by employee ID
+        from .models import Student, Faculty, HOD, Mentor
+        
+        try:
+            faculty = Faculty.objects.get(employeeId=faculty_employee_id)
+        except Faculty.DoesNotExist:
+            return JsonResponse(
+                {'message': 'Faculty not found with the provided employee ID'},
+                status=404
+            )
+        
+        # Verify that the HOD is authorized for this department
+        try:
+            hod = HOD.objects.select_related('faculty').get(
+                user_id=hod_user_id,
+                department=faculty.department,
+                endDate__isnull=True  # Only active HODs
+            )
+        except HOD.DoesNotExist:
+            return JsonResponse(
+                {'message': f'You are not authorized to assign mentors in the {faculty.department} department'},
+                status=403
+            )
+        
+        # Process each student
+        results = {
+            'successful': [],
+            'failed': []
+        }
+        
+        for roll_number in student_roll_numbers:
+            try:
+                # Find the student by roll number
+                try:
+                    student = Student.objects.select_related('user').get(rollNumber=int(roll_number))
+                except Student.DoesNotExist:
+                    results['failed'].append({
+                        'rollNumber': roll_number,
+                        'reason': 'Student not found'
+                    })
+                    continue
+                
+                # If student already has an active mentor, deactivate it
+                previous_mentor_name = None
+                if student.currentMentorId:
+                    try:
+                        previous_mentor = Mentor.objects.select_related('faculty').get(id=student.currentMentorId)
+                        previous_mentor.isActive = False
+                        previous_mentor.endDate = datetime.now()
+                        previous_mentor.save()
+                        # Add student to pastStudents many-to-many relationship
+                        previous_mentor.pastStudents.add(student)
+                        previous_mentor_name = previous_mentor.faculty.name
+                    except Mentor.DoesNotExist:
+                        pass
+                
+                # Create new mentor assignment
+                mentor_assignment = Mentor.objects.create(
+                    faculty=faculty,
+                    student=student,
+                    year=int(year),
+                    semester=int(semester),
+                    isActive=True,
+                    startDate=datetime.now()
+                )
+                
+                # Update student's currentMentorId
+                student.currentMentorId = mentor_assignment.id
+                student.save()
+                
+                results['successful'].append({
+                    'student': {
+                        'name': student.name,
+                        'rollNumber': student.rollNumber,
+                        'branch': student.branch
+                    },
+                    'previousMentor': previous_mentor_name,
+                    'newMentorAssignmentId': mentor_assignment.id
+                })
+                
+            except Exception as e:
+                results['failed'].append({
+                    'rollNumber': roll_number,
+                    'reason': str(e)
+                })
+        
+        return JsonResponse({
+            'message': f"Assigned {len(results['successful'])} student(s) to {faculty.name}",
+            'mentor': {
+                'name': faculty.name,
+                'employeeId': faculty.employeeId,
+                'department': faculty.department
+            },
+            'year': int(year),
+            'semester': int(semester),
+            'assignedBy': hod.faculty.name if hod.faculty else 'HOD',
+            'results': {
+                'successful': results['successful'],
+                'failed': results['failed'],
+                'totalProcessed': len(student_roll_numbers),
+                'successCount': len(results['successful']),
+                'failedCount': len(results['failed'])
+            }
+        }, status=201)
+        
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {'message': 'Invalid JSON in request body'},
+            status=400
+        )
+    except ValueError as e:
+        return JsonResponse(
+            {'message': f'Invalid data format: {str(e)}'},
+            status=400
+        )
+    except Exception as e:
+        print(f"Assign mentor bulk error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse(
+            {'message': 'Server error'},
+            status=500
+        )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role('STUDENT')
+def get_student_mentor_details(request):
+    """
+    Get current and past mentor details for a student
+    Returns current mentor info and list of all past mentors
+    """
+    try:
+        # Get student user ID from request (set by middleware)
+        student_user_id = request.user_id
+        
+        from .models import Student, Mentor
+        
+        # Find the student
+        try:
+            student = Student.objects.select_related('user').get(user_id=student_user_id)
+        except Student.DoesNotExist:
+            return JsonResponse(
+                {'message': 'Student profile not found'},
+                status=404
+            )
+        
+        # Get current mentor details
+        current_mentor_info = None
+        if student.currentMentorId:
+            try:
+                current_mentor = Mentor.objects.select_related('faculty').get(
+                    id=student.currentMentorId,
+                    isActive=True
+                )
+                current_mentor_info = {
+                    'id': current_mentor.id,
+                    'faculty': {
+                        'name': current_mentor.faculty.name,
+                        'employeeId': current_mentor.faculty.employeeId,
+                        'department': current_mentor.faculty.department,
+                        'collegeEmail': current_mentor.faculty.collegeEmail,
+                        'phone1': current_mentor.faculty.phone1,
+                        'office': current_mentor.faculty.office,
+                        'officeHours': current_mentor.faculty.officeHours
+                    },
+                    'year': current_mentor.year,
+                    'semester': current_mentor.semester,
+                    'startDate': current_mentor.startDate.isoformat(),
+                    'comments': current_mentor.comments
+                }
+            except Mentor.DoesNotExist:
+                pass
+        
+        # Get past mentors (all mentors with isActive=False)
+        past_mentors = Mentor.objects.filter(
+            student=student,
+            isActive=False
+        ).select_related('faculty').order_by('-endDate')
+        
+        past_mentors_list = []
+        for mentor in past_mentors:
+            past_mentors_list.append({
+                'id': mentor.id,
+                'faculty': {
+                    'name': mentor.faculty.name,
+                    'employeeId': mentor.faculty.employeeId,
+                    'department': mentor.faculty.department,
+                    'collegeEmail': mentor.faculty.collegeEmail
+                },
+                'year': mentor.year,
+                'semester': mentor.semester,
+                'startDate': mentor.startDate.isoformat() if mentor.startDate else None,
+                'endDate': mentor.endDate.isoformat() if mentor.endDate else None,
+                'comments': mentor.comments
+            })
+        
+        return JsonResponse({
+            'student': {
+                'name': student.name,
+                'rollNumber': student.rollNumber,
+                'branch': student.branch,
+                'program': student.program
+            },
+            'currentMentor': current_mentor_info,
+            'pastMentors': past_mentors_list,
+            'totalPastMentors': len(past_mentors_list)
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get mentor details error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse(
             {'message': 'Server error'},
             status=500

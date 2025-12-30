@@ -1,5 +1,8 @@
+import uuid
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 
 # --- Enums as Django choices ---
@@ -41,14 +44,27 @@ class Community(models.TextChoices):
     EWS = 'EWS'
 
 
+class MeetingStatus(models.TextChoices):
+    UPCOMING = 'UPCOMING'
+    YET_TO_DONE = 'YET_TO_DONE'
+    COMPLETED = 'COMPLETED'
+    REQUESTED = 'REQUESTED'
+
+
+class AccountStatus(models.TextChoices):
+    ACTIVE = 'ACTIVE'
+    INACTIVE = 'INACTIVE'
+    SUSPENDED = 'SUSPENDED'
+
+
 # --- Models ---
 class User(models.Model):
-    id = models.CharField(primary_key=True, max_length=40)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=255)
     role = models.CharField(max_length=20, choices=UserRole.choices)
     profilePicture = models.URLField(null=True, blank=True)
-    accountStatus = models.CharField(max_length=20, default='ACTIVE')
+    accountStatus = models.CharField(max_length=20, choices=AccountStatus.choices, default=AccountStatus.ACTIVE)
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
 
@@ -59,12 +75,12 @@ class User(models.Model):
 
 
 class Faculty(models.Model):
-    id = models.CharField(primary_key=True, max_length=40)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='faculty', null=True, db_column='userId')
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='faculty', db_column='userId')
     employeeId = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=255)
-    phone1 = models.BigIntegerField()
-    phone2 = models.BigIntegerField(null=True, blank=True)
+    phone1 = models.CharField(max_length=20)
+    phone2 = models.CharField(max_length=20, null=True, blank=True)
     personalEmail = models.EmailField(unique=True)
     collegeEmail = models.EmailField(unique=True)
     department = models.CharField(max_length=255)
@@ -76,6 +92,16 @@ class Faculty(models.Model):
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
 
+    @property
+    def current_mentorships(self):
+        """Returns all current/active mentorships for this faculty"""
+        return self.mentorships.filter(is_active=True)
+    
+    @property
+    def past_mentorships(self):
+        """Returns all past/inactive mentorships for this faculty"""
+        return self.mentorships.filter(is_active=False)
+
     def __str__(self):
         return self.name
     class Meta:
@@ -83,9 +109,9 @@ class Faculty(models.Model):
 
 
 class HOD(models.Model):
-    id = models.CharField(primary_key=True, max_length=40)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='hod', null=True, db_column='userId')
-    faculty = models.OneToOneField(Faculty, on_delete=models.CASCADE, related_name='as_hod', null=True, db_column='facultyId')
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='hod', db_column='userId')
+    faculty = models.OneToOneField(Faculty, on_delete=models.CASCADE, related_name='as_hod', db_column='facultyId')
     department = models.CharField(max_length=255)
     startDate = models.DateTimeField()
     endDate = models.DateTimeField(null=True, blank=True)
@@ -96,8 +122,8 @@ class HOD(models.Model):
 
 
 class Admin(models.Model):
-    id = models.CharField(primary_key=True, max_length=40)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='admin', null=True, db_column='userId')
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='admin', db_column='userId')
     employeeId = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=255)
     phone = models.CharField(max_length=50)
@@ -113,16 +139,16 @@ class Admin(models.Model):
 
 
 class Student(models.Model):
-    id = models.CharField(primary_key=True, max_length=40)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student', null=True, db_column='userId')
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student', db_column='userId')
     name = models.CharField(max_length=255)
-    aadhar = models.BigIntegerField(unique=True)
-    phoneNumber = models.CharField(max_length=50)
+    aadhar = models.CharField(max_length=12, unique=True)
+    phoneNumber = models.CharField(max_length=20)
     phoneCode = models.IntegerField()
     registrationNumber = models.IntegerField(unique=True)
     rollNumber = models.IntegerField(unique=True)
     passPort = models.CharField(max_length=255, default='Not Available')
-    emergencyContact = models.BigIntegerField()
+    emergencyContact = models.CharField(max_length=20)
     personalEmail = models.EmailField(unique=True)
     collegeEmail = models.EmailField(unique=True)
     dob = models.DateTimeField()
@@ -133,12 +159,12 @@ class Student(models.Model):
     dayScholar = models.BooleanField()
     fatherName = models.CharField(max_length=255)
     fatherOccupation = models.CharField(max_length=255, null=True, blank=True)
-    fatherAadhar = models.BigIntegerField(null=True, blank=True)
-    fatherNumber = models.BigIntegerField(null=True, blank=True)
+    fatherAadhar = models.CharField(max_length=12, null=True, blank=True)
+    fatherNumber = models.CharField(max_length=20, null=True, blank=True)
     motherName = models.CharField(max_length=255)
     motherOccupation = models.CharField(max_length=255, null=True, blank=True)
-    motherAadhar = models.BigIntegerField(null=True, blank=True)
-    motherNumber = models.BigIntegerField(null=True, blank=True)
+    motherAadhar = models.CharField(max_length=12, null=True, blank=True)
+    motherNumber = models.CharField(max_length=20, null=True, blank=True)
     gender = models.CharField(max_length=10, choices=Gender.choices)
     community = models.CharField(max_length=10, choices=Community.choices)
     xMarks = models.IntegerField()
@@ -148,35 +174,55 @@ class Student(models.Model):
     status = models.CharField(max_length=20, choices=StudentStatus.choices, default=StudentStatus.PURSUING)
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
-    # current mentor reference (nullable)
-    currentMentorId = models.CharField(max_length=40, null=True, blank=True)
+    
+    @property
+    def current_mentor(self):
+        """Returns the current active mentorship"""
+        mentorship = self.mentorships.filter(is_active=True).first()
+        return mentorship.faculty if mentorship else None
+    
+    @property
+    def past_mentors(self):
+        """Returns all past mentors"""
+        return Faculty.objects.filter(mentorships__student=self, mentorships__is_active=False).distinct()
+    
     class Meta:
         db_table = 'students'
 
 
-class Mentor(models.Model):
-    id = models.CharField(primary_key=True, max_length=40)
+class Mentorship(models.Model):
+    """Through table for Faculty-Student mentorship relationships"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='mentorships', db_column='facultyId')
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='mentors', db_column='studentId')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='mentorships', db_column='studentId')
+    department = models.CharField(max_length=255)  # Department for this mentorship
     year = models.IntegerField()
     semester = models.IntegerField()
-    startDate = models.DateTimeField()
-    endDate = models.DateTimeField(null=True, blank=True)
-    isActive = models.BooleanField(default=True)
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
     comments = ArrayField(models.TextField(), default=list, blank=True)
-    createdAt = models.DateTimeField(auto_now_add=True)
-    updatedAt = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
     class Meta:
-        db_table = 'mentors'
+        db_table = 'mentorships'
+        unique_together = [['faculty', 'student', 'year', 'semester']]
+        indexes = [
+            models.Index(fields=['faculty', 'is_active']),
+            models.Index(fields=['student', 'is_active']),
+            models.Index(fields=['department']),
+        ]
 
 
 class Meeting(models.Model):
-    id = models.CharField(primary_key=True, max_length=40)
-    mentor = models.ForeignKey(Mentor, on_delete=models.CASCADE, related_name='meetings', db_column='mentorId')
-    date = models.DateTimeField()
-    time = models.CharField(max_length=50)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    mentorship = models.ForeignKey(Mentorship, on_delete=models.CASCADE, related_name='meetings', db_column='mentorshipId', null=True, blank=True)
+    date = models.DateField()
+    time = models.TimeField()
     description = models.TextField(null=True, blank=True)
     facultyReview = models.TextField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=MeetingStatus.choices, default=MeetingStatus.UPCOMING)
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
     class Meta:
@@ -184,7 +230,7 @@ class Meeting(models.Model):
 
 
 class Internship(models.Model):
-    id = models.CharField(primary_key=True, max_length=40)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     semester = models.IntegerField()
     type = models.CharField(max_length=255)
     organisation = models.CharField(max_length=255)
@@ -197,19 +243,19 @@ class Internship(models.Model):
 
 
 class Project(models.Model):
-    id = models.CharField(primary_key=True, max_length=40)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     semester = models.IntegerField()
     title = models.CharField(max_length=255)
     description = models.TextField()
     technologies = ArrayField(models.CharField(max_length=100), default=list, blank=True)
-    mentor = models.CharField(max_length=255)
+    mentor = models.ForeignKey(Faculty, on_delete=models.SET_NULL, null=True, related_name='projects_mentored')
     students = models.ManyToManyField(Student, related_name='projects')
     class Meta:
         db_table = 'projects'
 
 
 class CoCurricular(models.Model):
-    id = models.CharField(primary_key=True, max_length=40)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     sem = models.IntegerField()
     date = models.DateTimeField()
     eventDetails = models.TextField()
@@ -220,28 +266,45 @@ class CoCurricular(models.Model):
         db_table = 'co_curriculars'
 
 
-class Semester(models.Model):
-    id = models.CharField(primary_key=True, max_length=40)
-    semester = models.IntegerField()
-    sgpa = models.FloatField()
-    cgpa = models.FloatField()
-    students = models.ManyToManyField(Student, related_name='semesters')
-    subjects = models.ManyToManyField('Subject', related_name='semesters')
-    class Meta:
-        db_table = 'semesters'
-
-
 class Subject(models.Model):
-    id = models.CharField(primary_key=True, max_length=40)
+    """Subject master table - contains subject info without grade"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     subjectName = models.CharField(max_length=255)
-    subjectCode = models.CharField(max_length=50)
-    grade = models.CharField(max_length=10)
+    subjectCode = models.CharField(max_length=50, unique=True)
+    credits = models.IntegerField(default=3)
     class Meta:
         db_table = 'subjects'
 
 
+class Semester(models.Model):
+    """Semester record for a student"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='semesters', null=True, blank=True)
+    semester = models.IntegerField()
+    sgpa = models.FloatField()
+    cgpa = models.FloatField()
+    class Meta:
+        db_table = 'semesters'
+        unique_together = [['student', 'semester']]
+
+
+class StudentSubject(models.Model):
+    """Through table for Student-Subject-Semester with grade"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='subject_grades')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='student_grades')
+    semester = models.ForeignKey(Semester, on_delete=models.CASCADE, related_name='subject_grades')
+    grade = models.CharField(max_length=5)  # Grade belongs to student+subject+semester
+    class Meta:
+        db_table = 'student_subjects'
+        unique_together = [['student', 'subject', 'semester']]
+        indexes = [
+            models.Index(fields=['student', 'semester']),
+        ]
+
+
 class CareerDetails(models.Model):
-    id = models.CharField(primary_key=True, max_length=40)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.OneToOneField(Student, on_delete=models.CASCADE, related_name='careerDetails', db_column='studentId')
     hobbies = ArrayField(models.CharField(max_length=255), default=list, blank=True)
     strengths = ArrayField(models.CharField(max_length=255), default=list, blank=True)
@@ -257,7 +320,7 @@ class CareerDetails(models.Model):
 
 
 class PersonalProblem(models.Model):
-    id = models.CharField(primary_key=True, max_length=40)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.OneToOneField(Student, on_delete=models.CASCADE, related_name='personalProblem', db_column='studentId')
     stress = models.BooleanField(null=True, blank=True)
     anger = models.BooleanField(null=True, blank=True)
@@ -271,14 +334,24 @@ class PersonalProblem(models.Model):
 
 
 class Request(models.Model):
-    id = models.CharField(primary_key=True, max_length=40)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='requests', db_column='studentId')
+    # Faculty assigned to handle/review this request
+    assigned_to = models.ForeignKey('Faculty', on_delete=models.SET_NULL, null=True, blank=True, 
+                                     related_name='requests', db_column='assignedToId')
     type = models.CharField(max_length=50, choices=RequestType.choices)
-    targetId = models.CharField(max_length=255)
+    # Generic foreign key for polymorphic target (Internship, Project, etc.)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.UUIDField(null=True, blank=True)
+    target = GenericForeignKey('content_type', 'object_id')
     status = models.CharField(max_length=20, choices=RequestStatus.choices, default=RequestStatus.PENDING)
     remarks = models.TextField(null=True, blank=True)
     feedback = models.TextField(null=True, blank=True)
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
+    
     class Meta:
         db_table = 'requests'
+        indexes = [
+            models.Index(fields=['content_type', 'object_id']),
+        ]
