@@ -217,7 +217,7 @@ class Mentorship(models.Model):
 
 class Meeting(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    mentorship = models.ForeignKey(Mentorship, on_delete=models.CASCADE, related_name='meetings', db_column='mentorshipId', null=True, blank=True)
+    mentorship = models.ForeignKey(Mentorship, on_delete=models.CASCADE, related_name='meetings', db_column='mentorshipId')
     date = models.DateField()
     time = models.TimeField()
     description = models.TextField(null=True, blank=True)
@@ -279,7 +279,7 @@ class Subject(models.Model):
 class Semester(models.Model):
     """Semester record for a student"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='semesters', null=True, blank=True)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='semesters')
     semester = models.IntegerField()
     sgpa = models.FloatField()
     cgpa = models.FloatField()
