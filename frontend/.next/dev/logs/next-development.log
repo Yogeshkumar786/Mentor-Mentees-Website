@@ -1,0 +1,537 @@
+[00:00:03.736] Server  WARN     ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+[00:00:04.107] Server  LOG      ✓ Ready in 2.4s
+[00:00:18.344] Server  LOG      ○ Compiling / ...
+[00:00:20.150] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:21.373] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:00:21.374] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/","route":"/"}
+[00:00:21.374] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/ color: rgb(120, 120, 120) color: inherit {"dp":"/","o":"http://localhost:3001/","r":"","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767199382212}
+[00:00:22.387] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/login color: rgb(120, 120, 120) color: inherit {"dp":"/login","o":"http://localhost:3001/login","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767199383410}
+[00:04:48.312] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/dashboard color: rgb(120, 120, 120) color: inherit {"dp":"/dashboard","o":"http://localhost:3001/dashboard","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767199649942}
+[00:04:56.742] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/login color: rgb(120, 120, 120) color: inherit {"dp":"/login","o":"http://localhost:3001/login","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767199658375}
+[00:05:08.377] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/dashboard color: rgb(120, 120, 120) color: inherit {"dp":"/dashboard","o":"http://localhost:3001/dashboard","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767199669297}
+[00:05:12.007] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:05:12.154] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:05:12.155] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/dashboard/student/mentor","route":"/dashboard/student/mentor"}
+[00:05:12.155] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/dashboard/student/mentor color: rgb(120, 120, 120) color: inherit {"dp":"/dashboard/student/mentor","o":"http://localhost:3001/dashboard/student/mentor","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767199673791}
+[00:05:13.790] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:05:13.965] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:05:13.965] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/dashboard","route":"/dashboard"}
+[00:05:13.965] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/dashboard color: rgb(120, 120, 120) color: inherit {"dp":"/dashboard","o":"http://localhost:3001/dashboard","r":"","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767199675600}
+[00:13:32.994] Server  LOG      ✓ Compiled in 565ms
+[00:13:34.430] Server  LOG      ✓ Compiled in 626ms
+[00:14:00.450] Server  LOG      ✓ Compiled in 537ms
+[00:14:02.002] Server  LOG      ✓ Compiled in 1071ms
+[00:14:03.386] Browser ERROR   ./app/dashboard/page.tsx:5:1
+Export AdminDashboard doesn't exist in target module
+  3 | import { DashboardLayout } from "@/components/dashboard-layout"
+  4 | import { useAuth } from "@/components/auth-provider"
+> 5 | import { AdminDashboard, HODDashboard, FacultyDashboard, StudentDashboard } from "@/components/dashboards"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Loader2 } from "lucide-react"
+  7 |
+  8 | export default function DashboardPage() {
+
+The export AdminDashboard was not found in module [project]/components/dashboards/index.ts [app-client] (ecmascript).
+The module has no exports at all.
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:14:03.386] Browser ERROR   ./app/dashboard/page.tsx:5:1
+Export AdminDashboard doesn't exist in target module
+  3 | import { DashboardLayout } from "@/components/dashboard-layout"
+  4 | import { useAuth } from "@/components/auth-provider"
+> 5 | import { AdminDashboard, HODDashboard, FacultyDashboard, StudentDashboard } from "@/components/dashboards"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Loader2 } from "lucide-react"
+  7 |
+  8 | export default function DashboardPage() {
+
+The export AdminDashboard was not found in module [project]/components/dashboards/index.ts [app-ssr] (ecmascript).
+The module has no exports at all.
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:14:03.387] Browser ERROR   ./app/dashboard/page.tsx:5:1
+Export FacultyDashboard doesn't exist in target module
+  3 | import { DashboardLayout } from "@/components/dashboard-layout"
+  4 | import { useAuth } from "@/components/auth-provider"
+> 5 | import { AdminDashboard, HODDashboard, FacultyDashboard, StudentDashboard } from "@/components/dashboards"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Loader2 } from "lucide-react"
+  7 |
+  8 | export default function DashboardPage() {
+
+The export FacultyDashboard was not found in module [project]/components/dashboards/index.ts [app-client] (ecmascript).
+The module has no exports at all.
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:14:03.387] Browser ERROR   ./app/dashboard/page.tsx:5:1
+Export FacultyDashboard doesn't exist in target module
+  3 | import { DashboardLayout } from "@/components/dashboard-layout"
+  4 | import { useAuth } from "@/components/auth-provider"
+> 5 | import { AdminDashboard, HODDashboard, FacultyDashboard, StudentDashboard } from "@/components/dashboards"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Loader2 } from "lucide-react"
+  7 |
+  8 | export default function DashboardPage() {
+
+The export FacultyDashboard was not found in module [project]/components/dashboards/index.ts [app-ssr] (ecmascript).
+The module has no exports at all.
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:14:03.387] Browser ERROR   ./app/dashboard/page.tsx:5:1
+Export HODDashboard doesn't exist in target module
+  3 | import { DashboardLayout } from "@/components/dashboard-layout"
+  4 | import { useAuth } from "@/components/auth-provider"
+> 5 | import { AdminDashboard, HODDashboard, FacultyDashboard, StudentDashboard } from "@/components/dashboards"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Loader2 } from "lucide-react"
+  7 |
+  8 | export default function DashboardPage() {
+
+The export HODDashboard was not found in module [project]/components/dashboards/index.ts [app-client] (ecmascript).
+The module has no exports at all.
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:14:03.387] Browser ERROR   ./app/dashboard/page.tsx:5:1
+Export HODDashboard doesn't exist in target module
+  3 | import { DashboardLayout } from "@/components/dashboard-layout"
+  4 | import { useAuth } from "@/components/auth-provider"
+> 5 | import { AdminDashboard, HODDashboard, FacultyDashboard, StudentDashboard } from "@/components/dashboards"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Loader2 } from "lucide-react"
+  7 |
+  8 | export default function DashboardPage() {
+
+The export HODDashboard was not found in module [project]/components/dashboards/index.ts [app-ssr] (ecmascript).
+The module has no exports at all.
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:14:03.387] Browser ERROR   ./app/dashboard/page.tsx:5:1
+Export StudentDashboard doesn't exist in target module
+  3 | import { DashboardLayout } from "@/components/dashboard-layout"
+  4 | import { useAuth } from "@/components/auth-provider"
+> 5 | import { AdminDashboard, HODDashboard, FacultyDashboard, StudentDashboard } from "@/components/dashboards"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Loader2 } from "lucide-react"
+  7 |
+  8 | export default function DashboardPage() {
+
+The export StudentDashboard was not found in module [project]/components/dashboards/index.ts [app-client] (ecmascript).
+The module has no exports at all.
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:14:03.387] Browser ERROR   ./app/dashboard/page.tsx:5:1
+Export StudentDashboard doesn't exist in target module
+  3 | import { DashboardLayout } from "@/components/dashboard-layout"
+  4 | import { useAuth } from "@/components/auth-provider"
+> 5 | import { AdminDashboard, HODDashboard, FacultyDashboard, StudentDashboard } from "@/components/dashboards"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Loader2 } from "lucide-react"
+  7 |
+  8 | export default function DashboardPage() {
+
+The export StudentDashboard was not found in module [project]/components/dashboards/index.ts [app-ssr] (ecmascript).
+The module has no exports at all.
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:14:03.387] Browser ERROR   ./app/dashboard/page.tsx:5:1
+Export AdminDashboard doesn't exist in target module
+  3 | import { DashboardLayout } from "@/components/dashboard-layout"
+  4 | import { useAuth } from "@/components/auth-provider"
+> 5 | import { AdminDashboard, HODDashboard, FacultyDashboard, StudentDashboard } from "@/components/dashboards"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Loader2 } from "lucide-react"
+  7 |
+  8 | export default function DashboardPage() {
+
+The export AdminDashboard was not found in module [project]/components/dashboards/index.ts [app-client] (ecmascript).
+The module has no exports at all.
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:14:03.387] Browser ERROR   ./app/dashboard/page.tsx:5:1
+Export AdminDashboard doesn't exist in target module
+  3 | import { DashboardLayout } from "@/components/dashboard-layout"
+  4 | import { useAuth } from "@/components/auth-provider"
+> 5 | import { AdminDashboard, HODDashboard, FacultyDashboard, StudentDashboard } from "@/components/dashboards"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Loader2 } from "lucide-react"
+  7 |
+  8 | export default function DashboardPage() {
+
+The export AdminDashboard was not found in module [project]/components/dashboards/index.ts [app-ssr] (ecmascript).
+The module has no exports at all.
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:14:03.387] Browser ERROR   ./app/dashboard/page.tsx:5:1
+Export FacultyDashboard doesn't exist in target module
+  3 | import { DashboardLayout } from "@/components/dashboard-layout"
+  4 | import { useAuth } from "@/components/auth-provider"
+> 5 | import { AdminDashboard, HODDashboard, FacultyDashboard, StudentDashboard } from "@/components/dashboards"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Loader2 } from "lucide-react"
+  7 |
+  8 | export default function DashboardPage() {
+
+The export FacultyDashboard was not found in module [project]/components/dashboards/index.ts [app-client] (ecmascript).
+The module has no exports at all.
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:14:03.387] Browser ERROR   ./app/dashboard/page.tsx:5:1
+Export FacultyDashboard doesn't exist in target module
+  3 | import { DashboardLayout } from "@/components/dashboard-layout"
+  4 | import { useAuth } from "@/components/auth-provider"
+> 5 | import { AdminDashboard, HODDashboard, FacultyDashboard, StudentDashboard } from "@/components/dashboards"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Loader2 } from "lucide-react"
+  7 |
+  8 | export default function DashboardPage() {
+
+The export FacultyDashboard was not found in module [project]/components/dashboards/index.ts [app-ssr] (ecmascript).
+The module has no exports at all.
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:14:03.387] Browser ERROR   ./app/dashboard/page.tsx:5:1
+Export HODDashboard doesn't exist in target module
+  3 | import { DashboardLayout } from "@/components/dashboard-layout"
+  4 | import { useAuth } from "@/components/auth-provider"
+> 5 | import { AdminDashboard, HODDashboard, FacultyDashboard, StudentDashboard } from "@/components/dashboards"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Loader2 } from "lucide-react"
+  7 |
+  8 | export default function DashboardPage() {
+
+The export HODDashboard was not found in module [project]/components/dashboards/index.ts [app-client] (ecmascript).
+The module has no exports at all.
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:14:03.387] Browser ERROR   ./app/dashboard/page.tsx:5:1
+Export HODDashboard doesn't exist in target module
+  3 | import { DashboardLayout } from "@/components/dashboard-layout"
+  4 | import { useAuth } from "@/components/auth-provider"
+> 5 | import { AdminDashboard, HODDashboard, FacultyDashboard, StudentDashboard } from "@/components/dashboards"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Loader2 } from "lucide-react"
+  7 |
+  8 | export default function DashboardPage() {
+
+The export HODDashboard was not found in module [project]/components/dashboards/index.ts [app-ssr] (ecmascript).
+The module has no exports at all.
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:14:03.387] Browser ERROR   ./app/dashboard/page.tsx:5:1
+Export StudentDashboard doesn't exist in target module
+  3 | import { DashboardLayout } from "@/components/dashboard-layout"
+  4 | import { useAuth } from "@/components/auth-provider"
+> 5 | import { AdminDashboard, HODDashboard, FacultyDashboard, StudentDashboard } from "@/components/dashboards"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Loader2 } from "lucide-react"
+  7 |
+  8 | export default function DashboardPage() {
+
+The export StudentDashboard was not found in module [project]/components/dashboards/index.ts [app-client] (ecmascript).
+The module has no exports at all.
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:14:03.387] Browser ERROR   ./app/dashboard/page.tsx:5:1
+Export StudentDashboard doesn't exist in target module
+  3 | import { DashboardLayout } from "@/components/dashboard-layout"
+  4 | import { useAuth } from "@/components/auth-provider"
+> 5 | import { AdminDashboard, HODDashboard, FacultyDashboard, StudentDashboard } from "@/components/dashboards"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import { Loader2 } from "lucide-react"
+  7 |
+  8 | export default function DashboardPage() {
+
+The export StudentDashboard was not found in module [project]/components/dashboards/index.ts [app-ssr] (ecmascript).
+The module has no exports at all.
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:21:24.987] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./lib/api.ts changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+[00:21:24.990] Server  LOG      ✓ Compiled in 259ms
+[00:21:27.466] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:21:28.384] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:21:28.384] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/dashboard","route":"/dashboard"}
+[00:21:28.384] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/dashboard color: rgb(120, 120, 120) color: inherit {"dp":"/dashboard","o":"http://localhost:3001/dashboard","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767200649764}
+[00:25:22.002] Server  LOG      ✓ Compiled in 640ms
+[00:25:23.130] Server  LOG      ✓ Compiled in 510ms
+[00:25:24.207] Server  LOG      ✓ Compiled in 550ms
+[00:25:25.074] Server  LOG      ✓ Compiled in 535ms
+[00:25:26.541] Server  LOG      ✓ Compiled in 561ms
+[00:26:23.841] Server  LOG      ✓ Compiled in 214ms
+[00:26:28.520] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:26:28.732] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:26:28.732] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/dashboard/student/academics","route":"/dashboard/student/academics"}
+[00:26:28.732] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/dashboard/student/academics color: rgb(120, 120, 120) color: inherit {"dp":"/dashboard/student/academics","o":"http://localhost:3001/dashboard/student/academics","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767200950358}
+[00:26:31.676] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:26:32.238] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:26:32.238] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/dashboard","route":"/dashboard"}
+[00:26:32.238] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/dashboard color: rgb(120, 120, 120) color: inherit {"dp":"/dashboard","o":"http://localhost:3001/dashboard","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767200953860}
+[00:26:36.493] Server  LOG      ✓ Compiled in 390ms
+[00:27:02.613] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/dashboard/mentee/academic color: rgb(120, 120, 120) color: inherit {"dp":"/dashboard/mentee/academic","o":"http://localhost:3001/dashboard/mentee/academic","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767200984241}
+[00:32:19.784] Server  LOG      ✓ Compiled in 139ms
+[00:32:32.286] Server  LOG      ✓ Compiled in 174ms
+[00:33:17.953] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/internships color: rgb(120, 120, 120) color: inherit {"dp":"/internships","o":"http://localhost:3001/internships","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767201359587}
+[00:33:23.145] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/career-details color: rgb(120, 120, 120) color: inherit {"dp":"/career-details","o":"http://localhost:3001/career-details","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767201364775}
+[00:33:26.378] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/personal-problems color: rgb(120, 120, 120) color: inherit {"dp":"/personal-problems","o":"http://localhost:3001/personal-problems","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767201368013}
+[00:34:27.393] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/projects color: rgb(120, 120, 120) color: inherit {"dp":"/projects","o":"http://localhost:3001/projects","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767201429028}
+[00:34:30.182] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/career-details color: rgb(120, 120, 120) color: inherit {"dp":"/career-details","o":"http://localhost:3001/career-details","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767201431808}
+[00:34:32.691] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/academic color: rgb(120, 120, 120) color: inherit {"dp":"/academic","o":"http://localhost:3001/academic","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767201434327}
+[00:34:38.806] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:34:39.012] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:34:39.012] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/meetings","route":"/meetings"}
+[00:34:39.012] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/meetings color: rgb(120, 120, 120) color: inherit {"dp":"/meetings","o":"http://localhost:3001/meetings","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767201440649}
+[00:34:41.027] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:34:41.295] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:34:41.295] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/academic","route":"/academic"}
+[00:34:41.295] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/academic color: rgb(120, 120, 120) color: inherit {"dp":"/academic","o":"http://localhost:3001/academic","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767201442845}
+[00:34:42.661] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:34:42.780] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:34:42.780] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/meetings","route":"/meetings"}
+[00:34:42.780] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/meetings color: rgb(120, 120, 120) color: inherit {"dp":"/meetings","o":"http://localhost:3001/meetings","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767201444418}
+[00:34:43.278] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:34:43.419] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:34:43.419] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/academic","route":"/academic"}
+[00:34:43.419] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/academic color: rgb(120, 120, 120) color: inherit {"dp":"/academic","o":"http://localhost:3001/academic","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767201445056}
+[00:34:47.298] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:34:47.426] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:34:47.426] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/goals","route":"/goals"}
+[00:34:47.426] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/goals color: rgb(120, 120, 120) color: inherit {"dp":"/goals","o":"http://localhost:3001/goals","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767201449057}
+[00:42:30.121] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./lib/api.ts changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+[00:42:30.133] Server  LOG      ✓ Compiled in 150ms
+[00:42:32.372] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:42:33.388] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:42:33.388] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/goals","route":"/goals"}
+[00:42:33.388] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/goals color: rgb(120, 120, 120) color: inherit {"dp":"/goals","o":"http://localhost:3001/goals","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767201914658}
+[00:43:39.019] Server  LOG      ✓ Compiled in 1748ms
+[00:43:48.145] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:43:49.384] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:43:49.384] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/goals","route":"/goals"}
+[00:43:49.384] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/goals color: rgb(120, 120, 120) color: inherit {"dp":"/goals","o":"http://localhost:3001/goals","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767201990072}
+[00:45:41.686] Server  LOG      ✓ Compiled in 405ms
+[00:46:27.123] Server  LOG      ✓ Compiled in 477ms
+[00:47:15.695] Server  LOG      ✓ Compiled in 236ms
+[00:47:18.083] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:47:19.384] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:47:19.384] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/goals","route":"/goals"}
+[00:47:19.384] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/goals color: rgb(120, 120, 120) color: inherit {"dp":"/goals","o":"http://localhost:3001/goals","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767202200144}
+[00:47:28.641] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:47:29.384] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:47:29.384] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/goals","route":"/goals"}
+[00:47:29.384] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/goals color: rgb(120, 120, 120) color: inherit {"dp":"/goals","o":"http://localhost:3001/goals","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767202210743}
+[00:49:22.578] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:49:22.743] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:49:22.743] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/goals","route":"/goals"}
+[00:49:22.743] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/goals color: rgb(120, 120, 120) color: inherit {"dp":"/goals","o":"http://localhost:3001/goals","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767202324367}
+[00:49:25.723] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:49:26.029] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:49:26.029] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/academic","route":"/academic"}
+[00:49:26.029] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/academic color: rgb(120, 120, 120) color: inherit {"dp":"/academic","o":"http://localhost:3001/academic","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767202327594}
+[00:49:30.326] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/requests color: rgb(120, 120, 120) color: inherit {"dp":"/requests","o":"http://localhost:3001/requests","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767202331874}
+[00:49:31.821] Browser ERROR   uncaughtError: TypeError: Cannot read properties of null (reading 'title')
+[00:51:25.344] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[00:51:25.347] Server  LOG      ✓ Compiled in 369ms
+[00:51:26.460] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:51:27.375] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:51:27.375] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/requests","route":"/requests"}
+[00:51:27.375] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/requests color: rgb(120, 120, 120) color: inherit {"dp":"/requests","o":"http://localhost:3001/requests","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767202448380}
+[00:53:33.683] Server  LOG      ✓ Compiled in 543ms
+[00:54:07.902] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:54:08.056] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:54:08.056] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/settings","route":"/settings"}
+[00:54:08.056] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/settings color: rgb(120, 120, 120) color: inherit {"dp":"/settings","o":"http://localhost:3001/settings","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767202609693}
+[00:56:17.301] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:56:18.372] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:56:18.372] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/settings","route":"/settings"}
+[00:56:18.372] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/settings color: rgb(120, 120, 120) color: inherit {"dp":"/settings","o":"http://localhost:3001/settings","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767202739259}
+[00:57:11.099] Server  ERROR   D:\Mentor-Mentees-Website\new - frontend\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:57:11.182] Server  ERROR   D:\Mentor-Mentees-Website\new - frontend\.next\dev\server\chunks\ssr\node_modules_next_dist_9f522a21._.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:57:11.198] Server  ERROR   D:\Mentor-Mentees-Website\new - frontend\node_modules\next\dist\server\base-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:57:11.213] Server  ERROR   D:\Mentor-Mentees-Website\new - frontend\node_modules\next\dist\server\next-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:57:11.223] Server  ERROR   D:\Mentor-Mentees-Website\new - frontend\node_modules\next\dist\server\dev\next-dev-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:57:11.226] Server  ERROR   D:\Mentor-Mentees-Website\new - frontend\node_modules\next\dist\trace\trace.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:57:11.237] Server  ERROR   D:\Mentor-Mentees-Website\new - frontend\node_modules\next\dist\server\lib\router-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:57:11.243] Server  ERROR   D:\Mentor-Mentees-Website\new - frontend\node_modules\next\dist\server\lib\start-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:57:11.249] Server  ERROR    ⨯ Error: The default export is not a React Component in "/settings/page"
+[00:57:11.297] Server  ERROR   D:\Mentor-Mentees-Website\new - frontend\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.dev.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:57:11.303] Server  ERROR   D:\Mentor-Mentees-Website\new - frontend\.next\dev\server\chunks\ssr\node_modules_next_dist_9f522a21._.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:57:11.311] Server  ERROR   D:\Mentor-Mentees-Website\new - frontend\node_modules\next\dist\server\base-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:57:11.317] Server  ERROR   D:\Mentor-Mentees-Website\new - frontend\node_modules\next\dist\server\next-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:57:11.323] Server  ERROR   D:\Mentor-Mentees-Website\new - frontend\node_modules\next\dist\server\dev\next-dev-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:57:11.329] Server  ERROR   D:\Mentor-Mentees-Website\new - frontend\node_modules\next\dist\trace\trace.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:57:11.332] Server  ERROR   D:\Mentor-Mentees-Website\new - frontend\node_modules\next\dist\server\lib\router-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:57:11.334] Server  ERROR   D:\Mentor-Mentees-Website\new - frontend\node_modules\next\dist\server\lib\start-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:57:11.337] Server  ERROR    ⨯ Error: The default export is not a React Component in "/settings/page"
+[00:57:14.362] Server  LOG      ○ Compiling /_error ...
+[00:57:14.534] Server  LOG      ✓ Compiled in 3.1s
+[00:57:24.550] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:57:25.093] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:57:25.093] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/settings","route":"/settings"}
+[00:57:25.093] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/settings color: rgb(120, 120, 120) color: inherit {"dp":"/settings","o":"http://localhost:3001/settings","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767202806607}
+[00:57:33.826] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/dashboard color: rgb(120, 120, 120) color: inherit {"dp":"/dashboard","o":"http://localhost:3001/dashboard","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767202815454}
+[00:57:37.309] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:57:37.328] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:57:37.328] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/mentor","route":"/mentor"}
+[00:57:37.328] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/mentor color: rgb(120, 120, 120) color: inherit {"dp":"/mentor","o":"http://localhost:3001/mentor","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767202818965}
+[00:57:39.421] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:57:39.421] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[00:57:39.421] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/dashboard","route":"/dashboard"}
+[00:57:39.421] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/dashboard color: rgb(120, 120, 120) color: inherit {"dp":"/dashboard","o":"http://localhost:3001/dashboard","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767202821148}
+[01:00:06.038] Server  LOG      ✓ Compiled in 162ms
+[01:00:13.261] Server  LOG      ✓ Compiled in 372ms
+[01:01:45.517] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./lib/api.ts changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+[01:01:45.540] Server  LOG      ✓ Compiled in 183ms
+[01:01:47.031] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:01:48.375] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[01:01:48.375] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/dashboard","route":"/dashboard"}
+[01:01:48.375] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/dashboard color: rgb(120, 120, 120) color: inherit {"dp":"/dashboard","o":"http://localhost:3001/dashboard","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767203069032}
+[01:02:30.023] Server  LOG      ✓ Compiled in 190ms
+[01:03:22.970] Server  LOG      ✓ Compiled in 674ms
+[01:04:03.284] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/mentor color: rgb(120, 120, 120) color: inherit {"dp":"/mentor","o":"http://localhost:3001/mentor","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767203204918}
+[01:04:28.822] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:04:28.968] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[01:04:28.968] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/mentor","route":"/mentor"}
+[01:04:28.968] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/mentor color: rgb(120, 120, 120) color: inherit {"dp":"/mentor","o":"http://localhost:3001/mentor","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767203230605}
+[01:07:20.525] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:07:20.828] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[01:07:20.828] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/mentor","route":"/mentor"}
+[01:07:20.829] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/mentor color: rgb(120, 120, 120) color: inherit {"dp":"/mentor","o":"http://localhost:3001/mentor","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767203402458}
+[01:08:17.197] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/settings color: rgb(120, 120, 120) color: inherit {"dp":"/settings","o":"http://localhost:3001/settings","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767203458822}
+[01:09:43.946] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/mentor color: rgb(120, 120, 120) color: inherit {"dp":"/mentor","o":"http://localhost:3001/mentor","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767203545576}
+[01:09:53.522] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:09:53.667] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[01:09:53.667] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/mentor","route":"/mentor"}
+[01:09:53.667] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/mentor color: rgb(120, 120, 120) color: inherit {"dp":"/mentor","o":"http://localhost:3001/mentor","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767203555305}
+[01:13:09.904] Server  LOG      ✓ Compiled in 867ms
+[01:13:35.455] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[01:13:36.235] Browser LOG     %c[Vercel Web Analytics]%c Debug mode is enabled by default in development. No requests will be sent to the server. color: rgb(120, 120, 120) color: inherit
+[01:13:36.235] Browser LOG     %c[Vercel Web Analytics]%c Running queued event color: rgb(120, 120, 120) color: inherit pageview {"path":"/mentor","route":"/mentor"}
+[01:13:36.235] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/mentor color: rgb(120, 120, 120) color: inherit {"dp":"/mentor","o":"http://localhost:3001/mentor","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767203777864}
+[01:13:44.893] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/mentor/4272b5e1-be68-4906-b595-59477a815567 color: rgb(120, 120, 120) color: inherit {"dp":"/mentor/[mentorshipId]","o":"http://localhost:3001/mentor/4272b5e1-be68-4906-b595-59477a815567","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767203786523}
+[01:13:54.975] Browser LOG     %c[Vercel Web Analytics]%c [pageview] http://localhost:3001/mentor color: rgb(120, 120, 120) color: inherit {"dp":"/mentor","o":"http://localhost:3001/mentor","sdkn":"@vercel/analytics/next","sdkv":"1.3.1","sv":"0.1.3","ts":1767203796604}

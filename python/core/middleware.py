@@ -291,10 +291,10 @@ def require_admin(view_func):
     return wrapped_view
 
 
-def require_role(role):
+def require_role(*roles):
     """
     Decorator to require specific role(s) for a view
-    Usage: @require_role('HOD') or @require_role(['FACULTY', 'HOD', 'ADMIN'])
+    Usage: @require_role('HOD') or @require_role('FACULTY', 'HOD', 'ADMIN')
     """
     def decorator(view_func):
         def wrapped_view(request, *args, **kwargs):
@@ -306,8 +306,8 @@ def require_role(role):
             
             user_role = request.user_data.get('role')
             
-            # Support both single role string and list of roles
-            allowed_roles = role if isinstance(role, list) else [role]
+            # Support both single role and multiple roles passed as args
+            allowed_roles = list(roles)
             
             if user_role not in allowed_roles:
                 return JsonResponse(

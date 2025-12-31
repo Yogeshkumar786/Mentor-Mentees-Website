@@ -26,4 +26,22 @@ urlpatterns = [
     path('api/department/students', views.get_department_students, name='get_department_students'),
     path('api/faculty', views.get_faculty, name='get_faculty'),
     path('api/student/mentor-details', views.get_student_mentor_details, name='get_student_mentor_details'),
+    # Student APIs
+    path('api/student/about', views.get_student_about, name='get_student_about'),
+    path('api/student/career-details', views.get_student_career_details, name='get_student_career_details'),
+    path('api/student/internships', views.get_student_internships, name='get_student_internships'),
+    path('api/student/personal-problems', views.get_student_personal_problems, name='get_student_personal_problems'),
+    path('api/student/projects', views.get_student_projects, name='get_student_projects'),
+    path('api/student/academic', views.get_student_academic, name='get_student_academic'),
+    # Request APIs - Student
+    path('api/student/requests', views.get_student_requests, name='get_student_requests'),
+    path('api/student/internships/request', views.create_internship_request, name='create_internship_request'),
+    path('api/student/projects/request', views.create_project_request, name='create_project_request'),
+    # Request APIs - Faculty/HOD
+    path('api/faculty/requests/pending', views.get_pending_requests, name='get_pending_requests'),
+    path('api/requests/<uuid:request_id>/approve', views.approve_request, name='approve_request'),
+    path('api/requests/<uuid:request_id>/reject', views.reject_request, name='reject_request'),
+    # Mentor APIs - Student
+    path('api/student/mentors', views.get_student_mentors, name='get_student_mentors'),
+    path('api/student/mentorship/<uuid:mentorship_id>/meetings', views.get_mentorship_meetings, name='get_mentorship_meetings'),
 ]

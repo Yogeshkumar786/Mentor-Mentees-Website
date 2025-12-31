@@ -357,17 +357,19 @@ class PersonalProblem(models.Model):
 class Request(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='requests', db_column='studentId')
-    # Faculty assigned to handle/review this request
+    # Faculty assigned to handle/review this request (mentor)
     assigned_to = models.ForeignKey('Faculty', on_delete=models.SET_NULL, null=True, blank=True, 
-                                     related_name='requests', db_column='assignedToId')
+                                     related_name='assigned_requests', db_column='assignedToId')
     type = models.CharField(max_length=50, choices=RequestType.choices)
-    # Generic foreign key for polymorphic target (Internship, Project, etc.)
+    # Store request data as JSON for pending requests
+    request_data = models.JSONField(null=True, blank=True)
+    # Generic foreign key for polymorphic target (Internship, Project, etc.) - populated after approval
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
     object_id = models.UUIDField(null=True, blank=True)
     target = GenericForeignKey('content_type', 'object_id')
     status = models.CharField(max_length=20, choices=RequestStatus.choices, default=RequestStatus.PENDING)
-    remarks = models.TextField(null=True, blank=True)
-    feedback = models.TextField(null=True, blank=True)
+    remarks = models.TextField(null=True, blank=True)  # Student's remarks when submitting
+    feedback = models.TextField(null=True, blank=True)  # Mentor/HOD feedback when approving/rejecting
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
     
@@ -375,4 +377,6 @@ class Request(models.Model):
         db_table = 'requests'
         indexes = [
             models.Index(fields=['content_type', 'object_id']),
+            models.Index(fields=['student', 'status']),
+            models.Index(fields=['assigned_to', 'status']),
         ]
