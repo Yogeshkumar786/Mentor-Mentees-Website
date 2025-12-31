@@ -1,0 +1,112 @@
+================================================================================
+ALL USERS IN DATABASE
+================================================================================
+
+Total Users: 8
+
+================================================================================
+Email: admin@nitandhra.ac.in
+Role: ADMIN
+User ID: cmj9mdi350000ocx0h3vz6ht3
+Account Status: ACTIVE
+Created: 2025-12-17 06:17:31.601000
+
+Admin Details:
+  Name: Mr. Admin Singh
+  Employee ID: ADM001
+
+Password: [BCRYPT HASHED - Cannot retrieve original]
+Password Hash (first 60 chars): $2b$10$3Z6Vf.7wlY0U.4laYzg7s.c.0LK./TtRwBX0TTq3yzi79KYsbz2UC
+================================================================================
+Email: ramesh.sharma@nitandhra.ac.in
+Role: FACULTY
+User ID: cmj9mdija0002ocx0ohygn8v9
+Account Status: ACTIVE
+Created: 2025-12-17 06:17:32.183000
+
+Faculty Details:
+  Name: Dr. Ramesh Sharma
+  Employee ID: FAC001
+  Department: Computer Science
+
+Password: [BCRYPT HASHED - Cannot retrieve original]
+Password Hash (first 60 chars): $2b$10$3Z6Vf.7wlY0U.4laYzg7s.c.0LK./TtRwBX0TTq3yzi79KYsbz2UC
+================================================================================
+Email: priya.verma@nitandhra.ac.in
+Role: FACULTY
+User ID: cmj9mdix00004ocx0h7cne3w3
+Account Status: ACTIVE
+Created: 2025-12-17 06:17:32.676000
+
+Faculty Details:
+  Name: Dr. Priya Verma
+  Employee ID: FAC002
+  Department: Computer Science
+
+Password: [BCRYPT HASHED - Cannot retrieve original]
+Password Hash (first 60 chars): $2b$10$3Z6Vf.7wlY0U.4laYzg7s.c.0LK./TtRwBX0TTq3yzi79KYsbz2UC
+================================================================================
+Email: hod.cs@nitandhra.ac.in
+Role: HOD
+User ID: cmj9mdje90006ocx0t3iakyz7
+Account Status: ACTIVE
+Created: 2025-12-17 06:17:33.297000
+
+HOD Details:
+  Department: Computer Science
+  Name: Dr. Ramesh Sharma
+  Employee ID: FAC001
+
+Password: [BCRYPT HASHED - Cannot retrieve original]
+Password Hash (first 60 chars): $2b$10$3Z6Vf.7wlY0U.4laYzg7s.c.0LK./TtRwBX0TTq3yzi79KYsbz2UC
+================================================================================
+Email: 22001@student.nitandhra.ac.in
+Role: STUDENT
+User ID: cmj9mdjpu0009ocx06ia2t6ny
+Account Status: ACTIVE
+Created: 2025-12-17 06:17:33.714000
+
+Student Details:
+  Name: Rahul Kumar
+  Roll Number: 22001
+  Branch: Computer Science
+
+Password: [BCRYPT HASHED - Cannot retrieve original]
+Password Hash (first 60 chars): $2b$10$3Z6Vf.7wlY0U.4laYzg7s.c.0LK./TtRwBX0TTq3yzi79KYsbz2UC
+================================================================================
+Email: 22002@student.nitandhra.ac.in
+Role: STUDENT
+User ID: cmj9mdk1x000bocx0s4qj1isq
+Account Status: ACTIVE
+Created: 2025-12-17 06:17:34.150000
+
+Student Details:
+  Name: Priya Sharma
+  Roll Number: 22002
+  Branch: Computer Science
+
+Password: [BCRYPT HASHED - Cannot retrieve original]
+Password Hash (first 60 chars): $2b$10$3Z6Vf.7wlY0U.4laYzg7s.c.0LK./TtRwBX0TTq3yzi79KYsbz2UC
+================================================================================
+Email: test@example.com
+Role: STUDENT
+User ID: faa197d8-05f5-4917-b84e-aa9c0f194fcf
+Account Status: ACTIVE
+Created: 2025-12-20 14:23:23.841000
+
+Password: [BCRYPT HASHED - Cannot retrieve original]
+Password Hash (first 60 chars): $2b$12$m1ce8B3IOIOblo1UlgG8dOAWv6L7Wxh7PdASxYDW/I2AcpF0UzRpS
+================================================================================
+Email: admin@example.com
+Role: ADMIN
+User ID: d35b48ca-aa97-43f6-83ed-cadd94fc3023
+Account Status: ACTIVE
+Created: 2025-12-20 14:23:24.548000
+
+Password: [BCRYPT HASHED - Cannot retrieve original]
+Password Hash (first 60 chars): $2b$12$RYZACd9vGp5Mrq7Lk5NiW.4Z0FTcnbogWAKacU4DO0fbZX.FL8dAq
+
+================================================================================
+NOTE: Passwords are hashed with bcrypt and cannot be retrieved.
+Use the credentials from test scripts or reset passwords as needed.
+================================================================================

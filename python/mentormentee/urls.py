@@ -22,6 +22,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/', include('core.urls')),
     path('api/hod/assign-mentor', views.assign_mentor, name='assign_mentor'),
-    path('api/hod/assign-mentor-bulk', views.assign_mentor_bulk, name='assign_mentor_bulk'),
+    path('api/hod/schedule-meetings', views.schedule_meetings, name='schedule_meetings'),
+    path('api/department/students', views.get_department_students, name='get_department_students'),
+    path('api/faculty', views.get_faculty, name='get_faculty'),
     path('api/student/mentor-details', views.get_student_mentor_details, name='get_student_mentor_details'),
 ]

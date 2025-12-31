@@ -57,6 +57,23 @@ class AccountStatus(models.TextChoices):
     SUSPENDED = 'SUSPENDED'
 
 
+class Department(models.TextChoices):
+    CSE = 'CSE', 'Computer Science & Engineering'
+    ECE = 'ECE', 'Electronics & Communication Engineering'
+    EEE = 'EEE', 'Electrical & Electronics Engineering'
+    MECH = 'MECH', 'Mechanical Engineering'
+    CIVIL = 'CIVIL', 'Civil Engineering'
+    BIOTECH = 'BIO-TECH', 'Biotechnology'
+    MME = 'MME', 'Metallurgical & Materials Engineering'
+    CHEM = 'CHEM', 'Chemical Engineering'
+
+
+class Programme(models.TextChoices):
+    BTECH = 'B.Tech', 'Bachelor of Technology'
+    MTECH = 'M.Tech', 'Master of Technology'
+    PHD = 'PhD', 'Doctor of Philosophy'
+
+
 # --- Models ---
 class User(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -83,7 +100,10 @@ class Faculty(models.Model):
     phone2 = models.CharField(max_length=20, null=True, blank=True)
     personalEmail = models.EmailField(unique=True)
     collegeEmail = models.EmailField(unique=True)
-    department = models.CharField(max_length=255)
+    department = models.CharField(max_length=20, choices=Department.choices)
+    isActive = models.BooleanField(default=True)
+    startDate = models.DateTimeField(null=True, blank=True)
+    endDate = models.DateTimeField(null=True, blank=True)
     btech = models.CharField(max_length=255, null=True, blank=True)
     mtech = models.CharField(max_length=255, null=True, blank=True)
     phd = models.CharField(max_length=255, null=True, blank=True)
@@ -112,7 +132,7 @@ class HOD(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='hod', db_column='userId')
     faculty = models.OneToOneField(Faculty, on_delete=models.CASCADE, related_name='as_hod', db_column='facultyId')
-    department = models.CharField(max_length=255)
+    department = models.CharField(max_length=20, choices=Department.choices)
     startDate = models.DateTimeField()
     endDate = models.DateTimeField(null=True, blank=True)
     createdAt = models.DateTimeField(auto_now_add=True)
@@ -129,7 +149,7 @@ class Admin(models.Model):
     phone = models.CharField(max_length=50)
     personalEmail = models.EmailField(unique=True)
     collegeEmail = models.EmailField(unique=True)
-    department = models.CharField(max_length=255, null=True, blank=True)
+    department = models.CharField(max_length=20, choices=Department.choices, null=True, blank=True)
     designation = models.CharField(max_length=255)
     office = models.CharField(max_length=255, null=True, blank=True)
     createdAt = models.DateTimeField(auto_now_add=True)
@@ -153,8 +173,9 @@ class Student(models.Model):
     collegeEmail = models.EmailField(unique=True)
     dob = models.DateTimeField()
     address = models.TextField()
-    program = models.CharField(max_length=255)
-    branch = models.CharField(max_length=255)
+    program = models.CharField(max_length=20, choices=Programme.choices)
+    branch = models.CharField(max_length=20, choices=Department.choices)
+    year = models.IntegerField(default=1)  # Year of study: 1, 2, 3, 4
     bloodGroup = models.CharField(max_length=10)
     dayScholar = models.BooleanField()
     fatherName = models.CharField(max_length=255)
@@ -195,7 +216,7 @@ class Mentorship(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='mentorships', db_column='facultyId')
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='mentorships', db_column='studentId')
-    department = models.CharField(max_length=255)  # Department for this mentorship
+    department = models.CharField(max_length=20, choices=Department.choices)
     year = models.IntegerField()
     semester = models.IntegerField()
     start_date = models.DateTimeField()

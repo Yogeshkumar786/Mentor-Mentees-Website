@@ -300,8 +300,327 @@ const addFaculty = TryCatch(async (req: AuthenticatedRequest, res: Response) => 
   }
 });
 
+const assignMentor = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
+  const { 
+    studentRollNumber, 
+    facultyEmployeeId,
+    year,
+    semester
+  } = req.body;
+
+  // Get hodId from authenticated user
+  const hodId = req.user?.id;
+  if (!hodId) {
+    return res.status(401).json({ message: "User not authenticated" });
+  }
+
+  // Validate required fields
+  if (!studentRollNumber || !facultyEmployeeId || !year || !semester) {
+    return res.status(400).json({ 
+      message: "Missing required fields: studentRollNumber, facultyEmployeeId, year, semester" 
+    });
+  }
+
+  // Find the student by roll number
+  const student = await prisma.student.findUnique({
+    where: { rollNumber: parseInt(studentRollNumber) },
+    select: {
+      id: true,
+      name: true,
+      rollNumber: true,
+      branch: true,
+      currentMentorId: true,
+      currentMentor: {
+        select: {
+          faculty: {
+            select: { name: true }
+          }
+        }
+      }
+    }
+  });
+
+  if (!student) {
+    return res.status(404).json({ message: "Student not found with the provided roll number" });
+  }
+
+  // Find the faculty by employee ID
+  const faculty = await prisma.faculty.findUnique({
+    where: { employeeId: facultyEmployeeId },
+    select: {
+      id: true,
+      name: true,
+      employeeId: true,
+      department: true
+    }
+  });
+
+  if (!faculty) {
+    return res.status(404).json({ message: "Faculty not found with the provided employee ID" });
+  }
+
+  // Verify that the HOD is authorized for this department
+  const hod = await prisma.hOD.findFirst({
+    where: {
+      id: hodId,
+      department: faculty.department,
+      endDate: null // Only active HODs
+    },
+    include: {
+      faculty: {
+        select: { name: true, department: true }
+      }
+    }
+  });
+
+  if (!hod) {
+    return res.status(403).json({ 
+      message: `You are not authorized to assign mentors in the ${faculty.department} department` 
+    });
+  }
+
+  // If student already has an active mentor, deactivate it and add to past mentors
+  if (student.currentMentorId) {
+    await prisma.mentor.update({
+      where: { id: student.currentMentorId },
+      data: {
+        isActive: false,
+        endDate: new Date(),
+        pastStudents: {
+          connect: { id: student.id }
+        }
+      }
+    });
+  }
+
+  // Create new mentor assignment
+  const mentorAssignment = await prisma.mentor.create({
+    data: {
+      facultyId: faculty.id,
+      studentId: student.id,
+      year: parseInt(year),
+      semester: parseInt(semester),
+      isActive: true,
+      startDate: new Date()
+    },
+    include: {
+      faculty: {
+        select: {
+          id: true,
+          name: true,
+          employeeId: true,
+          department: true,
+          collegeEmail: true
+        }
+      }
+    }
+  });
+
+  // Update student's currentMentorId
+  await prisma.student.update({
+    where: { id: student.id },
+    data: { currentMentorId: mentorAssignment.id }
+  });
+
+  return res.status(201).json({
+    message: "Mentor assigned successfully",
+    assignment: {
+      id: mentorAssignment.id,
+      student: {
+        name: student.name,
+        rollNumber: student.rollNumber,
+        branch: student.branch
+      },
+      mentor: {
+        name: faculty.name,
+        employeeId: faculty.employeeId,
+        department: faculty.department
+      },
+      year: mentorAssignment.year,
+      semester: mentorAssignment.semester,
+      startDate: mentorAssignment.startDate,
+      assignedBy: hod.faculty.name
+    },
+    previousMentor: student.currentMentor ? student.currentMentor.faculty.name : null
+  });
+});
+
+const assignMentorToMultipleStudents = TryCatch(async (req: AuthenticatedRequest, res: Response) => {
+  const { 
+    studentRollNumbers, 
+    facultyEmployeeId,
+    year,
+    semester
+  } = req.body;
+
+  // Get hodId from authenticated user
+  const hodId = req.user?.id;
+  if (!hodId) {
+    return res.status(401).json({ message: "User not authenticated" });
+  }
+
+  // Validate required fields
+  if (!studentRollNumbers || !Array.isArray(studentRollNumbers) || studentRollNumbers.length === 0) {
+    return res.status(400).json({ 
+      message: "studentRollNumbers must be a non-empty array" 
+    });
+  }
+
+  if (!facultyEmployeeId || !year || !semester) {
+    return res.status(400).json({ 
+      message: "Missing required fields: facultyEmployeeId, year, semester" 
+    });
+  }
+
+  // Find the faculty by employee ID
+  const faculty = await prisma.faculty.findUnique({
+    where: { employeeId: facultyEmployeeId },
+    select: {
+      id: true,
+      name: true,
+      employeeId: true,
+      department: true
+    }
+  });
+
+  if (!faculty) {
+    return res.status(404).json({ message: "Faculty not found with the provided employee ID" });
+  }
+
+  // Verify that the HOD is authorized for this department
+  const hod = await prisma.hOD.findFirst({
+    where: {
+      id: hodId,
+      department: faculty.department,
+      endDate: null // Only active HODs
+    },
+    include: {
+      faculty: {
+        select: { name: true, department: true }
+      }
+    }
+  });
+
+  if (!hod) {
+    return res.status(403).json({ 
+      message: `You are not authorized to assign mentors in the ${faculty.department} department` 
+    });
+  }
+
+  // Process each student
+  const results = {
+    successful: [] as any[],
+    failed: [] as any[]
+  };
+
+  for (const rollNumber of studentRollNumbers) {
+    try {
+      // Find the student by roll number
+      const student = await prisma.student.findUnique({
+        where: { rollNumber: parseInt(rollNumber) },
+        select: {
+          id: true,
+          name: true,
+          rollNumber: true,
+          branch: true,
+          currentMentorId: true,
+          currentMentor: {
+            select: {
+              id: true,
+              faculty: {
+                select: { name: true }
+              }
+            }
+          }
+        }
+      });
+
+      if (!student) {
+        results.failed.push({
+          rollNumber,
+          reason: "Student not found"
+        });
+        continue;
+      }
+
+      // If student already has an active mentor, deactivate it and add to past mentors
+      let previousMentorName = null;
+      if (student.currentMentorId && student.currentMentor) {
+        // Deactivate current mentor and add to past mentors
+        await prisma.mentor.update({
+          where: { id: student.currentMentorId },
+          data: {
+            isActive: false,
+            endDate: new Date(),
+            pastStudents: {
+              connect: { id: student.id }
+            }
+          }
+        });
+        
+        previousMentorName = student.currentMentor.faculty.name;
+      }
+
+      // Create new mentor assignment
+      const mentorAssignment = await prisma.mentor.create({
+        data: {
+          facultyId: faculty.id,
+          studentId: student.id,
+          year: parseInt(year),
+          semester: parseInt(semester),
+          isActive: true,
+          startDate: new Date()
+        }
+      });
+
+      // Update student's currentMentorId
+      await prisma.student.update({
+        where: { id: student.id },
+        data: { currentMentorId: mentorAssignment.id }
+      });
+
+      results.successful.push({
+        student: {
+          name: student.name,
+          rollNumber: student.rollNumber,
+          branch: student.branch
+        },
+        previousMentor: previousMentorName,
+        newMentorAssignmentId: mentorAssignment.id
+      });
+
+    } catch (error) {
+      results.failed.push({
+        rollNumber,
+        reason: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  }
+
+  return res.status(201).json({
+    message: `Assigned ${results.successful.length} student(s) to ${faculty.name}`,
+    mentor: {
+      name: faculty.name,
+      employeeId: faculty.employeeId,
+      department: faculty.department
+    },
+    year: parseInt(year),
+    semester: parseInt(semester),
+    assignedBy: hod.faculty.name,
+    results: {
+      successful: results.successful,
+      failed: results.failed,
+      totalProcessed: studentRollNumbers.length,
+      successCount: results.successful.length,
+      failedCount: results.failed.length
+    }
+  });
+});
+
 export default { 
   createNewMeeting, 
   addReview,
-  addFaculty
+  addFaculty,
+  assignMentor,
+  assignMentorToMultipleStudents
 };

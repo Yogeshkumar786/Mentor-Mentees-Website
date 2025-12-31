@@ -293,8 +293,8 @@ def require_admin(view_func):
 
 def require_role(role):
     """
-    Decorator to require specific role for a view
-    Usage: @require_role('HOD') or @require_role('FACULTY')
+    Decorator to require specific role(s) for a view
+    Usage: @require_role('HOD') or @require_role(['FACULTY', 'HOD', 'ADMIN'])
     """
     def decorator(view_func):
         def wrapped_view(request, *args, **kwargs):
@@ -305,9 +305,13 @@ def require_role(role):
                 )
             
             user_role = request.user_data.get('role')
-            if user_role != role:
+            
+            # Support both single role string and list of roles
+            allowed_roles = role if isinstance(role, list) else [role]
+            
+            if user_role not in allowed_roles:
                 return JsonResponse(
-                    {'message': f'Unauthorized - {role} access required'},
+                    {'message': f'Unauthorized - {allowed_roles} access required'},
                     status=403
                 )
             
