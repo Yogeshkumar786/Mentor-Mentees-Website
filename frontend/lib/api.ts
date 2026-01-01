@@ -338,6 +338,489 @@ export interface MentorshipMeetingsResponse {
   }
 }
 
+// Department Students Types
+export interface DepartmentStudent {
+  id: string
+  name: string
+  rollNumber: number
+  registrationNumber: number
+  email: string
+  collegeEmail: string | null
+  program: string
+  branch: string
+  year: number
+  phoneNumber: string | null
+  gender: string | null
+  status: string
+}
+
+export interface DepartmentStudentsResponse {
+  message: string
+  department: string
+  filters: {
+    year: number | 'all'
+    programme: string | 'all'
+  }
+  count: number
+  students: DepartmentStudent[]
+}
+
+// Faculty List Types
+export interface FacultyMember {
+  id: string
+  employeeId: string
+  name: string
+  email: string
+  collegeEmail: string | null
+  personalEmail: string | null
+  phone1: string | null
+  phone2: string | null
+  department: string
+  isActive: boolean
+  startDate: string | null
+  endDate: string | null
+  office: string | null
+  officeHours: string | null
+  btech: boolean
+  mtech: boolean
+  phd: boolean
+  currentMenteeCount: number
+}
+
+export interface FacultyListResponse {
+  message: string
+  department?: string
+  count: number
+  faculty: FacultyMember[]
+}
+
+// HOD Management Types
+export interface HODMember {
+  id: string
+  userId: string
+  facultyId: string
+  department: string
+  name: string
+  email: string
+  collegeEmail: string | null
+  phone: string | null
+  startDate: string | null
+  endDate: string | null
+  isActive: boolean
+}
+
+export interface HODListResponse {
+  message: string
+  count: number
+  hods: HODMember[]
+}
+
+export interface AssignHODRequest {
+  facultyId: string
+  department: string
+}
+
+export interface AssignHODResponse {
+  message: string
+  hod: {
+    id: string
+    facultyId: string
+    name: string
+    email: string
+    department: string
+    startDate: string
+  }
+  previousHod?: string
+}
+
+export interface RemoveHODResponse {
+  message: string
+  hod: {
+    id: string
+    name: string
+    department: string
+    endDate: string
+  }
+}
+
+// HOD Mentorship Management Types
+export interface MenteeData {
+  mentorshipId: string
+  studentId: string
+  name: string
+  rollNumber: number
+  registrationNumber: number
+  email: string | null
+  program: string
+  branch: string
+  year: number
+  semester: number
+  startDate: string | null
+  endDate: string | null
+  isActive: boolean
+}
+
+export interface FacultyMentorshipData {
+  facultyId: string
+  facultyName: string
+  facultyEmail: string
+  employeeId: string
+  activeMenteeCount: number
+  totalMenteeCount: number
+  currentMentees: MenteeData[]
+  pastMentees: MenteeData[]
+}
+
+export interface UnassignedStudent {
+  id: string
+  name: string
+  rollNumber: number
+  registrationNumber: number
+  email: string | null
+  program: string
+  branch: string
+  year: number
+}
+
+export interface HODMentorshipsStats {
+  totalStudents: number
+  assignedStudents: number
+  unassignedStudents: number
+  totalFaculty: number
+  activeMentors: number
+}
+
+export interface HODMentorshipsResponse {
+  department: string
+  stats: HODMentorshipsStats
+  mentorshipsByFaculty: FacultyMentorshipData[]
+  unassignedStudents: UnassignedStudent[]
+}
+
+export interface CreateMeetingRequest {
+  mentorshipId: string
+  date: string
+  time: string
+  description?: string
+}
+
+export interface CreateMeetingResponse {
+  message: string
+  meeting: {
+    id: string
+    date: string
+    time: string
+    description: string | null
+    status: string
+  }
+  mentorship: {
+    id: string
+    faculty: {
+      name: string
+      employeeId: string
+    }
+    student: {
+      name: string
+      rollNumber: number
+    }
+  }
+}
+
+export interface MentorshipDetailsResponse {
+  mentorshipId: string
+  isActive: boolean
+  year: number
+  semester: number
+  startDate: string | null
+  endDate: string | null
+  comments: string[]
+  faculty: {
+    id: string
+    name: string
+    employeeId: string
+    email: string | null
+    phone: string | null
+    department: string
+  }
+  student: {
+    id: string
+    name: string
+    rollNumber: number
+    registrationNumber: number
+    email: string | null
+    program: string
+    branch: string
+    year: number
+  }
+  meetings: MeetingData[]
+  meetingStats: {
+    total: number
+    completed: number
+    upcoming: number
+    yetToDone: number
+  }
+}
+
+export interface AssignMentorRequest {
+  studentRollNumbers: number[]
+  facultyEmployeeId: string
+  year: number
+  semester: number
+  comments?: string[]
+}
+
+export interface AssignMentorResponse {
+  message: string
+  mentor: {
+    id: string
+    name: string
+    employeeId: string
+    department: string
+  }
+  year: number
+  semester: number
+  assignedBy: string
+  results: {
+    successful: Array<{
+      student: {
+        name: string
+        rollNumber: number
+        branch: string
+      }
+      mentorshipId: string
+      previousMentor?: {
+        id: string
+        name: string
+        employeeId: string
+        mentorshipId: string
+      } | null
+      reactivated: boolean
+    }>
+    failed: Array<{
+      rollNumber: number
+      reason: string
+    }>
+    totalProcessed: number
+    successCount: number
+    failedCount: number
+  }
+}
+
+export interface EndMentorshipResponse {
+  message: string
+  mentorship: {
+    id: string
+    faculty: string
+    student: string
+    endDate: string
+  }
+}
+
+// Mentorship Group API types
+export interface MentorshipGroupMentee {
+  mentorshipId: string
+  studentId: string
+  name: string
+  rollNumber: number
+  registrationNumber: number
+  email: string | null
+  program: string
+  branch: string
+  studentYear: number
+  startDate: string | null
+  endDate: string | null
+  comments: string[]
+}
+
+export interface MentorshipGroupMeeting {
+  id: string
+  mentorshipId: string
+  studentName: string
+  studentRollNumber: number
+  date: string
+  time: string | null
+  description: string
+  facultyReview: string
+  status: 'UPCOMING' | 'COMPLETED' | 'YET_TO_DONE' | 'CANCELLED'
+  createdAt: string
+}
+
+export interface MentorshipGroupResponse {
+  faculty: {
+    id: string
+    name: string
+    employeeId: string
+    email: string | null
+    phone: string | null
+    department: string
+  }
+  year: number
+  semester: number
+  isActive: boolean
+  menteesCount: number
+  mentees: MentorshipGroupMentee[]
+  meetings: MentorshipGroupMeeting[]
+  meetingStats: {
+    total: number
+    completed: number
+    upcoming: number
+    yetToDone: number
+  }
+}
+
+// Faculty Mentees API types
+export interface FacultyMenteeGroup {
+  key: string
+  year: number
+  semester: number
+  isActive: boolean
+  mentees: Array<{
+    mentorshipId: string
+    studentId: string
+    name: string
+    rollNumber: number
+    registrationNumber: number
+    email: string | null
+    program: string
+    branch: string
+    studentYear: number
+    phoneNumber: string | null
+    startDate: string | null
+    endDate: string | null
+  }>
+}
+
+export interface FacultyMenteesResponse {
+  faculty: {
+    id: string
+    name: string
+    employeeId: string
+    email: string | null
+    department: string
+  }
+  stats: {
+    totalMentees: number
+    activeMentees: number
+    pastMentees: number
+    totalMeetings: number
+    completedMeetings: number
+  }
+  menteeGroups: FacultyMenteeGroup[]
+}
+
+// Faculty Mentorship Group API types (for faculty-group page)
+export interface FacultyMentorshipGroupMentee {
+  id: string
+  mentorshipId: string
+  studentId: string
+  name: string
+  rollNumber: number
+  registrationNumber: number
+  email: string | null
+  program: string
+  branch: string
+  studentYear: number
+  phoneNumber: string | null
+  startDate: string | null
+  endDate: string | null
+  meetingCount: number
+  completedMeetings: number
+  meetings: Array<{
+    id: string
+    date: string
+    time: string
+    description: string | null
+    status: string
+    notes: string | null
+    createdAt: string
+  }>
+}
+
+export interface FacultyMentorshipGroupResponse {
+  faculty: {
+    id: string
+    name: string
+    employeeId: string
+    email: string | null
+    department: string
+  }
+  year: number
+  semester: number
+  isActive: boolean
+  menteesCount: number
+  mentees: FacultyMentorshipGroupMentee[]
+}
+
+// Schedule Meetings API types
+export interface ScheduleMeetingItem {
+  date: string
+  time: string
+  description?: string
+}
+
+export interface ScheduleMeetingsRequest {
+  mentorshipId: string
+  meetings: ScheduleMeetingItem[]
+}
+
+// Group Schedule Meetings - schedules meetings for ALL students in a group
+export interface GroupScheduleMeetingsRequest {
+  facultyId: string
+  year: number
+  semester: number
+  meetings: ScheduleMeetingItem[]
+}
+
+export interface GroupScheduleMeetingsResponse {
+  message: string
+  group: {
+    facultyId: string
+    facultyName: string
+    year: number
+    semester: number
+    studentCount: number
+  }
+  results: {
+    totalStudents: number
+    totalMeetingsCreated: number
+    studentsWithMeetings: Array<{
+      studentId: string
+      studentName: string
+      meetingsCreated: number
+    }>
+    failed: Array<{
+      studentName: string
+      reason: string
+    }>
+  }
+}
+
+export interface ScheduleMeetingsResponse {
+  message: string
+  mentorship: {
+    id: string
+    student: {
+      name: string
+      rollNumber: number
+    }
+  }
+  results: {
+    created: Array<{
+      id: string
+      date: string
+      time: string
+      status: string
+    }>
+    failed: Array<{
+      index: number
+      reason: string
+    }>
+    totalRequested: number
+    successCount: number
+    failedCount: number
+  }
+}
+
 class ApiService {
   private async request<T>(
     endpoint: string,
@@ -439,6 +922,130 @@ class ApiService {
 
   async getMentorshipMeetings(mentorshipId: string): Promise<MentorshipMeetingsResponse> {
     return this.request<MentorshipMeetingsResponse>(`/api/student/mentorship/${mentorshipId}/meetings`)
+  }
+
+  // Department Students endpoint (for HOD, ADMIN, FACULTY)
+  async getDepartmentStudents(
+    department: string,
+    year?: number,
+    programme?: string
+  ): Promise<DepartmentStudentsResponse> {
+    const params = new URLSearchParams({ department })
+    if (year !== undefined && year !== 0) params.append('year', year.toString())
+    if (programme) params.append('programme', programme)
+    return this.request<DepartmentStudentsResponse>(`/api/department/students?${params.toString()}`)
+  }
+
+  // Faculty list endpoint (for HOD, ADMIN)
+  async getFacultyList(
+    department?: string,
+    active?: boolean
+  ): Promise<FacultyListResponse> {
+    const params = new URLSearchParams()
+    if (department) params.append('department', department)
+    if (active !== undefined) params.append('active', active.toString())
+    const query = params.toString()
+    return this.request<FacultyListResponse>(`/api/faculty${query ? `?${query}` : ''}`)
+  }
+
+  // HOD Management endpoints (ADMIN only)
+  async getHodList(): Promise<HODListResponse> {
+    return this.request<HODListResponse>('/api/hods')
+  }
+
+  async assignHod(facultyId: string, department: string): Promise<AssignHODResponse> {
+    return this.request<AssignHODResponse>('/api/hod/assign', {
+      method: 'POST',
+      body: JSON.stringify({ facultyId, department }),
+    })
+  }
+
+  async removeHod(hodId: string): Promise<RemoveHODResponse> {
+    return this.request<RemoveHODResponse>(`/api/hod/${hodId}/remove`, {
+      method: 'DELETE',
+    })
+  }
+
+  // HOD Mentorship Management endpoints
+  async getHODMentorships(): Promise<HODMentorshipsResponse> {
+    return this.request<HODMentorshipsResponse>('/api/hod/mentorships')
+  }
+
+  async getMentorshipDetails(mentorshipId: string): Promise<MentorshipDetailsResponse> {
+    return this.request<MentorshipDetailsResponse>(`/api/hod/mentorship/${mentorshipId}`)
+  }
+
+  async getMentorshipGroup(facultyId: string, year: number, semester: number, isActive: boolean): Promise<MentorshipGroupResponse> {
+    const params = new URLSearchParams({
+      faculty: facultyId,
+      year: year.toString(),
+      semester: semester.toString(),
+      active: isActive.toString()
+    })
+    return this.request<MentorshipGroupResponse>(`/api/hod/mentorship/group?${params.toString()}`)
+  }
+
+  async createMeeting(data: CreateMeetingRequest): Promise<CreateMeetingResponse> {
+    return this.request<CreateMeetingResponse>('/api/hod/meeting/create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async assignMentor(data: AssignMentorRequest): Promise<AssignMentorResponse> {
+    return this.request<AssignMentorResponse>('/api/hod/assign-mentor', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async endMentorship(mentorshipId: string): Promise<EndMentorshipResponse> {
+    return this.request<EndMentorshipResponse>(`/api/hod/mentorship/${mentorshipId}/end`, {
+      method: 'PUT',
+    })
+  }
+
+  async scheduleMeetings(data: ScheduleMeetingsRequest): Promise<ScheduleMeetingsResponse> {
+    return this.request<ScheduleMeetingsResponse>('/api/hod/schedule-meetings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  // Faculty Mentorship endpoints
+  async getFacultyMentees(): Promise<FacultyMenteesResponse> {
+    return this.request<FacultyMenteesResponse>('/api/faculty/mentees')
+  }
+
+  async getFacultyMentorshipGroup(year: number, semester: number, isActive: boolean): Promise<FacultyMentorshipGroupResponse> {
+    const params = new URLSearchParams({
+      year: year.toString(),
+      semester: semester.toString(),
+      active: isActive.toString()
+    })
+    return this.request<FacultyMentorshipGroupResponse>(`/api/faculty/mentorship/group?${params.toString()}`)
+  }
+
+  async facultyScheduleMeetings(data: ScheduleMeetingsRequest): Promise<ScheduleMeetingsResponse> {
+    return this.request<ScheduleMeetingsResponse>('/api/faculty/schedule-meetings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  // Group scheduling - schedules meetings for ALL students in a group at once
+  async scheduleGroupMeetings(data: GroupScheduleMeetingsRequest): Promise<GroupScheduleMeetingsResponse> {
+    return this.request<GroupScheduleMeetingsResponse>('/api/hod/schedule-group-meetings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async facultyScheduleGroupMeetings(year: number, semester: number, meetings: ScheduleMeetingItem[]): Promise<GroupScheduleMeetingsResponse> {
+    return this.request<GroupScheduleMeetingsResponse>('/api/faculty/schedule-group-meetings', {
+      method: 'POST',
+      body: JSON.stringify({ year, semester, meetings }),
+    })
   }
 }
 

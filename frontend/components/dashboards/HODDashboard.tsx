@@ -198,27 +198,27 @@ export function HODDashboard({ user }: HODDashboardProps) {
         <CardContent>
           <div className="flex flex-wrap gap-2">
             <Button asChild>
-              <Link href="/dashboard/hod/assign-mentor">
+              <Link href="/requests">
                 <UserCheck className="h-4 w-4 mr-2" />
-                Assign Mentor
+                View Requests
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/dashboard/hod/faculty">
+              <Link href="/faculty">
                 <Briefcase className="h-4 w-4 mr-2" />
                 View Faculty
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/dashboard/hod/students">
+              <Link href="/students">
                 <GraduationCap className="h-4 w-4 mr-2" />
                 View Students
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/dashboard/hod/meetings">
+              <Link href="/dashboard/settings">
                 <Calendar className="h-4 w-4 mr-2" />
-                Schedule Meetings
+                Settings
               </Link>
             </Button>
           </div>

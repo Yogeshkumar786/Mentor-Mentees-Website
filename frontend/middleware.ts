@@ -7,17 +7,23 @@ const roleRoutes: Record<string, string[]> = {
     '/dashboard',
     '/dashboard/admin',
     '/dashboard/settings',
+    '/students',
+    '/faculty',
+    '/hods',
   ],
   HOD: [
     '/dashboard',
     '/dashboard/hod',
     '/dashboard/settings',
+    '/students',
+    '/faculty',
   ],
   FACULTY: [
     '/dashboard',
     '/dashboard/faculty',
     '/dashboard/mentor',
     '/dashboard/settings',
+    '/students',
   ],
   STUDENT: [
     '/dashboard',
@@ -29,6 +35,9 @@ const roleRoutes: Record<string, string[]> = {
 
 // Routes that don't require authentication
 const publicRoutes = ['/', '/login', '/register']
+
+// Protected routes that require authentication
+const protectedRoutes = ['/dashboard', '/students', '/faculty', '/hods']
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -42,7 +51,8 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('token')?.value
   
   // If no token and trying to access protected route, redirect to login
-  if (!token && pathname.startsWith('/dashboard')) {
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
+  if (!token && isProtectedRoute) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)

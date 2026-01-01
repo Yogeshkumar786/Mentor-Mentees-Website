@@ -1,12 +1,13 @@
 "use client"
 
 import { StatsCard } from "@/components/stats-card"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, UserCheck, FileCheck } from "lucide-react"
+import { Users, UserCheck, FileCheck, GraduationCap, Building } from "lucide-react"
 import { useEffect, useState } from "react"
 import { storage } from "@/lib/storage"
 import { useAuth } from "@/components/auth-provider"
+import Link from "next/link"
 
 export function AdminDashboard() {
   const { user } = useAuth()
@@ -33,7 +34,9 @@ export function AdminDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-        <p className="text-muted-foreground mt-1">System overview for {user?.name}</p>
+        <p className="text-muted-foreground mt-1">
+          System overview for {user?.admin?.name || user?.email}
+        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -48,16 +51,78 @@ export function AdminDashboard() {
         />
       </div>
 
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              All Students
+            </CardTitle>
+            <CardDescription>View and manage all students</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              View students across all departments with filtering by department, year, and programme.
+            </p>
+            <Button className="w-full" asChild>
+              <Link href="/students">View Students</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <GraduationCap className="h-5 w-5" />
+              All Faculty
+            </CardTitle>
+            <CardDescription>View and manage all faculty members</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              View faculty across all departments, their mentee counts, and active status.
+            </p>
+            <Button className="w-full" asChild>
+              <Link href="/faculty">View Faculty</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileCheck className="h-5 w-5" />
+              Pending Requests
+            </CardTitle>
+            <CardDescription>Review system-wide requests</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Review and manage pending requests from all departments.
+            </p>
+            <Button variant="outline" className="w-full bg-transparent" asChild>
+              <Link href="/requests">View Requests</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>System Quick Actions</CardTitle>
         </CardHeader>
-        <CardContent className="flex gap-4">
+        <CardContent className="flex flex-wrap gap-4">
           <Button variant="outline" asChild>
             <a href="/dashboard/users">Manage Users</a>
           </Button>
           <Button variant="outline" asChild>
-            <a href="/dashboard/requests">View Requests</a>
+            <Link href="/students">View Students</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/faculty">View Faculty</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/requests">View Requests</Link>
           </Button>
         </CardContent>
       </Card>

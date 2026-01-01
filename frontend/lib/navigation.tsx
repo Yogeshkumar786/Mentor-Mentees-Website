@@ -1,20 +1,17 @@
 import {
   LayoutDashboard,
-  Users,
   FileCheck,
-  Calendar,
-  FileText,
   BookOpen,
   Target,
   GraduationCap,
   ClipboardList,
   Settings,
   UserCheck,
-  MessageSquare,
   User,
   Briefcase,
   FolderKanban,
   HeartPulse,
+  Shield,
 } from "lucide-react"
 import type { UserRole } from "@/lib/api"
 import type { ReactNode } from "react"
@@ -30,24 +27,25 @@ export type NavItem = {
 export const roleNavigations: Record<UserRole, NavItem[]> = {
   ADMIN: [
     { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: "users", label: "Users", href: "/dashboard/admin/users", icon: <Users className="w-4 h-4" /> },
-    { id: "requests", label: "Requests", href: "/dashboard/admin/requests", icon: <FileCheck className="w-4 h-4" /> },
-    { id: "reports", label: "Reports", href: "/dashboard/admin/reports", icon: <FileText className="w-4 h-4" /> },
+    { id: "students", label: "Students", href: "/students", icon: <GraduationCap className="w-4 h-4" /> },
+    { id: "faculty", label: "Faculty", href: "/faculty", icon: <UserCheck className="w-4 h-4" /> },
+    { id: "hods", label: "HODs", href: "/hods", icon: <Shield className="w-4 h-4" /> },
+    { id: "requests", label: "Requests", href: "/requests", icon: <FileCheck className="w-4 h-4" /> },
     { id: "settings", label: "Settings", href: "/dashboard/settings", icon: <Settings className="w-4 h-4" /> },
   ],
   HOD: [
     { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: "mentor-assignments", label: "Mentor Assignments", href: "/dashboard/hod/assignments", icon: <Users className="w-4 h-4" /> },
-    { id: "faculty", label: "Faculty", href: "/dashboard/hod/faculty", icon: <UserCheck className="w-4 h-4" /> },
-    { id: "students", label: "Students", href: "/dashboard/hod/students", icon: <GraduationCap className="w-4 h-4" /> },
-    { id: "approvals", label: "Approvals", href: "/dashboard/hod/approvals", icon: <FileCheck className="w-4 h-4" /> },
+    { id: "mentor", label: "Mentorship", href: "/mentor", icon: <UserCheck className="w-4 h-4" /> },
+    { id: "students", label: "Students", href: "/students", icon: <GraduationCap className="w-4 h-4" /> },
+    { id: "faculty", label: "Faculty", href: "/faculty", icon: <UserCheck className="w-4 h-4" /> },
+    { id: "approvals", label: "Approvals", href: "/requests", icon: <FileCheck className="w-4 h-4" /> },
     { id: "settings", label: "Settings", href: "/dashboard/settings", icon: <Settings className="w-4 h-4" /> },
   ],
   FACULTY: [
     { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: "my-students", label: "My Students", href: "/dashboard/faculty/students", icon: <Users className="w-4 h-4" /> },
-    { id: "meetings", label: "Meetings", href: "/dashboard/faculty/meetings", icon: <Calendar className="w-4 h-4" /> },
-    { id: "requests", label: "Requests", href: "/dashboard/faculty/requests", icon: <ClipboardList className="w-4 h-4" /> },
+    { id: "mentor", label: "My Mentees", href: "/mentor", icon: <UserCheck className="w-4 h-4" /> },
+    { id: "students", label: "Students", href: "/students", icon: <GraduationCap className="w-4 h-4" /> },
+    { id: "requests", label: "Requests", href: "/requests", icon: <ClipboardList className="w-4 h-4" /> },
     { id: "settings", label: "Settings", href: "/dashboard/settings", icon: <Settings className="w-4 h-4" /> },
   ],
   STUDENT: [
@@ -71,15 +69,19 @@ export const routeAccess: Record<string, UserRole[]> = {
   '/dashboard/admin': ['ADMIN'],
   '/dashboard/hod': ['HOD'],
   '/dashboard/faculty': ['FACULTY'],
+  // Shared routes (simple URLs)
+  '/students': ['ADMIN', 'HOD', 'FACULTY'],
+  '/faculty': ['ADMIN', 'HOD'],
+  '/hods': ['ADMIN'],
+  '/requests': ['ADMIN', 'HOD', 'FACULTY', 'STUDENT'],
   // Student routes (root level)
   '/about': ['STUDENT'],
-  '/mentor': ['STUDENT'],
+  '/mentor': ['HOD', 'FACULTY', 'STUDENT'],
   '/academic': ['STUDENT'],
   '/career-details': ['STUDENT'],
   '/internships': ['STUDENT'],
   '/projects': ['STUDENT'],
   '/personal-problems': ['STUDENT'],
-  '/requests': ['STUDENT'],
 }
 
 export function getNavigationForRole(role: UserRole): NavItem[] {

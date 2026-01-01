@@ -3,5 +3,9 @@ node_modules
 dist
 frontend/node_modules
 frontend/.env
+frontend/.next
 python/.env
+python/__pycache__
+python/*/__pycache__
+*.pyc
 .hintrc

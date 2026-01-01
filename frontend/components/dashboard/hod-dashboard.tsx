@@ -3,10 +3,11 @@
 import { StatsCard } from "@/components/stats-card"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, UserCheck, FileCheck, ClipboardList, UserPlus } from "lucide-react"
+import { Users, UserCheck, FileCheck, ClipboardList, UserPlus, GraduationCap } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useEffect, useState } from "react"
 import { storage } from "@/lib/storage"
+import Link from "next/link"
 
 export function HodDashboard() {
   const { user } = useAuth()
@@ -22,7 +23,8 @@ export function HodDashboard() {
     const requests = storage.getRequests()
     const relationships = storage.getRelationships()
 
-    const deptUsers = users.filter((u) => u.department === user?.department)
+    const userDept = user?.hod?.department
+    const deptUsers = users.filter((u) => u.department === userDept)
     const faculty = deptUsers.filter((u) => u.role === "faculty")
     const students = deptUsers.filter((u) => u.role === "student")
 
@@ -44,7 +46,7 @@ export function HodDashboard() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">HOD Dashboard</h1>
           <p className="text-muted-foreground mt-1">
-            Managing <span className="font-semibold text-primary">{user?.department || "N/A"}</span> Department
+            Managing <span className="font-semibold text-primary">{user?.hod?.department || "N/A"}</span> Department
           </p>
         </div>
         <Button variant="outline" className="hidden sm:flex bg-transparent">
@@ -63,6 +65,42 @@ export function HodDashboard() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Department Students
+            </CardTitle>
+            <CardDescription>View and manage students in your department</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              View all students in your department, filter by year, programme, and search for specific students.
+            </p>
+            <Button className="w-full" asChild>
+              <Link href="/students">View Students</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <GraduationCap className="h-5 w-5" />
+              Department Faculty
+            </CardTitle>
+            <CardDescription>Manage your department's faculty members</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Review faculty mentoring loads, expertise areas, and overall department engagement.
+            </p>
+            <Button variant="outline" className="w-full bg-transparent" asChild>
+              <Link href="/faculty">View Faculty</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Mentor Assignment</CardTitle>
             <CardDescription>Assign faculty mentors to department students</CardDescription>
           </CardHeader>
@@ -71,7 +109,7 @@ export function HodDashboard() {
               As HOD, you can manually assign mentors or approve student-requested assignments to ensure every student
               has guidance.
             </p>
-            <Button className="w-full" asChild>
+            <Button variant="outline" className="w-full bg-transparent" asChild>
               <a href="/dashboard/mentor-assignments">Assign Mentors</a>
             </Button>
           </CardContent>
@@ -79,15 +117,15 @@ export function HodDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Department Faculty</CardTitle>
-            <CardDescription>Manage your department's faculty members</CardDescription>
+            <CardTitle>Pending Approvals</CardTitle>
+            <CardDescription>Review and approve pending requests</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Review faculty mentoring loads, expertise areas, and overall department engagement.
+              Review pending internship, project, and other requests from students that require your approval.
             </p>
             <Button variant="outline" className="w-full bg-transparent" asChild>
-              <a href="/dashboard/faculty">Manage Faculty</a>
+              <Link href="/requests">View Requests</Link>
             </Button>
           </CardContent>
         </Card>

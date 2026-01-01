@@ -189,21 +189,21 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
         <CardContent>
           <div className="flex flex-wrap gap-2">
             <Button asChild>
-              <Link href="/dashboard/admin/users">
+              <Link href="/students">
                 <Users className="h-4 w-4 mr-2" />
-                Manage Users
+                View Students
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/dashboard/admin/users">
+              <Link href="/faculty">
                 <UserPlus className="h-4 w-4 mr-2" />
-                Add New User
+                View Faculty
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/dashboard/settings">
+              <Link href="/hods">
                 <Settings className="h-4 w-4 mr-2" />
-                System Settings
+                Manage HODs
               </Link>
             </Button>
           </div>

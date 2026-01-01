@@ -128,10 +128,10 @@ export function DashboardLayout({ children, requiredRoles }: DashboardLayoutProp
         </div>
       </header>
 
-      <div className="flex">
+      <div className="flex h-[calc(100vh-4rem)]">
         {/* Sidebar - Desktop */}
-        <aside className="hidden lg:block w-64 border-r min-h-[calc(100vh-4rem)] bg-background">
-          <nav className="p-4">
+        <aside className="hidden lg:block w-64 border-r bg-background shrink-0 overflow-y-auto">
+          <nav className="p-4 sticky top-0">
             <ul className="space-y-1">
               {navigation.map((item) => (
                 <li key={item.id}>
@@ -151,7 +151,7 @@ export function DashboardLayout({ children, requiredRoles }: DashboardLayoutProp
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-4 md:p-6 lg:p-8">{children}</main>
+        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">{children}</main>
       </div>
     </div>
   )
