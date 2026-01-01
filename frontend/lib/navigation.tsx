@@ -30,7 +30,6 @@ export const roleNavigations: Record<UserRole, NavItem[]> = {
     { id: "students", label: "Students", href: "/students", icon: <GraduationCap className="w-4 h-4" /> },
     { id: "faculty", label: "Faculty", href: "/faculty", icon: <UserCheck className="w-4 h-4" /> },
     { id: "hods", label: "HODs", href: "/hods", icon: <Shield className="w-4 h-4" /> },
-    { id: "requests", label: "Requests", href: "/requests", icon: <FileCheck className="w-4 h-4" /> },
     { id: "settings", label: "Settings", href: "/dashboard/settings", icon: <Settings className="w-4 h-4" /> },
   ],
   HOD: [

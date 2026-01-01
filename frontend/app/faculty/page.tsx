@@ -4,14 +4,17 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { api, type FacultyMember } from "@/lib/api"
+import { api, type FacultyMember, type CreateFacultyRequest } from "@/lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Search, GraduationCap, Mail, Phone, Building, Users } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Loader2, Search, GraduationCap, Mail, Phone, Building, Users, Plus } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 const DEPARTMENTS = [
   { value: "all", label: "All Departments" },
@@ -34,6 +37,7 @@ const ACTIVE_STATUS = [
 export default function FacultyPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
+  const { toast } = useToast()
   
   const [faculty, setFaculty] = useState<FacultyMember[]>([])
   const [loading, setLoading] = useState(false)
@@ -43,6 +47,25 @@ export default function FacultyPage() {
   const [department, setDepartment] = useState<string>("all")
   const [activeStatus, setActiveStatus] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState<string>("")
+  
+  // Add Faculty Dialog
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [addLoading, setAddLoading] = useState(false)
+  const [newFaculty, setNewFaculty] = useState<CreateFacultyRequest>({
+    employeeId: "",
+    name: "",
+    phone1: "",
+    phone2: "",
+    personalEmail: "",
+    collegeEmail: "",
+    department: "CSE",
+    office: "",
+    officeHours: "",
+    password: "",
+    btech: "",
+    mtech: "",
+    phd: ""
+  })
   
   // Check authorization - only HOD and ADMIN
   useEffect(() => {
@@ -101,6 +124,60 @@ export default function FacultyPage() {
     )
   })
 
+  // Reset add faculty form
+  const resetAddForm = () => {
+    setNewFaculty({
+      employeeId: "",
+      name: "",
+      phone1: "",
+      phone2: "",
+      personalEmail: "",
+      collegeEmail: "",
+      department: "CSE",
+      office: "",
+      officeHours: "",
+      password: "",
+      btech: "",
+      mtech: "",
+      phd: ""
+    })
+  }
+
+  // Handle add faculty
+  const handleAddFaculty = async () => {
+    // Validate required fields
+    if (!newFaculty.employeeId || !newFaculty.name || !newFaculty.phone1 || 
+        !newFaculty.personalEmail || !newFaculty.collegeEmail || !newFaculty.department ||
+        !newFaculty.office || !newFaculty.officeHours || !newFaculty.password) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setAddLoading(true)
+    try {
+      await api.createFaculty(newFaculty)
+      toast({
+        title: "Success",
+        description: "Faculty member added successfully"
+      })
+      setAddDialogOpen(false)
+      resetAddForm()
+      fetchFaculty()
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to add faculty",
+        variant: "destructive"
+      })
+    } finally {
+      setAddLoading(false)
+    }
+  }
+
   if (authLoading) {
     return (
       <DashboardLayout>
@@ -119,9 +196,181 @@ export default function FacultyPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold">Faculty</h1>
-          <p className="text-muted-foreground">View and manage faculty members</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Faculty</h1>
+            <p className="text-muted-foreground">View and manage faculty members</p>
+          </div>
+          {user.role === "ADMIN" && (
+            <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Faculty
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add New Faculty</DialogTitle>
+                  <DialogDescription>
+                    Fill in the details to create a new faculty member account.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="employeeId">Employee ID *</Label>
+                      <Input
+                        id="employeeId"
+                        value={newFaculty.employeeId}
+                        onChange={(e) => setNewFaculty({...newFaculty, employeeId: e.target.value})}
+                        placeholder="e.g., FAC001"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name *</Label>
+                      <Input
+                        id="name"
+                        value={newFaculty.name}
+                        onChange={(e) => setNewFaculty({...newFaculty, name: e.target.value})}
+                        placeholder="Dr. John Doe"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone1">Phone 1 *</Label>
+                      <Input
+                        id="phone1"
+                        value={newFaculty.phone1}
+                        onChange={(e) => setNewFaculty({...newFaculty, phone1: e.target.value})}
+                        placeholder="9876543210"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone2">Phone 2</Label>
+                      <Input
+                        id="phone2"
+                        value={newFaculty.phone2}
+                        onChange={(e) => setNewFaculty({...newFaculty, phone2: e.target.value})}
+                        placeholder="Optional"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="personalEmail">Personal Email *</Label>
+                      <Input
+                        id="personalEmail"
+                        type="email"
+                        value={newFaculty.personalEmail}
+                        onChange={(e) => setNewFaculty({...newFaculty, personalEmail: e.target.value})}
+                        placeholder="john@gmail.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="collegeEmail">College Email *</Label>
+                      <Input
+                        id="collegeEmail"
+                        type="email"
+                        value={newFaculty.collegeEmail}
+                        onChange={(e) => setNewFaculty({...newFaculty, collegeEmail: e.target.value})}
+                        placeholder="john@college.edu"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="department">Department *</Label>
+                      <Select 
+                        value={newFaculty.department} 
+                        onValueChange={(value) => setNewFaculty({...newFaculty, department: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DEPARTMENTS.filter(d => d.value !== "all").map((dept) => (
+                            <SelectItem key={dept.value} value={dept.value}>
+                              {dept.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password *</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={newFaculty.password}
+                        onChange={(e) => setNewFaculty({...newFaculty, password: e.target.value})}
+                        placeholder="Initial password"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="office">Office *</Label>
+                      <Input
+                        id="office"
+                        value={newFaculty.office}
+                        onChange={(e) => setNewFaculty({...newFaculty, office: e.target.value})}
+                        placeholder="Room 101, Block A"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="officeHours">Office Hours *</Label>
+                      <Input
+                        id="officeHours"
+                        value={newFaculty.officeHours}
+                        onChange={(e) => setNewFaculty({...newFaculty, officeHours: e.target.value})}
+                        placeholder="Mon-Fri 10AM-5PM"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="btech">B.Tech Programs</Label>
+                      <Input
+                        id="btech"
+                        value={newFaculty.btech}
+                        onChange={(e) => setNewFaculty({...newFaculty, btech: e.target.value})}
+                        placeholder="CSE, IT"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="mtech">M.Tech Programs</Label>
+                      <Input
+                        id="mtech"
+                        value={newFaculty.mtech}
+                        onChange={(e) => setNewFaculty({...newFaculty, mtech: e.target.value})}
+                        placeholder="CSE, Data Science"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phd">PhD Programs</Label>
+                      <Input
+                        id="phd"
+                        value={newFaculty.phd}
+                        onChange={(e) => setNewFaculty({...newFaculty, phd: e.target.value})}
+                        placeholder="AI/ML, Networks"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => { setAddDialogOpen(false); resetAddForm(); }}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleAddFaculty} disabled={addLoading}>
+                    {addLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Add Faculty
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
       {/* Filters */}

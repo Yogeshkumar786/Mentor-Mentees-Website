@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { Loader2, Search, Users, Mail, Phone } from "lucide-react"
 
 const DEPARTMENTS = [
+  { value: "all", label: "All Departments" },
   { value: "CSE", label: "Computer Science & Engineering" },
   { value: "ECE", label: "Electronics & Communication Engineering" },
   { value: "EEE", label: "Electrical & Electronics Engineering" },
@@ -75,22 +76,20 @@ export default function StudentsPage() {
       } else if (user.role === "HOD" && user.hod?.department) {
         setDepartment(user.hod.department)
       } else if (user.role === "ADMIN") {
-        // Admin can see all departments, default to first one
-        setDepartment("CSE")
+        // Admin can see all departments, default to "all"
+        setDepartment("all")
       }
     }
   }, [user])
 
   // Fetch students when filters change
   const fetchStudents = async () => {
-    if (!department) return
-    
     setLoading(true)
     setError(null)
     
     try {
       const response = await api.getDepartmentStudents(
-        department,
+        department !== "all" ? department : undefined,
         year !== "0" ? parseInt(year) : undefined,
         programme !== "all" ? programme : undefined
       )
@@ -164,7 +163,10 @@ export default function StudentsPage() {
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
-                    {DEPARTMENTS.map((dept) => (
+                    {DEPARTMENTS.filter(dept => 
+                      // Only show "All Departments" option for ADMIN
+                      dept.value !== "all" || user.role === "ADMIN"
+                    ).map((dept) => (
                       <SelectItem key={dept.value} value={dept.value}>
                         {dept.label}
                       </SelectItem>

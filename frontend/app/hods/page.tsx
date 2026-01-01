@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { Loader2, Plus, Search, UserMinus, UserPlus, Shield, Users } from "lucide-react"
+import { Loader2, Plus, Search, UserMinus, UserPlus, Shield, Users, RefreshCw } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 const DEPARTMENTS = [
   { value: "CSE", label: "Computer Science" },
@@ -30,6 +31,7 @@ const DEPARTMENTS = [
 export default function HodsPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
+  const { toast } = useToast()
   
   const [hods, setHods] = useState<HODMember[]>([])
   const [loading, setLoading] = useState(true)
@@ -44,6 +46,13 @@ export default function HodsPage() {
   const [loadingFaculty, setLoadingFaculty] = useState(false)
   const [assigning, setAssigning] = useState(false)
   const [assignError, setAssignError] = useState<string | null>(null)
+  
+  // Change HOD dialog state
+  const [changeDialogOpen, setChangeDialogOpen] = useState(false)
+  const [changeDepartment, setChangeDepartment] = useState("")
+  const [changeFacultyList, setChangeFacultyList] = useState<FacultyMember[]>([])
+  const [changeSelectedFacultyId, setChangeSelectedFacultyId] = useState("")
+  const [changingHod, setChangingHod] = useState(false)
   
   // Remove HOD state
   const [removing, setRemoving] = useState<string | null>(null)
@@ -129,8 +138,10 @@ export default function HodsPage() {
       setFacultyList([])
       fetchHods() // Refresh the list
       
-      // Show success (could use toast)
-      alert(response.message)
+      toast({
+        title: "Success",
+        description: response.message
+      })
     } catch (err) {
       setAssignError(err instanceof Error ? err.message : "Failed to assign HOD")
     } finally {
@@ -145,11 +156,67 @@ export default function HodsPage() {
     try {
       const response = await api.removeHod(hodId)
       fetchHods() // Refresh the list
-      alert(response.message)
+      toast({
+        title: "Success",
+        description: response.message
+      })
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to remove HOD")
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to remove HOD",
+        variant: "destructive"
+      })
     } finally {
       setRemoving(null)
+    }
+  }
+
+  // Open change HOD dialog
+  const openChangeHodDialog = async (department: string) => {
+    setChangeDepartment(department)
+    setChangeSelectedFacultyId("")
+    setChangeFacultyList([])
+    setChangeDialogOpen(true)
+    
+    // Fetch faculty for the department
+    try {
+      const response = await api.getFacultyList(department, true)
+      // Filter out the current HOD
+      const currentHodFacultyId = hods.find(h => h.department === department && h.isActive)?.facultyId
+      const availableFaculty = response.faculty.filter(f => f.id !== currentHodFacultyId)
+      setChangeFacultyList(availableFaculty)
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch faculty list",
+        variant: "destructive"
+      })
+    }
+  }
+
+  // Handle change HOD
+  const handleChangeHod = async () => {
+    if (!changeSelectedFacultyId || !changeDepartment) return
+    
+    setChangingHod(true)
+    try {
+      const response = await api.changeHod(changeSelectedFacultyId, changeDepartment)
+      setChangeDialogOpen(false)
+      setChangeDepartment("")
+      setChangeSelectedFacultyId("")
+      fetchHods()
+      toast({
+        title: "Success",
+        description: response.message
+      })
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to change HOD",
+        variant: "destructive"
+      })
+    } finally {
+      setChangingHod(false)
     }
   }
 
@@ -382,36 +449,45 @@ export default function HodsPage() {
                         {hod.startDate ? new Date(hod.startDate).toLocaleDateString() : "-"}
                       </TableCell>
                       <TableCell>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                              variant="destructive" 
-                              size="sm"
-                              disabled={removing === hod.id}
-                            >
-                              {removing === hod.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <UserMinus className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Remove HOD?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to remove {hod.name} as HOD of {getDepartmentLabel(hod.department)}?
-                                Their role will be reverted to Faculty.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleRemoveHod(hod.id)}>
-                                Remove
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => openChangeHodDialog(hod.department)}
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                disabled={removing === hod.id}
+                              >
+                                {removing === hod.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <UserMinus className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Remove HOD?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to remove {hod.name} as HOD of {getDepartmentLabel(hod.department)}?
+                                  Their role will be reverted to Faculty.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleRemoveHod(hod.id)}>
+                                  Remove
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -462,6 +538,69 @@ export default function HodsPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Change HOD Dialog */}
+        <Dialog open={changeDialogOpen} onOpenChange={setChangeDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Change HOD</DialogTitle>
+              <DialogDescription>
+                Select a new faculty member to become HOD of {getDepartmentLabel(changeDepartment)}.
+                The current HOD will be reverted to Faculty role.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Department</Label>
+                <Input value={getDepartmentLabel(changeDepartment)} disabled />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>New HOD</Label>
+                {changeFacultyList.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No other faculty available in this department</p>
+                ) : (
+                  <Select 
+                    value={changeSelectedFacultyId} 
+                    onValueChange={setChangeSelectedFacultyId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select new HOD" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {changeFacultyList.map((faculty) => (
+                        <SelectItem key={faculty.id} value={faculty.id}>
+                          {faculty.name} ({faculty.employeeId})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setChangeDialogOpen(false)
+                  setChangeDepartment("")
+                  setChangeSelectedFacultyId("")
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleChangeHod}
+                disabled={!changeSelectedFacultyId || changingHod}
+              >
+                {changingHod && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Change HOD
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   )

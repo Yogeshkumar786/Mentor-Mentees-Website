@@ -514,6 +514,85 @@ export interface RemoveHODResponse {
   }
 }
 
+// Admin Faculty Management Types
+export interface CreateFacultyRequest {
+  employeeId: string
+  name: string
+  phone1: string
+  phone2?: string
+  personalEmail: string
+  collegeEmail: string
+  department: string
+  office: string
+  officeHours: string
+  password: string
+  btech?: string
+  mtech?: string
+  phd?: string
+}
+
+export interface CreateFacultyResponse {
+  message: string
+  faculty: {
+    id: string
+    employeeId: string
+    name: string
+    email: string
+    collegeEmail: string
+    department: string
+    isActive: boolean
+  }
+}
+
+export interface UpdateFacultyRequest {
+  name?: string
+  phone1?: string
+  phone2?: string
+  personalEmail?: string
+  collegeEmail?: string
+  department?: string
+  office?: string
+  officeHours?: string
+  btech?: string
+  mtech?: string
+  phd?: string
+  isActive?: boolean
+}
+
+export interface UpdateFacultyResponse {
+  message: string
+  faculty: {
+    id: string
+    employeeId: string
+    name: string
+    email: string
+    collegeEmail: string
+    department: string
+    isActive: boolean
+  }
+}
+
+export interface ChangeHODRequest {
+  facultyId: string
+  department: string
+}
+
+export interface ChangeHODResponse {
+  message: string
+  newHOD: {
+    hodId: string
+    facultyId: string
+    name: string
+    employeeId: string
+    department: string
+  }
+  previousHOD?: {
+    id: string
+    name: string
+    employeeId: string
+  }
+}
+
 // HOD Mentorship Management Types
 export interface MenteeData {
   mentorshipId: string
@@ -997,14 +1076,16 @@ class ApiService {
 
   // Department Students endpoint (for HOD, ADMIN, FACULTY)
   async getDepartmentStudents(
-    department: string,
+    department?: string,
     year?: number,
     programme?: string
   ): Promise<DepartmentStudentsResponse> {
-    const params = new URLSearchParams({ department })
+    const params = new URLSearchParams()
+    if (department) params.append('department', department)
     if (year !== undefined && year !== 0) params.append('year', year.toString())
     if (programme) params.append('programme', programme)
-    return this.request<DepartmentStudentsResponse>(`/api/department/students?${params.toString()}`)
+    const query = params.toString()
+    return this.request<DepartmentStudentsResponse>(`/api/department/students${query ? `?${query}` : ''}`)
   }
 
   // Faculty list endpoint (for HOD, ADMIN)
@@ -1034,6 +1115,28 @@ class ApiService {
   async removeHod(hodId: string): Promise<RemoveHODResponse> {
     return this.request<RemoveHODResponse>(`/api/hod/${hodId}/remove`, {
       method: 'DELETE',
+    })
+  }
+
+  // Admin Faculty Management endpoints
+  async createFaculty(data: CreateFacultyRequest): Promise<CreateFacultyResponse> {
+    return this.request<CreateFacultyResponse>('/api/admin/faculty', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateFaculty(facultyId: string, data: UpdateFacultyRequest): Promise<UpdateFacultyResponse> {
+    return this.request<UpdateFacultyResponse>(`/api/admin/faculty/${facultyId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async changeHod(facultyId: string, department: string): Promise<ChangeHODResponse> {
+    return this.request<ChangeHODResponse>('/api/hod/change', {
+      method: 'POST',
+      body: JSON.stringify({ facultyId, department }),
     })
   }
 
