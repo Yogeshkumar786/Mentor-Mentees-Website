@@ -133,7 +133,7 @@ export default function FacultyPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Department */}
-            <div className="space-y-2">
+            <div className="space-y-2 md:mr-6">
               <Label>Department</Label>
               <Select 
                 value={department} 

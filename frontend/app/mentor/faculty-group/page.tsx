@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { api, FacultyMentorshipGroupResponse, FacultyMentorshipGroupMentee, ScheduleMeetingItem } from "@/lib/api"
+import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -713,12 +714,14 @@ function FacultyGroupContent() {
 
 export default function FacultyGroupPage() {
   return (
-    <Suspense fallback={
-      <div className="container py-6 flex items-center justify-center h-[50vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    }>
-      <FacultyGroupContent />
-    </Suspense>
+    <DashboardLayout requiredRoles={["FACULTY"]}>
+      <Suspense fallback={
+        <div className="container py-6 flex items-center justify-center h-[50vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      }>
+        <FacultyGroupContent />
+      </Suspense>
+    </DashboardLayout>
   )
 }

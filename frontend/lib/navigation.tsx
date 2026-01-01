@@ -38,14 +38,14 @@ export const roleNavigations: Record<UserRole, NavItem[]> = {
     { id: "mentor", label: "Mentorship", href: "/mentor", icon: <UserCheck className="w-4 h-4" /> },
     { id: "students", label: "Students", href: "/students", icon: <GraduationCap className="w-4 h-4" /> },
     { id: "faculty", label: "Faculty", href: "/faculty", icon: <UserCheck className="w-4 h-4" /> },
-    { id: "approvals", label: "Requests", href: "/mentor/requests", icon: <FileCheck className="w-4 h-4" /> },
+    { id: "approvals", label: "Requests", href: "/requests", icon: <FileCheck className="w-4 h-4" /> },
     { id: "settings", label: "Settings", href: "/dashboard/settings", icon: <Settings className="w-4 h-4" /> },
   ],
   FACULTY: [
     { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
     { id: "mentor", label: "My Mentees", href: "/mentor", icon: <UserCheck className="w-4 h-4" /> },
     { id: "students", label: "Students", href: "/students", icon: <GraduationCap className="w-4 h-4" /> },
-    { id: "requests", label: "Requests", href: "/mentor/requests", icon: <ClipboardList className="w-4 h-4" /> },
+    { id: "requests", label: "Requests", href: "/requests", icon: <ClipboardList className="w-4 h-4" /> },
     { id: "settings", label: "Settings", href: "/dashboard/settings", icon: <Settings className="w-4 h-4" /> },
   ],
   STUDENT: [
@@ -73,8 +73,7 @@ export const routeAccess: Record<string, UserRole[]> = {
   '/students': ['ADMIN', 'HOD', 'FACULTY'],
   '/faculty': ['ADMIN', 'HOD'],
   '/hods': ['ADMIN'],
-  '/requests': ['ADMIN', 'STUDENT'],
-  '/mentor/requests': ['HOD', 'FACULTY'],
+  '/requests': ['ADMIN', 'HOD', 'FACULTY', 'STUDENT'],
   // Student routes (root level)
   '/about': ['STUDENT'],
   '/mentor': ['HOD', 'FACULTY', 'STUDENT'],

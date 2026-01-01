@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useAuth } from "@/components/auth-provider"
+import FacultyRequests from "@/components/faculty-requests"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { api, StudentRequestsResponse, StudentRequest } from "@/lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,25 +25,38 @@ import {
 } from "lucide-react"
 
 export default function RequestsPage() {
+  const { user } = useAuth()
   const [requestsData, setRequestsData] = useState<StudentRequestsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        setLoading(true)
-        const data = await api.getStudentRequests()
-        setRequestsData(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch requests')
-      } finally {
-        setLoading(false)
+    if (!user) return
+    // If student, fetch student requests. Faculty/HOD will use FacultyRequests component.
+    if (user.role === 'STUDENT') {
+      const fetchRequests = async () => {
+        try {
+          setLoading(true)
+          const data = await api.getStudentRequests()
+          setRequestsData(data)
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to fetch requests')
+        } finally {
+          setLoading(false)
+        }
       }
+      fetchRequests()
     }
+  }, [user])
 
-    fetchRequests()
-  }, [])
+  if (!user) {
+    return null
+  }
+
+  // If faculty or hod, render faculty requests UI
+  if (user.role === 'FACULTY' || user.role === 'HOD') {
+    return <FacultyRequests />
+  }
 
   if (loading) {
     return (

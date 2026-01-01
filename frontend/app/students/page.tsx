@@ -152,29 +152,30 @@ export default function StudentsPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Department */}
-            <div className="space-y-2">
-              <Label>Department</Label>
-              <Select 
-                value={department} 
-                onValueChange={setDepartment}
-                disabled={user.role === "FACULTY"}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DEPARTMENTS.map((dept) => (
-                    <SelectItem key={dept.value} value={dept.value}>
-                      {dept.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Department (hidden for FACULTY) */}
+            {user.role !== "FACULTY" && (
+              <div className="space-y-2 md:mr-6">
+                <Label>Department</Label>
+                <Select 
+                  value={department} 
+                  onValueChange={setDepartment}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEPARTMENTS.map((dept) => (
+                      <SelectItem key={dept.value} value={dept.value}>
+                        {dept.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Year */}
-            <div className="space-y-2">
+            <div className="space-y-2 md:mr-6">
               <Label>Year</Label>
               <Select value={year} onValueChange={setYear}>
                 <SelectTrigger>
