@@ -38,6 +38,22 @@ interface MeetingDetails {
   createdAt: string
 }
 
+// Interface for grouped meetings (deduplicated by date/time)
+interface GroupedMeeting {
+  date: string
+  time: string | null
+  description: string | null
+  status: string
+  studentCount: number
+  students: Array<{
+    id: string
+    name: string
+    rollNumber: number
+    mentorshipId: string
+  }>
+  createdAt: string
+}
+
 function FacultyGroupContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -116,6 +132,64 @@ function FacultyGroupContent() {
       default:
         return <Badge variant="outline">{status}</Badge>
     }
+  }
+
+  // Helper function to get all meetings from all mentees and deduplicate by date/time
+  const getGroupedMeetings = (): GroupedMeeting[] => {
+    if (!data?.mentees) return []
+    
+    const groupMap = new Map<string, GroupedMeeting>()
+    
+    for (const mentee of data.mentees) {
+      if (!mentee.meetings) continue
+      
+      for (const meeting of mentee.meetings) {
+        // Create a unique key based on date, time, and description
+        const key = `${meeting.date}_${meeting.time || 'null'}_${meeting.description || ''}`
+        
+        if (groupMap.has(key)) {
+          // Add student to existing group
+          const group = groupMap.get(key)!
+          group.students.push({
+            id: meeting.id,
+            name: mentee.name,
+            rollNumber: mentee.rollNumber,
+            mentorshipId: mentee.mentorshipId
+          })
+          group.studentCount = group.students.length
+        } else {
+          // Create new group
+          groupMap.set(key, {
+            date: meeting.date,
+            time: meeting.time,
+            description: meeting.description,
+            status: meeting.status,
+            studentCount: 1,
+            students: [{
+              id: meeting.id,
+              name: mentee.name,
+              rollNumber: mentee.rollNumber,
+              mentorshipId: mentee.mentorshipId
+            }],
+            createdAt: meeting.createdAt
+          })
+        }
+      }
+    }
+    
+    // Convert to array and sort by date (newest first)
+    return Array.from(groupMap.values()).sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    )
+  }
+
+  // State for group meeting dialog
+  const [groupMeetingDialogOpen, setGroupMeetingDialogOpen] = useState(false)
+  const [selectedGroupMeeting, setSelectedGroupMeeting] = useState<GroupedMeeting | null>(null)
+
+  const openGroupMeetingDialog = (meeting: GroupedMeeting) => {
+    setSelectedGroupMeeting(meeting)
+    setGroupMeetingDialogOpen(true)
   }
 
   const openMeetingDialog = (studentName: string, meetings: FacultyMentorshipGroupMentee['meetings']) => {
@@ -204,8 +278,11 @@ function FacultyGroupContent() {
   }
 
   const mentees = data.mentees || []
-  const totalMeetings = mentees.reduce((sum, m) => sum + (m.meetingCount || 0), 0)
-  const completedMeetings = mentees.reduce((sum, m) => sum + (m.completedMeetings || 0), 0)
+  
+  // Get grouped meetings for stats
+  const groupedMeetings = getGroupedMeetings()
+  const totalGroupMeetings = groupedMeetings.length
+  const completedGroupMeetings = groupedMeetings.filter(m => m.status.toLowerCase() === 'completed').length
 
   return (
     <div className="container py-6 space-y-6">
@@ -251,8 +328,8 @@ function FacultyGroupContent() {
                 <Calendar className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{totalMeetings}</p>
-                <p className="text-xs text-muted-foreground">Total Meetings</p>
+                <p className="text-2xl font-bold">{totalGroupMeetings}</p>
+                <p className="text-xs text-muted-foreground">Group Meetings</p>
               </div>
             </div>
           </CardContent>
@@ -264,7 +341,7 @@ function FacultyGroupContent() {
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{completedMeetings}</p>
+                <p className="text-2xl font-bold">{completedGroupMeetings}</p>
                 <p className="text-xs text-muted-foreground">Completed</p>
               </div>
             </div>
@@ -277,7 +354,7 @@ function FacultyGroupContent() {
                 <Clock className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{totalMeetings - completedMeetings}</p>
+                <p className="text-2xl font-bold">{totalGroupMeetings - completedGroupMeetings}</p>
                 <p className="text-xs text-muted-foreground">Pending</p>
               </div>
             </div>
@@ -375,7 +452,139 @@ function FacultyGroupContent() {
         </CardContent>
       </Card>
 
-      {/* Meeting Details Dialog */}
+      {/* Group Meetings Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" />
+            Group Meetings ({getGroupedMeetings().length})
+          </CardTitle>
+          <CardDescription>
+            Meetings scheduled for the entire group
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {getGroupedMeetings().length === 0 ? (
+            <div className="py-8 text-center">
+              <Calendar className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+              <h3 className="text-md font-semibold">No Meetings Yet</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                No meetings have been scheduled for this group.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {getGroupedMeetings().map((meeting, index) => (
+                <Card 
+                  key={`${meeting.date}_${meeting.time}_${index}`} 
+                  className="cursor-pointer hover:shadow-md hover:border-primary/50 transition-all"
+                  onClick={() => openGroupMeetingDialog(meeting)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <p className="font-semibold text-sm">Group Meeting</p>
+                        <p className="text-xs text-muted-foreground">
+                          {meeting.studentCount} student{meeting.studentCount > 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      {getStatusBadge(meeting.status)}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        {formatDate(meeting.date)}
+                      </div>
+                      {meeting.time && (
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          {formatTime(meeting.time)}
+                        </div>
+                      )}
+                    </div>
+                    {meeting.description && (
+                      <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+                        {meeting.description}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Group Meeting Details Dialog */}
+      <Dialog open={groupMeetingDialogOpen} onOpenChange={setGroupMeetingDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Group Meeting Details
+            </DialogTitle>
+            {selectedGroupMeeting && (
+              <DialogDescription>
+                Meeting for {selectedGroupMeeting.studentCount} student{selectedGroupMeeting.studentCount > 1 ? 's' : ''}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          {selectedGroupMeeting && (
+            <div className="space-y-4 py-4">
+              {/* Status */}
+              <div className="flex items-center justify-between">
+                <Label className="text-muted-foreground">Status</Label>
+                {getStatusBadge(selectedGroupMeeting.status)}
+              </div>
+              
+              {/* Date and Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Date</Label>
+                  <p className="font-medium">{formatDate(selectedGroupMeeting.date)}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Time</Label>
+                  <p className="font-medium">{selectedGroupMeeting.time ? formatTime(selectedGroupMeeting.time) : 'Not set'}</p>
+                </div>
+              </div>
+              
+              {/* Students in this meeting */}
+              <div>
+                <Label className="text-muted-foreground">Students ({selectedGroupMeeting.studentCount})</Label>
+                <div className="mt-2 max-h-40 overflow-y-auto border rounded-md">
+                  {selectedGroupMeeting.students.map((student, idx) => (
+                    <div 
+                      key={student.id} 
+                      className={`flex items-center justify-between p-2 text-sm ${idx !== selectedGroupMeeting.students.length - 1 ? 'border-b' : ''}`}
+                    >
+                      <span className="font-medium">{student.name}</span>
+                      <span className="text-muted-foreground">Roll No: {student.rollNumber}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Description */}
+              <div>
+                <Label className="text-muted-foreground">Description / Agenda</Label>
+                <div className="mt-1 p-3 bg-muted rounded-md">
+                  <p className="text-sm">
+                    {selectedGroupMeeting.description || 'No description provided'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGroupMeetingDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Meeting Details Dialog (per student) */}
       <Dialog open={meetingDialogOpen} onOpenChange={setMeetingDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>

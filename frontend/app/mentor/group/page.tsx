@@ -32,6 +32,22 @@ import {
   CalendarPlus
 } from "lucide-react"
 
+// Interface for grouped meetings (deduplicated by date/time)
+interface GroupedMeeting {
+  date: string
+  time: string | null
+  description: string
+  status: 'UPCOMING' | 'COMPLETED' | 'YET_TO_DONE' | 'CANCELLED'
+  studentCount: number
+  students: Array<{
+    id: string
+    name: string
+    rollNumber: number
+    mentorshipId: string
+  }>
+  createdAt: string
+}
+
 export default function MentorshipGroupPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -42,7 +58,6 @@ export default function MentorshipGroupPage() {
   const [data, setData] = useState<MentorshipGroupResponse | null>(null)
   
   // Meeting detail dialog state
-  const [selectedMeeting, setSelectedMeeting] = useState<MentorshipGroupMeeting | null>(null)
   const [meetingDialogOpen, setMeetingDialogOpen] = useState(false)
   
   // Create meeting dialog state (group scheduling for ALL students)
@@ -135,8 +150,56 @@ export default function MentorshipGroupPage() {
     }
   }
 
-  const openMeetingDetails = (meeting: MentorshipGroupMeeting) => {
-    setSelectedMeeting(meeting)
+  // Helper function to deduplicate meetings by date/time/description
+  // Since meetings are scheduled for the whole group, they share the same date/time
+  const getGroupedMeetings = (): GroupedMeeting[] => {
+    if (!data?.meetings) return []
+    
+    const groupMap = new Map<string, GroupedMeeting>()
+    
+    for (const meeting of data.meetings) {
+      // Create a unique key based on date, time, and description
+      const key = `${meeting.date}_${meeting.time || 'null'}_${meeting.description || ''}`
+      
+      if (groupMap.has(key)) {
+        // Add student to existing group
+        const group = groupMap.get(key)!
+        group.students.push({
+          id: meeting.id,
+          name: meeting.studentName,
+          rollNumber: meeting.studentRollNumber,
+          mentorshipId: meeting.mentorshipId
+        })
+        group.studentCount = group.students.length
+      } else {
+        // Create new group
+        groupMap.set(key, {
+          date: meeting.date,
+          time: meeting.time,
+          description: meeting.description,
+          status: meeting.status,
+          studentCount: 1,
+          students: [{
+            id: meeting.id,
+            name: meeting.studentName,
+            rollNumber: meeting.studentRollNumber,
+            mentorshipId: meeting.mentorshipId
+          }],
+          createdAt: meeting.createdAt
+        })
+      }
+    }
+    
+    // Convert to array and sort by date (newest first)
+    return Array.from(groupMap.values()).sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    )
+  }
+
+  const [selectedGroupedMeeting, setSelectedGroupedMeeting] = useState<GroupedMeeting | null>(null)
+
+  const openMeetingDetails = (meeting: GroupedMeeting) => {
+    setSelectedGroupedMeeting(meeting)
     setMeetingDialogOpen(true)
   }
 
@@ -337,7 +400,7 @@ export default function MentorshipGroupPage() {
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{data.meetingStats.completed}</p>
+                  <p className="text-2xl font-bold">{getGroupedMeetings().filter(m => m.status === 'COMPLETED').length}</p>
                   <p className="text-xs text-muted-foreground">Completed Meetings</p>
                 </div>
               </div>
@@ -350,7 +413,7 @@ export default function MentorshipGroupPage() {
                   <Clock className="h-5 w-5 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{data.meetingStats.upcoming}</p>
+                  <p className="text-2xl font-bold">{getGroupedMeetings().filter(m => m.status === 'UPCOMING').length}</p>
                   <p className="text-xs text-muted-foreground">Upcoming Meetings</p>
                 </div>
               </div>
@@ -363,7 +426,7 @@ export default function MentorshipGroupPage() {
                   <AlertTriangle className="h-5 w-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{data.meetingStats.yetToDone}</p>
+                  <p className="text-2xl font-bold">{getGroupedMeetings().filter(m => m.status === 'YET_TO_DONE').length}</p>
                   <p className="text-xs text-muted-foreground">Yet to Complete</p>
                 </div>
               </div>
@@ -438,15 +501,15 @@ export default function MentorshipGroupPage() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-primary" />
-                Meetings ({data.meetingStats.total})
+                Group Meetings ({getGroupedMeetings().length})
               </CardTitle>
               <CardDescription>
-                All meetings scheduled for this group
+                Meetings scheduled for the entire group
               </CardDescription>
             </div>
           </CardHeader>
           <CardContent>
-            {data.meetings.length === 0 ? (
+            {getGroupedMeetings().length === 0 ? (
               <div className="py-8 text-center">
                 <Calendar className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
                 <h3 className="text-md font-semibold">No Meetings Yet</h3>
@@ -456,18 +519,18 @@ export default function MentorshipGroupPage() {
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {data.meetings.map((meeting) => (
+                {getGroupedMeetings().map((meeting, index) => (
                   <Card 
-                    key={meeting.id} 
+                    key={`${meeting.date}_${meeting.time}_${index}`} 
                     className="cursor-pointer hover:shadow-md hover:border-primary/50 transition-all"
                     onClick={() => openMeetingDetails(meeting)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <p className="font-semibold text-sm">{meeting.studentName}</p>
+                          <p className="font-semibold text-sm">Group Meeting</p>
                           <p className="text-xs text-muted-foreground">
-                            Roll No: {meeting.studentRollNumber}
+                            {meeting.studentCount} student{meeting.studentCount > 1 ? 's' : ''}
                           </p>
                         </div>
                         {getStatusBadge(meeting.status)}
@@ -497,44 +560,52 @@ export default function MentorshipGroupPage() {
 
         {/* Meeting Details Dialog */}
         <Dialog open={meetingDialogOpen} onOpenChange={setMeetingDialogOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-primary" />
-                Meeting Details
+                Group Meeting Details
               </DialogTitle>
-              {selectedMeeting && (
+              {selectedGroupedMeeting && (
                 <DialogDescription>
-                  Meeting with {selectedMeeting.studentName}
+                  Meeting for {selectedGroupedMeeting.studentCount} student{selectedGroupedMeeting.studentCount > 1 ? 's' : ''}
                 </DialogDescription>
               )}
             </DialogHeader>
-            {selectedMeeting && (
+            {selectedGroupedMeeting && (
               <div className="space-y-4 py-4">
                 {/* Status */}
                 <div className="flex items-center justify-between">
                   <Label className="text-muted-foreground">Status</Label>
-                  {getStatusBadge(selectedMeeting.status)}
+                  {getStatusBadge(selectedGroupedMeeting.status)}
                 </div>
                 
                 {/* Date and Time */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-muted-foreground">Date</Label>
-                    <p className="font-medium">{formatDate(selectedMeeting.date)}</p>
+                    <p className="font-medium">{formatDate(selectedGroupedMeeting.date)}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">Time</Label>
-                    <p className="font-medium">{formatTime(selectedMeeting.time)}</p>
+                    <p className="font-medium">{formatTime(selectedGroupedMeeting.time)}</p>
                   </div>
                 </div>
                 
-                {/* Student Info */}
+                {/* Students in this meeting */}
                 <div>
-                  <Label className="text-muted-foreground">Student</Label>
-                  <p className="font-medium">
-                    {selectedMeeting.studentName} (Roll No: {selectedMeeting.studentRollNumber})
-                  </p>
+                  <Label className="text-muted-foreground">Students ({selectedGroupedMeeting.studentCount})</Label>
+                  <div className="mt-2 max-h-40 overflow-y-auto border rounded-md">
+                    {selectedGroupedMeeting.students.map((student, idx) => (
+                      <div 
+                        key={student.id} 
+                        className={`flex items-center justify-between p-2 text-sm ${idx !== selectedGroupedMeeting.students.length - 1 ? 'border-b' : ''}`}
+                      >
+                        <span className="font-medium">{student.name}</span>
+                        <span className="text-muted-foreground">Roll No: {student.rollNumber}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 
                 {/* Description */}
@@ -542,17 +613,7 @@ export default function MentorshipGroupPage() {
                   <Label className="text-muted-foreground">Description / Agenda</Label>
                   <div className="mt-1 p-3 bg-muted rounded-md">
                     <p className="text-sm">
-                      {selectedMeeting.description || 'No description provided'}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Faculty Review */}
-                <div>
-                  <Label className="text-muted-foreground">Faculty Review</Label>
-                  <div className="mt-1 p-3 bg-muted rounded-md">
-                    <p className="text-sm">
-                      {selectedMeeting.facultyReview || 'No review submitted yet'}
+                      {selectedGroupedMeeting.description || 'No description provided'}
                     </p>
                   </div>
                 </div>
@@ -560,7 +621,7 @@ export default function MentorshipGroupPage() {
                 {/* Meeting Status Indicator */}
                 <div className="p-4 rounded-lg border">
                   <div className="flex items-center gap-3">
-                    {selectedMeeting.status === 'COMPLETED' ? (
+                    {selectedGroupedMeeting.status === 'COMPLETED' ? (
                       <>
                         <div className="p-2 bg-green-100 dark:bg-green-900 rounded-full">
                           <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -572,7 +633,7 @@ export default function MentorshipGroupPage() {
                           </p>
                         </div>
                       </>
-                    ) : selectedMeeting.status === 'UPCOMING' ? (
+                    ) : selectedGroupedMeeting.status === 'UPCOMING' ? (
                       <>
                         <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-full">
                           <Clock className="h-5 w-5 text-blue-600" />
@@ -584,7 +645,7 @@ export default function MentorshipGroupPage() {
                           </p>
                         </div>
                       </>
-                    ) : selectedMeeting.status === 'YET_TO_DONE' ? (
+                    ) : selectedGroupedMeeting.status === 'YET_TO_DONE' ? (
                       <>
                         <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-full">
                           <AlertTriangle className="h-5 w-5 text-amber-600" />

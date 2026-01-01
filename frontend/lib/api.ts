@@ -282,6 +282,44 @@ export interface CreateRequestResponse {
   assignedTo: string
 }
 
+// Faculty/HOD Pending Request types
+export interface PendingRequestStudent {
+  id: string
+  name: string
+  rollNumber: string
+  branch: string
+  year: number
+}
+
+export interface PendingRequest {
+  id: string
+  type: RequestType
+  status: RequestStatus
+  remarks: string | null
+  requestData: InternshipRequestData | ProjectRequestData
+  createdAt: string
+  student: PendingRequestStudent
+  assignedTo: {
+    id: string
+    name: string
+  } | null
+}
+
+export interface PendingRequestsResponse {
+  requests: PendingRequest[]
+  total: number
+}
+
+export interface ApproveRejectResponse {
+  message: string
+  requestId: string
+  status: RequestStatus
+  createdRecord?: {
+    type: string
+    id: string
+  }
+}
+
 // Mentor types
 export interface MentorData {
   mentorshipId: string
@@ -1045,6 +1083,25 @@ class ApiService {
     return this.request<GroupScheduleMeetingsResponse>('/api/faculty/schedule-group-meetings', {
       method: 'POST',
       body: JSON.stringify({ year, semester, meetings }),
+    })
+  }
+
+  // Faculty/HOD Request Management endpoints
+  async getPendingRequests(): Promise<PendingRequestsResponse> {
+    return this.request<PendingRequestsResponse>('/api/faculty/requests/pending')
+  }
+
+  async approveRequest(requestId: string, feedback?: string): Promise<ApproveRejectResponse> {
+    return this.request<ApproveRejectResponse>(`/api/requests/${requestId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ feedback }),
+    })
+  }
+
+  async rejectRequest(requestId: string, feedback: string): Promise<ApproveRejectResponse> {
+    return this.request<ApproveRejectResponse>(`/api/requests/${requestId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ feedback }),
     })
   }
 }
