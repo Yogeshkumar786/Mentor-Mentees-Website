@@ -3477,3 +3477,221 @@ def faculty_schedule_group_meetings(request):
         import traceback
         traceback.print_exc()
         return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@require_http_methods(["POST"])
+def complete_meeting(request, meeting_id):
+    """
+    Faculty/HOD marks a meeting as completed with a review.
+    Only allowed if the meeting date/time has passed.
+    
+    POST body:
+        - review: string (required) - Faculty review for the meeting
+        - description: string (optional) - Updated description/agenda
+    """
+    try:
+        from .models import Meeting, MeetingStatus, User, UserRole
+        from datetime import datetime
+        
+        # Get user from session
+        user_id = request.session.get('user_id')
+        if not user_id:
+            return JsonResponse({'message': 'Not authenticated'}, status=401)
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({'message': 'User not found'}, status=401)
+        
+        # Only Faculty and HOD can complete meetings
+        if user.role not in [UserRole.FACULTY, UserRole.HOD]:
+            return JsonResponse({'message': 'Only faculty can complete meetings'}, status=403)
+        
+        # Get the meeting
+        try:
+            meeting = Meeting.objects.select_related('mentorship__faculty', 'mentorship__student').get(id=meeting_id)
+        except Meeting.DoesNotExist:
+            return JsonResponse({'message': 'Meeting not found'}, status=404)
+        
+        # Verify the user is the mentor for this meeting
+        if user.role == UserRole.FACULTY:
+            if not hasattr(user, 'faculty') or meeting.mentorship.faculty.id != user.faculty.id:
+                return JsonResponse({'message': 'You can only complete your own meetings'}, status=403)
+        elif user.role == UserRole.HOD:
+            if not hasattr(user, 'hod'):
+                return JsonResponse({'message': 'HOD profile not found'}, status=403)
+            # HOD can complete meetings in their department
+            if meeting.mentorship.department != user.hod.department:
+                return JsonResponse({'message': 'You can only complete meetings in your department'}, status=403)
+        
+        # Check if meeting is already completed
+        if meeting.status == MeetingStatus.COMPLETED:
+            return JsonResponse({'message': 'Meeting is already marked as completed'}, status=400)
+        
+        # Check if meeting time has passed
+        now = datetime.now()
+        meeting_datetime = datetime.combine(meeting.date, meeting.time)
+        
+        if now < meeting_datetime:
+            return JsonResponse({
+                'message': 'Cannot complete a meeting before its scheduled time',
+                'meetingTime': meeting_datetime.isoformat(),
+                'currentTime': now.isoformat()
+            }, status=400)
+        
+        # Parse request body
+        data = json.loads(request.body)
+        review = data.get('review', '').strip()
+        description = data.get('description')
+        
+        if not review:
+            return JsonResponse({'message': 'Review is required to complete a meeting'}, status=400)
+        
+        # Update meeting
+        meeting.status = MeetingStatus.COMPLETED
+        meeting.facultyReview = review
+        if description is not None:
+            meeting.description = description
+        meeting.save()
+        
+        return JsonResponse({
+            'message': 'Meeting marked as completed successfully',
+            'meeting': {
+                'id': str(meeting.id),
+                'date': meeting.date.isoformat(),
+                'time': meeting.time.strftime('%H:%M'),
+                'description': meeting.description,
+                'facultyReview': meeting.facultyReview,
+                'status': meeting.status,
+                'student': {
+                    'name': meeting.mentorship.student.name,
+                    'rollNumber': meeting.mentorship.student.rollNumber
+                }
+            }
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Complete meeting error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@require_http_methods(["POST"])
+def complete_group_meetings(request):
+    """
+    Faculty/HOD marks all meetings for a specific date/time in a group as completed.
+    This is useful for group meetings where all students meet at the same time.
+    
+    POST body:
+        - date: string (required) - Meeting date in YYYY-MM-DD format
+        - time: string (required) - Meeting time in HH:MM format  
+        - review: string (required) - Faculty review for the meeting
+        - description: string (optional) - Updated description/agenda
+        - year: int (required) - Academic year
+        - semester: int (required) - Semester
+    """
+    try:
+        from .models import Meeting, MeetingStatus, User, UserRole, Mentorship
+        from datetime import datetime
+        
+        # Get user from session
+        user_id = request.session.get('user_id')
+        if not user_id:
+            return JsonResponse({'message': 'Not authenticated'}, status=401)
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({'message': 'User not found'}, status=401)
+        
+        # Only Faculty and HOD can complete meetings
+        if user.role not in [UserRole.FACULTY, UserRole.HOD]:
+            return JsonResponse({'message': 'Only faculty can complete meetings'}, status=403)
+        
+        # Parse request body
+        data = json.loads(request.body)
+        meeting_date = data.get('date')
+        meeting_time = data.get('time')
+        review = data.get('review', '').strip()
+        description = data.get('description')
+        year = data.get('year')
+        semester = data.get('semester')
+        
+        if not all([meeting_date, meeting_time, review, year, semester]):
+            return JsonResponse({'message': 'date, time, review, year, and semester are required'}, status=400)
+        
+        # Parse date and time
+        try:
+            parsed_date = datetime.strptime(meeting_date, '%Y-%m-%d').date()
+            parsed_time = datetime.strptime(meeting_time, '%H:%M').time()
+        except ValueError:
+            return JsonResponse({'message': 'Invalid date/time format'}, status=400)
+        
+        # Check if meeting time has passed
+        now = datetime.now()
+        meeting_datetime = datetime.combine(parsed_date, parsed_time)
+        
+        if now < meeting_datetime:
+            return JsonResponse({
+                'message': 'Cannot complete a meeting before its scheduled time',
+                'meetingTime': meeting_datetime.isoformat(),
+                'currentTime': now.isoformat()
+            }, status=400)
+        
+        # Get faculty
+        if user.role == UserRole.FACULTY:
+            if not hasattr(user, 'faculty'):
+                return JsonResponse({'message': 'Faculty profile not found'}, status=403)
+            faculty = user.faculty
+        else:  # HOD
+            if not hasattr(user, 'hod') or not hasattr(user.hod, 'faculty'):
+                return JsonResponse({'message': 'HOD/Faculty profile not found'}, status=403)
+            faculty = user.hod.faculty
+        
+        # Get all mentorships for this faculty in the specified year/semester
+        mentorships = Mentorship.objects.filter(
+            faculty=faculty,
+            year=year,
+            semester=semester
+        )
+        
+        if not mentorships.exists():
+            return JsonResponse({'message': 'No mentorships found for this group'}, status=404)
+        
+        # Get all meetings for these mentorships with matching date/time
+        meetings = Meeting.objects.filter(
+            mentorship__in=mentorships,
+            date=parsed_date,
+            time=parsed_time
+        ).exclude(status=MeetingStatus.COMPLETED)
+        
+        if not meetings.exists():
+            return JsonResponse({'message': 'No pending meetings found for this date/time'}, status=404)
+        
+        # Update all meetings
+        updated_count = meetings.update(
+            status=MeetingStatus.COMPLETED,
+            facultyReview=review
+        )
+        
+        # Update description if provided
+        if description is not None:
+            meetings.update(description=description)
+        
+        return JsonResponse({
+            'message': f'Marked {updated_count} meeting(s) as completed',
+            'completedCount': updated_count,
+            'date': meeting_date,
+            'time': meeting_time
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Complete group meetings error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)

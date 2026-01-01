@@ -320,6 +320,39 @@ export interface ApproveRejectResponse {
   }
 }
 
+// Meeting completion types
+export interface CompleteMeetingResponse {
+  message: string
+  meeting: {
+    id: string
+    date: string
+    time: string
+    description: string | null
+    facultyReview: string
+    status: string
+    student: {
+      name: string
+      rollNumber: number
+    }
+  }
+}
+
+export interface CompleteGroupMeetingsRequest {
+  date: string
+  time: string
+  review: string
+  description?: string
+  year: number
+  semester: number
+}
+
+export interface CompleteGroupMeetingsResponse {
+  message: string
+  completedCount: number
+  date: string
+  time: string
+}
+
 // Mentor types
 export interface MentorData {
   mentorshipId: string
@@ -1102,6 +1135,21 @@ class ApiService {
     return this.request<ApproveRejectResponse>(`/api/requests/${requestId}/reject`, {
       method: 'POST',
       body: JSON.stringify({ feedback }),
+    })
+  }
+
+  // Meeting completion APIs
+  async completeMeeting(meetingId: string, review: string, description?: string): Promise<CompleteMeetingResponse> {
+    return this.request<CompleteMeetingResponse>(`/api/meeting/${meetingId}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({ review, description }),
+    })
+  }
+
+  async completeGroupMeetings(data: CompleteGroupMeetingsRequest): Promise<CompleteGroupMeetingsResponse> {
+    return this.request<CompleteGroupMeetingsResponse>('/api/meetings/complete-group', {
+      method: 'POST',
+      body: JSON.stringify(data),
     })
   }
 }

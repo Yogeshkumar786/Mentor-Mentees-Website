@@ -48,6 +48,9 @@ urlpatterns = [
     path('api/student/personal-problems', views.get_student_personal_problems, name='get_student_personal_problems'),
     path('api/student/projects', views.get_student_projects, name='get_student_projects'),
     path('api/student/academic', views.get_student_academic, name='get_student_academic'),
+    # Meeting completion APIs
+    path('api/meeting/<uuid:meeting_id>/complete', views.complete_meeting, name='complete_meeting'),
+    path('api/meetings/complete-group', views.complete_group_meetings, name='complete_group_meetings'),
     # Request APIs - Student
     path('api/student/requests', views.get_student_requests, name='get_student_requests'),
     path('api/student/internships/request', views.create_internship_request, name='create_internship_request'),
