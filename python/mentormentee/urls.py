@@ -41,6 +41,10 @@ urlpatterns = [
     path('api/hods', views.get_hods, name='get_hods'),
     path('api/hod/assign', views.assign_hod, name='assign_hod'),
     path('api/hod/<uuid:hod_id>/remove', views.remove_hod, name='remove_hod'),
+    path('api/hod/change', views.change_hod, name='change_hod'),
+    # Faculty Management APIs (Admin only)
+    path('api/admin/faculty', views.create_faculty, name='create_faculty'),
+    path('api/admin/faculty/<uuid:faculty_id>', views.update_faculty, name='update_faculty'),
     # Student APIs
     path('api/student/about', views.get_student_about, name='get_student_about'),
     path('api/student/career-details', views.get_student_career_details, name='get_student_career_details'),

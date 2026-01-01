@@ -631,7 +631,7 @@ def get_department_students(request):
     """
     Get students of a department with optional filters
     Query params:
-        - department: Required (CSE, ECE, EEE, MECH, CIVIL, BIO-TECH, MME, CHEM)
+        - department: Optional (CSE, ECE, EEE, MECH, CIVIL, BIO-TECH, MME, CHEM). If not provided, returns all students.
         - year: Optional (1, 2, 3, 4). If 0 or not provided, returns all years
         - programme: Optional (B.Tech, M.Tech, PhD). If not provided, returns all programmes
     Accessible by: FACULTY, HOD, ADMIN (not STUDENT)
@@ -644,20 +644,14 @@ def get_department_students(request):
         year = request.GET.get('year', '0')
         programme = request.GET.get('programme')
         
-        # Validate department
-        if not department:
-            return JsonResponse(
-                {'message': 'department query parameter is required'},
-                status=400
-            )
-        
-        # Validate department is valid enum value
-        valid_departments = [d.value for d in Department]
-        if department not in valid_departments:
-            return JsonResponse(
-                {'message': f'Invalid department. Valid values: {valid_departments}'},
-                status=400
-            )
+        # Validate department if provided
+        if department:
+            valid_departments = [d.value for d in Department]
+            if department not in valid_departments:
+                return JsonResponse(
+                    {'message': f'Invalid department. Valid values: {valid_departments}'},
+                    status=400
+                )
         
         # Validate programme if provided
         if programme:
@@ -682,8 +676,12 @@ def get_department_students(request):
                 status=400
             )
         
-        # Build query
-        students_query = Student.objects.filter(branch=department)
+        # Build query - start with all students
+        students_query = Student.objects.all()
+        
+        # Apply department filter only if provided
+        if department:
+            students_query = students_query.filter(branch=department)
         
         # Apply year filter using the year field
         if year != 0:
@@ -715,7 +713,7 @@ def get_department_students(request):
         
         return JsonResponse({
             'message': f'Found {len(students_list)} student(s)',
-            'department': department,
+            'department': department if department else 'all',
             'filters': {
                 'year': year if year != 0 else 'all',
                 'programme': programme if programme else 'all'
@@ -3695,3 +3693,362 @@ def complete_group_meetings(request):
         import traceback
         traceback.print_exc()
         return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role('ADMIN')
+def create_faculty(request):
+    """
+    Create a new faculty member (Admin only)
+    Required fields:
+        - employeeId: Unique employee ID
+        - name: Full name
+        - phone1: Primary phone number
+        - personalEmail: Personal email address
+        - collegeEmail: College email address
+        - department: Department (CSE, ECE, EEE, MECH, CIVIL, BIO-TECH, MME, CHEM)
+        - office: Office location
+        - officeHours: Office hours
+        - password: Initial password for the account
+    Optional fields:
+        - phone2: Secondary phone number
+        - btech: B.Tech programs (comma separated or empty string)
+        - mtech: M.Tech programs (comma separated or empty string)
+        - phd: PhD programs (comma separated or empty string)
+    """
+    try:
+        from .models import User, Faculty, Department, UserRole
+        
+        data = json.loads(request.body)
+        
+        # Required fields
+        employee_id = data.get('employeeId')
+        name = data.get('name')
+        phone1 = data.get('phone1')
+        personal_email = data.get('personalEmail')
+        college_email = data.get('collegeEmail')
+        department = data.get('department')
+        office = data.get('office')
+        office_hours = data.get('officeHours')
+        password = data.get('password')
+        
+        # Optional fields
+        phone2 = data.get('phone2')
+        btech = data.get('btech')
+        mtech = data.get('mtech')
+        phd = data.get('phd')
+        
+        # Validate required fields
+        required_fields = {
+            'employeeId': employee_id,
+            'name': name,
+            'phone1': phone1,
+            'personalEmail': personal_email,
+            'collegeEmail': college_email,
+            'department': department,
+            'office': office,
+            'officeHours': office_hours,
+            'password': password
+        }
+        
+        for field_name, value in required_fields.items():
+            if not value:
+                return JsonResponse({'message': f'{field_name} is required'}, status=400)
+        
+        # Validate department
+        valid_departments = [d.value for d in Department]
+        if department not in valid_departments:
+            return JsonResponse(
+                {'message': f'Invalid department. Valid values: {valid_departments}'},
+                status=400
+            )
+        
+        # Check for unique constraints
+        if User.objects.filter(email=college_email).exists():
+            return JsonResponse({'message': 'A user with this college email already exists'}, status=400)
+        
+        if Faculty.objects.filter(employeeId=employee_id).exists():
+            return JsonResponse({'message': 'A faculty with this employee ID already exists'}, status=400)
+        
+        if Faculty.objects.filter(personalEmail=personal_email).exists():
+            return JsonResponse({'message': 'A faculty with this personal email already exists'}, status=400)
+        
+        if Faculty.objects.filter(collegeEmail=college_email).exists():
+            return JsonResponse({'message': 'A faculty with this college email already exists'}, status=400)
+        
+        # Hash the password
+        from django.contrib.auth.hashers import make_password
+        hashed_password = make_password(password)
+        
+        # Create user
+        user = User.objects.create(
+            email=college_email,
+            password=hashed_password,
+            role=UserRole.FACULTY
+        )
+        
+        # Create faculty
+        from django.utils import timezone
+        faculty = Faculty.objects.create(
+            user=user,
+            employeeId=employee_id,
+            name=name,
+            phone1=phone1,
+            phone2=phone2,
+            personalEmail=personal_email,
+            collegeEmail=college_email,
+            department=department,
+            office=office,
+            officeHours=office_hours,
+            btech=btech,
+            mtech=mtech,
+            phd=phd,
+            isActive=True,
+            startDate=timezone.now()
+        )
+        
+        return JsonResponse({
+            'message': 'Faculty created successfully',
+            'faculty': {
+                'id': str(faculty.id),
+                'employeeId': faculty.employeeId,
+                'name': faculty.name,
+                'email': user.email,
+                'collegeEmail': faculty.collegeEmail,
+                'department': faculty.department,
+                'isActive': faculty.isActive
+            }
+        }, status=201)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Create faculty error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT"])
+@require_role('ADMIN')
+def update_faculty(request, faculty_id):
+    """
+    Update an existing faculty member (Admin only)
+    Path params:
+        - faculty_id: UUID of the faculty to update
+    Optional fields (any combination):
+        - name, phone1, phone2, personalEmail, collegeEmail
+        - department, office, officeHours
+        - btech, mtech, phd
+        - isActive
+    """
+    try:
+        from .models import Faculty, Department
+        
+        # Get faculty
+        try:
+            faculty = Faculty.objects.select_related('user').get(id=faculty_id)
+        except Faculty.DoesNotExist:
+            return JsonResponse({'message': 'Faculty not found'}, status=404)
+        
+        data = json.loads(request.body)
+        
+        # Update allowed fields
+        if 'name' in data:
+            faculty.name = data['name']
+        
+        if 'phone1' in data:
+            faculty.phone1 = data['phone1']
+        
+        if 'phone2' in data:
+            faculty.phone2 = data['phone2']
+        
+        if 'personalEmail' in data:
+            # Check uniqueness
+            if Faculty.objects.filter(personalEmail=data['personalEmail']).exclude(id=faculty_id).exists():
+                return JsonResponse({'message': 'A faculty with this personal email already exists'}, status=400)
+            faculty.personalEmail = data['personalEmail']
+        
+        if 'collegeEmail' in data:
+            # Check uniqueness for User and Faculty
+            if Faculty.objects.filter(collegeEmail=data['collegeEmail']).exclude(id=faculty_id).exists():
+                return JsonResponse({'message': 'A faculty with this college email already exists'}, status=400)
+            faculty.collegeEmail = data['collegeEmail']
+            faculty.user.email = data['collegeEmail']
+            faculty.user.save()
+        
+        if 'department' in data:
+            valid_departments = [d.value for d in Department]
+            if data['department'] not in valid_departments:
+                return JsonResponse(
+                    {'message': f'Invalid department. Valid values: {valid_departments}'},
+                    status=400
+                )
+            faculty.department = data['department']
+        
+        if 'office' in data:
+            faculty.office = data['office']
+        
+        if 'officeHours' in data:
+            faculty.officeHours = data['officeHours']
+        
+        if 'btech' in data:
+            faculty.btech = data['btech']
+        
+        if 'mtech' in data:
+            faculty.mtech = data['mtech']
+        
+        if 'phd' in data:
+            faculty.phd = data['phd']
+        
+        if 'isActive' in data:
+            faculty.isActive = data['isActive']
+            if not data['isActive']:
+                from django.utils import timezone
+                faculty.endDate = timezone.now()
+        
+        faculty.save()
+        
+        return JsonResponse({
+            'message': 'Faculty updated successfully',
+            'faculty': {
+                'id': str(faculty.id),
+                'employeeId': faculty.employeeId,
+                'name': faculty.name,
+                'email': faculty.user.email,
+                'collegeEmail': faculty.collegeEmail,
+                'department': faculty.department,
+                'isActive': faculty.isActive
+            }
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update faculty error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role('ADMIN')
+def change_hod(request):
+    """
+    Change HOD for a department (Admin only)
+    This will:
+    1. Remove current HOD (if any) for the department
+    2. Set the new faculty as HOD
+    Required fields:
+        - facultyId: UUID of the faculty to become HOD
+        - department: Department for which to assign HOD
+    """
+    try:
+        from .models import User, Faculty, HOD, Department, UserRole
+        from django.utils import timezone
+        
+        data = json.loads(request.body)
+        
+        faculty_id = data.get('facultyId')
+        department = data.get('department')
+        
+        # Validate required fields
+        if not faculty_id:
+            return JsonResponse({'message': 'facultyId is required'}, status=400)
+        
+        if not department:
+            return JsonResponse({'message': 'department is required'}, status=400)
+        
+        # Validate department
+        valid_departments = [d.value for d in Department]
+        if department not in valid_departments:
+            return JsonResponse(
+                {'message': f'Invalid department. Valid values: {valid_departments}'},
+                status=400
+            )
+        
+        # Get the faculty
+        try:
+            faculty = Faculty.objects.select_related('user').get(id=faculty_id)
+        except Faculty.DoesNotExist:
+            return JsonResponse({'message': 'Faculty not found'}, status=404)
+        
+        # Validate faculty is in the same department
+        if faculty.department != department:
+            return JsonResponse(
+                {'message': f'Faculty is in {faculty.department} department, not {department}'},
+                status=400
+            )
+        
+        # Check if faculty is active
+        if not faculty.isActive:
+            return JsonResponse({'message': 'Faculty is not active'}, status=400)
+        
+        # Check if faculty is already HOD somewhere
+        existing_hod_entry = HOD.objects.filter(faculty=faculty, endDate__isnull=True).first()
+        if existing_hod_entry:
+            if existing_hod_entry.department == department:
+                return JsonResponse({'message': 'This faculty is already HOD of this department'}, status=400)
+            else:
+                return JsonResponse(
+                    {'message': f'This faculty is already HOD of {existing_hod_entry.department}'},
+                    status=400
+                )
+        
+        # Remove current HOD for the department (if any)
+        current_hod = HOD.objects.filter(department=department, endDate__isnull=True).first()
+        removed_hod_info = None
+        
+        if current_hod:
+            current_hod.endDate = timezone.now()
+            current_hod.save()
+            
+            # Update old HOD's user role back to FACULTY
+            current_hod.user.role = UserRole.FACULTY
+            current_hod.user.save()
+            
+            removed_hod_info = {
+                'id': str(current_hod.faculty.id),
+                'name': current_hod.faculty.name,
+                'employeeId': current_hod.faculty.employeeId
+            }
+        
+        # Create new HOD entry
+        new_hod = HOD.objects.create(
+            user=faculty.user,
+            faculty=faculty,
+            department=department,
+            startDate=timezone.now()
+        )
+        
+        # Update faculty's user role to HOD
+        faculty.user.role = UserRole.HOD
+        faculty.user.save()
+        
+        response_data = {
+            'message': f'HOD changed successfully for {department}',
+            'newHOD': {
+                'hodId': str(new_hod.id),
+                'facultyId': str(faculty.id),
+                'name': faculty.name,
+                'employeeId': faculty.employeeId,
+                'department': department
+            }
+        }
+        
+        if removed_hod_info:
+            response_data['previousHOD'] = removed_hod_info
+        
+        return JsonResponse(response_data, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Change HOD error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
