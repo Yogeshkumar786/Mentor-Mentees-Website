@@ -60,7 +60,8 @@ export default function LoginPage() {
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
             <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
-              <GraduationCap className="w-7 h-7 text-primary-foreground" />
+              {/* <GraduationCap className="w-7 h-7 text-primary-foreground" /> */}
+              <img src="/clglogo.jpg" alt="Logo" className="w-12 h-12 object-contain" />
             </div>
           </div>
           <div className="space-y-2">
