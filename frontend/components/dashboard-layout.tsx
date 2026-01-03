@@ -6,7 +6,7 @@ import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { useAuth, type UserRole } from "./auth-provider"
 import { Button } from "./ui/button"
-import { GraduationCap, LogOut, Menu } from "lucide-react"
+import { LogOut, Menu } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet"
 import { getNavigationForRole, canAccessRoute, getUserDisplayName, type NavItem } from "@/lib/navigation"
 
@@ -80,7 +80,8 @@ export function DashboardLayout({ children, requiredRoles }: DashboardLayoutProp
                   <div className="p-6 border-b">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                        <GraduationCap className="w-5 h-5 text-primary-foreground" />
+                        {/* <GraduationCap className="w-5 h-5 text-primary-foreground" /> */}
+                        <img src="/clglogo.jpg" alt="Logo" className="w-8 h-8 object-contain" />
                       </div>
                       <span className="font-semibold text-lg">MentorHub</span>
                     </div>
@@ -109,7 +110,8 @@ export function DashboardLayout({ children, requiredRoles }: DashboardLayoutProp
 
             <Link href="/dashboard" className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-primary-foreground" />
+                {/* <GraduationCap className="w-5 h-5 text-primary-foreground" /> */}
+                 <img src="/clglogo.jpg" alt="Logo" className="w-8 h-8 object-contain" />
               </div>
               <span className="font-semibold text-lg hidden sm:inline">MentorHub</span>
             </Link>
