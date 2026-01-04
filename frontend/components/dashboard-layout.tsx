@@ -83,7 +83,7 @@ export function DashboardLayout({ children, requiredRoles }: DashboardLayoutProp
                         {/* <GraduationCap className="w-5 h-5 text-primary-foreground" /> */}
                         <img src="/clglogo.jpg" alt="Logo" className="w-8 h-8 object-contain" />
                       </div>
-                      <span className="font-semibold text-lg">MentorHub</span>
+                      <span className="font-semibold text-lg">National Institute of Technology Andhra Pradesh</span>
                     </div>
                   </div>
                   <nav className="flex-1 p-4">
