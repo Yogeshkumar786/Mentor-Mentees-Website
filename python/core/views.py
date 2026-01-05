@@ -1916,13 +1916,70 @@ def approve_request(request, request_id):
             req.content_type = ContentType.objects.get_for_model(Project)
             req.object_id = project.id
         
+        elif req.type == 'DELETE_INTERNSHIP':
+            # Delete the internship
+            internship_id = req.request_data.get('internshipId')
+            if internship_id:
+                try:
+                    internship = Internship.objects.get(id=internship_id)
+                    # Remove student from internship
+                    internship.students.remove(req.student)
+                    # If no students left, delete the internship
+                    if internship.students.count() == 0:
+                        internship.delete()
+                except Internship.DoesNotExist:
+                    pass
+        
+        elif req.type == 'DELETE_PROJECT':
+            # Delete the project
+            project_id = req.request_data.get('projectId')
+            if project_id:
+                try:
+                    project = Project.objects.get(id=project_id)
+                    # Remove student from project
+                    project.students.remove(req.student)
+                    # If no students left, delete the project
+                    if project.students.count() == 0:
+                        project.delete()
+                except Project.DoesNotExist:
+                    pass
+        
+        elif req.type == 'MEETING_REQUEST':
+            # Create a meeting when approved
+            from .models import Meeting, MeetingStatus, Mentorship
+            
+            mentorship_id = req.request_data.get('mentorshipId')
+            if mentorship_id:
+                try:
+                    mentorship = Mentorship.objects.get(id=mentorship_id)
+                    
+                    # Parse date and time from request data
+                    from datetime import datetime
+                    meeting_date_str = req.request_data.get('date')
+                    meeting_time_str = req.request_data.get('time', '10:00')
+                    
+                    meeting_date = datetime.strptime(meeting_date_str, '%Y-%m-%d').date() if meeting_date_str else datetime.now().date()
+                    meeting_time = datetime.strptime(meeting_time_str, '%H:%M').time() if meeting_time_str else datetime.now().time()
+                    
+                    # Create the meeting
+                    meeting = Meeting.objects.create(
+                        mentorship=mentorship,
+                        date=meeting_date,
+                        time=meeting_time,
+                        description=req.request_data.get('description', ''),
+                        status=MeetingStatus.UPCOMING
+                    )
+                    created_object = meeting
+                except Mentorship.DoesNotExist:
+                    pass
+        
         # Update request status
         req.status = RequestStatus.APPROVED
         req.feedback = data.get('feedback', 'Approved')
         req.save()
         
         return JsonResponse({
-            'message': f'{req.type.capitalize()} approved successfully',
+            'message': f'{req.type.replace("_", " ").capitalize()} approved successfully',
             'requestId': str(req.id),
             'status': req.status,
             'createdId': str(created_object.id) if created_object else None
@@ -4556,3 +4613,245 @@ def update_career_details_all(request):
         traceback.print_exc()
         return JsonResponse({'message': 'Server error'}, status=500)
 
+
+# ============ REQUEST MANAGEMENT APIs ============
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+@require_role('STUDENT')
+def cancel_request(request, request_id):
+    """
+    Cancel a pending request (student can only cancel their own pending requests)
+    """
+    try:
+        user_id = request.user_id
+        
+        from .models import Student, Request, RequestStatus
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        try:
+            req = Request.objects.get(id=request_id, student=student)
+        except Request.DoesNotExist:
+            return JsonResponse({'message': 'Request not found'}, status=404)
+        
+        if req.status != RequestStatus.PENDING:
+            return JsonResponse({'message': f'Cannot cancel a {req.status.lower()} request'}, status=400)
+        
+        req.delete()
+        
+        return JsonResponse({
+            'message': 'Request cancelled successfully',
+            'requestId': str(request_id)
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Cancel request error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role('STUDENT')
+def create_delete_internship_request(request):
+    """
+    Create a request to delete an existing internship
+    """
+    try:
+        user_id = request.user_id
+        data = json.loads(request.body)
+        
+        from .models import Student, Request, RequestType, Mentorship, Internship
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        internship_id = data.get('internshipId')
+        if not internship_id:
+            return JsonResponse({'message': 'internshipId is required'}, status=400)
+        
+        try:
+            internship = Internship.objects.get(id=internship_id, students=student)
+        except Internship.DoesNotExist:
+            return JsonResponse({'message': 'Internship not found or not owned by student'}, status=404)
+        
+        # Get current mentor to assign the request
+        mentorship = Mentorship.objects.filter(student=student, is_active=True).first()
+        assigned_to = mentorship.faculty if mentorship else None
+        
+        # Store internship data in request for reference
+        delete_data = {
+            'internshipId': str(internship.id),
+            'organisation': internship.organisation,
+            'type': internship.type,
+            'semester': internship.semester,
+            'location': internship.location,
+            'duration': internship.duration,
+            'stipend': internship.stipend,
+            'reason': data.get('reason', '')
+        }
+        
+        # Create the delete request
+        new_request = Request.objects.create(
+            student=student,
+            assigned_to=assigned_to,
+            type=RequestType.DELETE_INTERNSHIP,
+            request_data=delete_data,
+            remarks=data.get('reason', 'Deletion requested')
+        )
+        
+        return JsonResponse({
+            'message': 'Delete request submitted successfully',
+            'requestId': str(new_request.id),
+            'status': new_request.status,
+            'assignedTo': assigned_to.name if assigned_to else 'Not assigned'
+        }, status=201)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Create delete internship request error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role('STUDENT')
+def create_delete_project_request(request):
+    """
+    Create a request to delete an existing project
+    """
+    try:
+        user_id = request.user_id
+        data = json.loads(request.body)
+        
+        from .models import Student, Request, RequestType, Mentorship, Project
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        project_id = data.get('projectId')
+        if not project_id:
+            return JsonResponse({'message': 'projectId is required'}, status=400)
+        
+        try:
+            project = Project.objects.get(id=project_id, students=student)
+        except Project.DoesNotExist:
+            return JsonResponse({'message': 'Project not found or not owned by student'}, status=404)
+        
+        # Get current mentor to assign the request
+        mentorship = Mentorship.objects.filter(student=student, is_active=True).first()
+        assigned_to = mentorship.faculty if mentorship else None
+        
+        # Store project data in request for reference
+        delete_data = {
+            'projectId': str(project.id),
+            'title': project.title,
+            'description': project.description,
+            'semester': project.semester,
+            'technologies': project.technologies,
+            'reason': data.get('reason', '')
+        }
+        
+        # Create the delete request
+        new_request = Request.objects.create(
+            student=student,
+            assigned_to=assigned_to,
+            type=RequestType.DELETE_PROJECT,
+            request_data=delete_data,
+            remarks=data.get('reason', 'Deletion requested')
+        )
+        
+        return JsonResponse({
+            'message': 'Delete request submitted successfully',
+            'requestId': str(new_request.id),
+            'status': new_request.status,
+            'assignedTo': assigned_to.name if assigned_to else 'Not assigned'
+        }, status=201)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Create delete project request error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role('STUDENT')
+def create_meeting_request(request):
+    """
+    Create a request for a meeting with mentor
+    """
+    try:
+        user_id = request.user_id
+        data = json.loads(request.body)
+        
+        from .models import Student, Request, RequestType, Mentorship
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        mentorship_id = data.get('mentorshipId')
+        if not mentorship_id:
+            return JsonResponse({'message': 'mentorshipId is required'}, status=400)
+        
+        try:
+            mentorship = Mentorship.objects.get(id=mentorship_id, student=student, is_active=True)
+        except Mentorship.DoesNotExist:
+            return JsonResponse({'message': 'Active mentorship not found'}, status=404)
+        
+        # Validate required fields
+        meeting_date = data.get('date')
+        if not meeting_date:
+            return JsonResponse({'message': 'date is required'}, status=400)
+        
+        # Store meeting request data (only date, time, description)
+        meeting_data = {
+            'mentorshipId': str(mentorship.id),
+            'facultyId': str(mentorship.faculty.id),
+            'facultyName': mentorship.faculty.name,
+            'studentName': student.name,
+            'date': meeting_date,
+            'time': data.get('time', '10:00'),
+            'description': data.get('description', '')
+        }
+        
+        # Create the meeting request
+        new_request = Request.objects.create(
+            student=student,
+            assigned_to=mentorship.faculty,
+            type=RequestType.MEETING_REQUEST,
+            request_data=meeting_data,
+            remarks=data.get('description', 'Meeting requested')
+        )
+        
+        return JsonResponse({
+            'message': 'Meeting request submitted successfully',
+            'requestId': str(new_request.id),
+            'status': new_request.status,
+            'assignedTo': mentorship.faculty.name
+        }, status=201)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Create meeting request error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)

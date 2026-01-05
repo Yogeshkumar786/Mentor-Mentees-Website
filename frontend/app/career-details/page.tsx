@@ -73,6 +73,10 @@ export default function CareerDetailsPage() {
     fetchCareerData()
   }, [])
 
+  // Validation constants
+  const MAX_ITEMS = 15
+  const MAX_ITEM_LENGTH = 50
+
   const openEditDialog = (field: string, title: string, items: string[], apiFunction: (items: string[]) => Promise<any>) => {
     setEditDialog({
       open: true,
@@ -85,13 +89,43 @@ export default function CareerDetailsPage() {
   }
 
   const handleAddItem = () => {
-    if (newItem.trim() && !editDialog.items.includes(newItem.trim())) {
-      setEditDialog(prev => ({
-        ...prev,
-        items: [...prev.items, newItem.trim()]
-      }))
-      setNewItem('')
+    const trimmedItem = newItem.trim()
+    
+    // Validation
+    if (!trimmedItem) return
+    
+    if (trimmedItem.length > MAX_ITEM_LENGTH) {
+      toast({
+        title: "Too Long",
+        description: `Item must be ${MAX_ITEM_LENGTH} characters or less`,
+        variant: "destructive",
+      })
+      return
     }
+    
+    if (editDialog.items.includes(trimmedItem)) {
+      toast({
+        title: "Duplicate",
+        description: "This item already exists",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    if (editDialog.items.length >= MAX_ITEMS) {
+      toast({
+        title: "Limit Reached",
+        description: `Maximum ${MAX_ITEMS} items allowed`,
+        variant: "destructive",
+      })
+      return
+    }
+    
+    setEditDialog(prev => ({
+      ...prev,
+      items: [...prev.items, trimmedItem]
+    }))
+    setNewItem('')
   }
 
   const handleRemoveItem = (item: string) => {
@@ -340,7 +374,7 @@ export default function CareerDetailsPage() {
             <DialogHeader>
               <DialogTitle>Edit {editDialog.title}</DialogTitle>
               <DialogDescription>
-                Add or remove items from your {editDialog.title.toLowerCase()} list.
+                Add or remove items from your {editDialog.title.toLowerCase()} list. Max {MAX_ITEMS} items, {MAX_ITEM_LENGTH} chars each.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -350,10 +384,22 @@ export default function CareerDetailsPage() {
                   value={newItem}
                   onChange={(e) => setNewItem(e.target.value)}
                   onKeyDown={handleKeyDown}
+                  maxLength={MAX_ITEM_LENGTH}
+                  disabled={editDialog.items.length >= MAX_ITEMS}
                 />
-                <Button onClick={handleAddItem} size="icon">
+                <Button 
+                  onClick={handleAddItem} 
+                  size="icon"
+                  disabled={editDialog.items.length >= MAX_ITEMS || !newItem.trim()}
+                >
                   <Plus className="h-4 w-4" />
                 </Button>
+              </div>
+              <div className="flex justify-between items-center text-xs text-muted-foreground">
+                <span>{newItem.length}/{MAX_ITEM_LENGTH} characters</span>
+                <span className={editDialog.items.length >= MAX_ITEMS ? 'text-destructive' : ''}>
+                  {editDialog.items.length}/{MAX_ITEMS} items
+                </span>
               </div>
               <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
                 {editDialog.items.length === 0 ? (

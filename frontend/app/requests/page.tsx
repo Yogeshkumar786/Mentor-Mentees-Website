@@ -10,6 +10,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useToast } from "@/hooks/use-toast"
 import { 
   ClipboardList, 
   Clock, 
@@ -21,7 +32,8 @@ import {
   AlertCircle,
   CalendarDays,
   User,
-  Plus
+  Plus,
+  Trash2
 } from "lucide-react"
 
 export default function RequestsPage() {
@@ -29,25 +41,52 @@ export default function RequestsPage() {
   const [requestsData, setRequestsData] = useState<StudentRequestsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [cancelDialog, setCancelDialog] = useState<{ open: boolean; requestId: string | null }>({ open: false, requestId: null })
+  const [cancelling, setCancelling] = useState(false)
+  const { toast } = useToast()
+
+  const fetchRequests = async () => {
+    try {
+      setLoading(true)
+      const data = await api.getStudentRequests()
+      setRequestsData(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch requests')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!user) return
     // If student, fetch student requests. Faculty/HOD will use FacultyRequests component.
     if (user.role === 'STUDENT') {
-      const fetchRequests = async () => {
-        try {
-          setLoading(true)
-          const data = await api.getStudentRequests()
-          setRequestsData(data)
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to fetch requests')
-        } finally {
-          setLoading(false)
-        }
-      }
       fetchRequests()
     }
   }, [user])
+
+  const handleCancelRequest = async () => {
+    if (!cancelDialog.requestId) return
+    
+    try {
+      setCancelling(true)
+      await api.cancelRequest(cancelDialog.requestId)
+      toast({
+        title: "Request Cancelled",
+        description: "Your request has been cancelled successfully",
+      })
+      fetchRequests()
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to cancel request',
+        variant: "destructive",
+      })
+    } finally {
+      setCancelling(false)
+      setCancelDialog({ open: false, requestId: null })
+    }
+  }
 
   if (!user) {
     return null
@@ -95,11 +134,32 @@ export default function RequestsPage() {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'INTERNSHIP':
+      case 'DELETE_INTERNSHIP':
         return <Briefcase className="h-5 w-5 text-blue-500" />
       case 'PROJECT':
+      case 'DELETE_PROJECT':
         return <FolderKanban className="h-5 w-5 text-purple-500" />
+      case 'MEETING_REQUEST':
+        return <CalendarDays className="h-5 w-5 text-green-500" />
       default:
         return <ClipboardList className="h-5 w-5" />
+    }
+  }
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'INTERNSHIP':
+        return 'Add Internship'
+      case 'PROJECT':
+        return 'Add Project'
+      case 'DELETE_INTERNSHIP':
+        return 'Delete Internship'
+      case 'DELETE_PROJECT':
+        return 'Delete Project'
+      case 'MEETING_REQUEST':
+        return 'Meeting Request'
+      default:
+        return type
     }
   }
 
@@ -114,28 +174,44 @@ export default function RequestsPage() {
   }
 
   const renderRequestCard = (request: StudentRequest) => {
-    const isInternship = request.type === 'INTERNSHIP'
+    const isInternship = request.type === 'INTERNSHIP' || request.type === 'DELETE_INTERNSHIP'
+    const isDelete = request.type.startsWith('DELETE_')
     const data = request.requestData
     
     // Handle null requestData
     if (!data) {
       return (
-        <Card key={request.id} className={request.status === 'REJECTED' ? 'border-red-200 dark:border-red-900' : ''}>
+        <Card key={request.id} className={`${request.status === 'REJECTED' ? 'border-red-200 dark:border-red-900' : ''} ${isDelete ? 'border-orange-300 dark:border-orange-800' : ''}`}>
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 {getTypeIcon(request.type)}
                 <div>
-                  <CardTitle className="text-lg">
-                    {isInternship ? 'Internship Request' : 'Project Request'}
-                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-lg">
+                      {getTypeLabel(request.type)}
+                    </CardTitle>
+                    {isDelete && <Badge variant="outline" className="text-orange-600 border-orange-600">Delete</Badge>}
+                  </div>
                   <CardDescription className="flex items-center gap-2 mt-1">
                     <CalendarDays className="h-3 w-3" />
                     {formatDate(request.createdAt)}
                   </CardDescription>
                 </div>
               </div>
-              {getStatusBadge(request.status)}
+              <div className="flex items-center gap-2">
+                {getStatusBadge(request.status)}
+                {request.status === 'PENDING' && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={() => setCancelDialog({ open: true, requestId: request.id })}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -145,30 +221,84 @@ export default function RequestsPage() {
       )
     }
     
+    // Get display title based on request type
+    const getDisplayTitle = () => {
+      if (request.type === 'DELETE_INTERNSHIP') {
+        return (data as { organisation?: string }).organisation || 'Delete Internship'
+      } else if (request.type === 'DELETE_PROJECT') {
+        return (data as { title?: string }).title || 'Delete Project'
+      } else if (request.type === 'INTERNSHIP') {
+        return (data as { organisation?: string }).organisation || 'Internship Request'
+      } else if (request.type === 'MEETING_REQUEST') {
+        return `Meeting with ${(data as { facultyName?: string }).facultyName || 'Mentor'}`
+      } else {
+        return (data as { title?: string }).title || 'Project Request'
+      }
+    }
+
+    const isMeetingRequest = request.type === 'MEETING_REQUEST'
+    
     return (
-      <Card key={request.id} className={request.status === 'REJECTED' ? 'border-red-200 dark:border-red-900' : ''}>
+      <Card key={request.id} className={`${request.status === 'REJECTED' ? 'border-red-200 dark:border-red-900' : ''} ${isDelete ? 'border-orange-300 dark:border-orange-800' : ''} ${isMeetingRequest ? 'border-green-300 dark:border-green-800' : ''}`}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               {getTypeIcon(request.type)}
               <div>
-                <CardTitle className="text-lg">
-                  {isInternship 
-                    ? (data as { organisation?: string }).organisation || 'Internship Request'
-                    : (data as { title?: string }).title || 'Project Request'}
-                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-lg">{getDisplayTitle()}</CardTitle>
+                  {isDelete && <Badge variant="outline" className="text-orange-600 border-orange-600">Delete Request</Badge>}
+                  {isMeetingRequest && <Badge variant="outline" className="text-green-600 border-green-600">Meeting</Badge>}
+                </div>
                 <CardDescription className="flex items-center gap-2 mt-1">
                   <CalendarDays className="h-3 w-3" />
                   {formatDate(request.createdAt)}
                 </CardDescription>
               </div>
             </div>
-            {getStatusBadge(request.status)}
+            <div className="flex items-center gap-2">
+              {getStatusBadge(request.status)}
+              {request.status === 'PENDING' && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  onClick={() => setCancelDialog({ open: true, requestId: request.id })}
+                  title="Cancel request"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
+          {isDelete && (data as { reason?: string }).reason && (
+            <div className="p-2 bg-orange-50 dark:bg-orange-950 rounded text-sm">
+              <span className="text-muted-foreground">Reason for deletion:</span>
+              <p className="mt-1">{(data as { reason?: string }).reason}</p>
+            </div>
+          )}
+          {isMeetingRequest && (
+            <div className="p-3 bg-green-50 dark:bg-green-950 rounded space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Date:</span>
+                <span className="font-medium">{(data as { date?: string }).date}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Time:</span>
+                <span className="font-medium">{(data as { time?: string }).time || '10:00'}</span>
+              </div>
+              {(data as { description?: string }).description && (
+                <div>
+                  <span className="text-muted-foreground">Description:</span>
+                  <p className="mt-1">{(data as { description?: string }).description}</p>
+                </div>
+              )}
+            </div>
+          )}
           <div className="grid gap-2 text-sm">
-            {isInternship ? (
+            {isInternship && !isMeetingRequest ? (
               <>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Type:</span>
@@ -409,6 +539,29 @@ export default function RequestsPage() {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Cancel Confirmation Dialog */}
+        <AlertDialog open={cancelDialog.open} onOpenChange={(open) => setCancelDialog({ open, requestId: null })}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancel Request</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to cancel this request? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>No, keep it</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleCancelRequest} 
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={cancelling}
+              >
+                {cancelling ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                Yes, cancel request
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   )

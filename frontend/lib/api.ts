@@ -232,7 +232,7 @@ export interface StudentAcademic {
 
 // Request types
 export type RequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
-export type RequestType = 'INTERNSHIP' | 'PROJECT' | 'PERFORMANCE' | 'CO_CURRICULAR'
+export type RequestType = 'INTERNSHIP' | 'PROJECT' | 'PERFORMANCE' | 'CO_CURRICULAR' | 'DELETE_INTERNSHIP' | 'DELETE_PROJECT' | 'MEETING_REQUEST'
 
 export interface InternshipRequestData {
   semester: number
@@ -250,6 +250,26 @@ export interface ProjectRequestData {
   technologies: string[]
   mentorId?: string
   mentorName?: string
+}
+
+export interface MeetingRequestData {
+  mentorshipId: string
+  facultyId: string
+  facultyName: string
+  studentName: string
+  proposedDate: string
+  proposedTime: string
+  agenda: string
+  mode: string
+  location?: string
+  link?: string
+}
+
+export interface StudentMeetingRequest {
+  mentorshipId: string
+  date: string
+  time?: string
+  description?: string
 }
 
 export interface StudentRequest {
@@ -1354,6 +1374,34 @@ class ApiService {
     return this.request<{ message: string; otherInterests: string[] }>('/api/student/career-details/other-interests', {
       method: 'PUT',
       body: JSON.stringify({ otherInterests }),
+    })
+  }
+
+  // Request Management APIs
+  async cancelRequest(requestId: string): Promise<{ message: string; requestId: string }> {
+    return this.request<{ message: string; requestId: string }>(`/api/student/requests/${requestId}/cancel`, {
+      method: 'DELETE',
+    })
+  }
+
+  async createDeleteInternshipRequest(internshipId: string, reason?: string): Promise<{ message: string; requestId: string; status: string }> {
+    return this.request<{ message: string; requestId: string; status: string }>('/api/student/internships/delete-request', {
+      method: 'POST',
+      body: JSON.stringify({ internshipId, reason }),
+    })
+  }
+
+  async createDeleteProjectRequest(projectId: string, reason?: string): Promise<{ message: string; requestId: string; status: string }> {
+    return this.request<{ message: string; requestId: string; status: string }>('/api/student/projects/delete-request', {
+      method: 'POST',
+      body: JSON.stringify({ projectId, reason }),
+    })
+  }
+
+  async createMeetingRequest(data: StudentMeetingRequest): Promise<{ message: string; requestId: string; status: string; assignedTo: string }> {
+    return this.request<{ message: string; requestId: string; status: string; assignedTo: string }>('/api/student/meeting/request', {
+      method: 'POST',
+      body: JSON.stringify(data),
     })
   }
 }

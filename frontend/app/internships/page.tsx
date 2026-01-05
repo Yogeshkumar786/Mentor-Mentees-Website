@@ -19,6 +19,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -34,7 +44,8 @@ import {
   Building2,
   Loader2,
   AlertCircle,
-  Plus
+  Plus,
+  Trash2
 } from "lucide-react"
 
 export default function InternshipsPage() {
@@ -43,6 +54,9 @@ export default function InternshipsPage() {
   const [error, setError] = useState<string | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; internshipId: string | null; name: string }>({ open: false, internshipId: null, name: '' })
+  const [deleteReason, setDeleteReason] = useState('')
+  const [deleting, setDeleting] = useState(false)
   const { toast } = useToast()
 
   // Form state
@@ -65,6 +79,29 @@ export default function InternshipsPage() {
       setError(err instanceof Error ? err.message : 'Failed to fetch internships')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDeleteRequest = async () => {
+    if (!deleteDialog.internshipId) return
+    
+    try {
+      setDeleting(true)
+      await api.createDeleteInternshipRequest(deleteDialog.internshipId, deleteReason)
+      toast({
+        title: "Delete Request Submitted",
+        description: "Your request to delete this internship has been sent for approval.",
+      })
+      setDeleteDialog({ open: false, internshipId: null, name: '' })
+      setDeleteReason('')
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to submit delete request',
+        variant: "destructive",
+      })
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -287,6 +324,15 @@ export default function InternshipsPage() {
                         <span>Semester {internship.semester}</span>
                       </CardDescription>
                     </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setDeleteDialog({ open: true, internshipId: internship.id, name: internship.organisation })}
+                      title="Request deletion"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-6">
@@ -337,6 +383,39 @@ export default function InternshipsPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Delete Request Dialog */}
+        <AlertDialog open={deleteDialog.open} onOpenChange={(open) => { setDeleteDialog({ open, internshipId: null, name: '' }); setDeleteReason(''); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Request Deletion</AlertDialogTitle>
+              <AlertDialogDescription>
+                Request to delete the internship at <strong>{deleteDialog.name}</strong>. Your mentor will review this request.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+              <Label htmlFor="deleteReason">Reason for deletion (optional)</Label>
+              <Textarea
+                id="deleteReason"
+                placeholder="Explain why you want to delete this internship..."
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteRequest}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleting}
+              >
+                {deleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                Submit Delete Request
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   )

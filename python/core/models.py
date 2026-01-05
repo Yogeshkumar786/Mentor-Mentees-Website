@@ -24,6 +24,9 @@ class RequestType(models.TextChoices):
     PROJECT = 'PROJECT'
     PERFORMANCE = 'PERFORMANCE'
     CO_CURRICULAR = 'CO_CURRICULAR'
+    DELETE_INTERNSHIP = 'DELETE_INTERNSHIP'
+    DELETE_PROJECT = 'DELETE_PROJECT'
+    MEETING_REQUEST = 'MEETING_REQUEST'
 
 
 class StudentStatus(models.TextChoices):

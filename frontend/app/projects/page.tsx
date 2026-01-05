@@ -19,6 +19,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -34,7 +44,8 @@ import {
   Loader2,
   AlertCircle,
   Plus,
-  X
+  X,
+  Trash2
 } from "lucide-react"
 
 export default function ProjectsPage() {
@@ -43,6 +54,9 @@ export default function ProjectsPage() {
   const [error, setError] = useState<string | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; projectId: string | null; name: string }>({ open: false, projectId: null, name: '' })
+  const [deleteReason, setDeleteReason] = useState('')
+  const [deleting, setDeleting] = useState(false)
   const { toast } = useToast()
 
   // Form state
@@ -92,6 +106,29 @@ export default function ProjectsPage() {
     if (e.key === 'Enter') {
       e.preventDefault()
       handleAddTech()
+    }
+  }
+
+  const handleDeleteRequest = async () => {
+    if (!deleteDialog.projectId) return
+    
+    try {
+      setDeleting(true)
+      await api.createDeleteProjectRequest(deleteDialog.projectId, deleteReason)
+      toast({
+        title: "Delete Request Submitted",
+        description: "Your request to delete this project has been sent for approval.",
+      })
+      setDeleteDialog({ open: false, projectId: null, name: '' })
+      setDeleteReason('')
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to submit delete request',
+        variant: "destructive",
+      })
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -295,6 +332,15 @@ export default function ProjectsPage() {
                         Semester {project.semester}
                       </CardDescription>
                     </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setDeleteDialog({ open: true, projectId: project.id, name: project.title })}
+                      title="Request deletion"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -348,6 +394,39 @@ export default function ProjectsPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Delete Request Dialog */}
+        <AlertDialog open={deleteDialog.open} onOpenChange={(open) => { setDeleteDialog({ open, projectId: null, name: '' }); setDeleteReason(''); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Request Deletion</AlertDialogTitle>
+              <AlertDialogDescription>
+                Request to delete the project <strong>{deleteDialog.name}</strong>. Your mentor will review this request.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+              <Label htmlFor="deleteReason">Reason for deletion (optional)</Label>
+              <Textarea
+                id="deleteReason"
+                placeholder="Explain why you want to delete this project..."
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteRequest}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleting}
+              >
+                {deleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                Submit Delete Request
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   )
