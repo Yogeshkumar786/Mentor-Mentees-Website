@@ -4052,3 +4052,507 @@ def change_hod(request):
         traceback.print_exc()
         return JsonResponse({'message': 'Server error'}, status=500)
 
+
+# ============== STUDENT UPDATE APIs ==============
+
+@csrf_exempt
+@require_http_methods(["PUT", "PATCH"])
+@require_role('STUDENT')
+def update_personal_problems(request):
+    """
+    Update student's personal problems/challenges
+    All fields are optional booleans
+    """
+    try:
+        user_id = request.user_id
+        data = json.loads(request.body)
+        
+        from .models import Student, PersonalProblem
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse(
+                {'message': 'Student profile not found'},
+                status=404
+            )
+        
+        # Get or create personal problem record
+        problems, created = PersonalProblem.objects.get_or_create(student=student)
+        
+        # Update fields if provided
+        fields = ['stress', 'anger', 'examinationAnxiety', 'timeManagementProblem', 
+                  'procrastination', 'worriesAboutFuture', 'fearOfPublicSpeaking']
+        
+        for field in fields:
+            if field in data:
+                setattr(problems, field, data[field])
+        
+        problems.save()
+        
+        return JsonResponse({
+            'message': 'Personal challenges updated successfully',
+            'id': str(problems.id),
+            'studentId': str(student.id),
+            'stress': problems.stress,
+            'anger': problems.anger,
+            'examinationAnxiety': problems.examinationAnxiety,
+            'timeManagementProblem': problems.timeManagementProblem,
+            'procrastination': problems.procrastination,
+            'worriesAboutFuture': problems.worriesAboutFuture,
+            'fearOfPublicSpeaking': problems.fearOfPublicSpeaking
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update personal problems error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "PATCH"])
+@require_role('STUDENT')
+def update_career_hobbies(request):
+    """
+    Update student's hobbies (array of strings)
+    """
+    try:
+        user_id = request.user_id
+        data = json.loads(request.body)
+        
+        from .models import Student, CareerDetails
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        hobbies = data.get('hobbies')
+        if hobbies is None:
+            return JsonResponse({'message': 'hobbies field is required'}, status=400)
+        
+        if not isinstance(hobbies, list):
+            return JsonResponse({'message': 'hobbies must be an array'}, status=400)
+        
+        career, created = CareerDetails.objects.get_or_create(student=student)
+        career.hobbies = hobbies
+        career.save()
+        
+        return JsonResponse({
+            'message': 'Hobbies updated successfully',
+            'hobbies': career.hobbies
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update hobbies error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "PATCH"])
+@require_role('STUDENT')
+def update_career_strengths(request):
+    """
+    Update student's strengths (array of strings)
+    """
+    try:
+        user_id = request.user_id
+        data = json.loads(request.body)
+        
+        from .models import Student, CareerDetails
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        strengths = data.get('strengths')
+        if strengths is None:
+            return JsonResponse({'message': 'strengths field is required'}, status=400)
+        
+        if not isinstance(strengths, list):
+            return JsonResponse({'message': 'strengths must be an array'}, status=400)
+        
+        career, created = CareerDetails.objects.get_or_create(student=student)
+        career.strengths = strengths
+        career.save()
+        
+        return JsonResponse({
+            'message': 'Strengths updated successfully',
+            'strengths': career.strengths
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update strengths error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "PATCH"])
+@require_role('STUDENT')
+def update_career_areas_to_improve(request):
+    """
+    Update student's areas to improve (array of strings)
+    """
+    try:
+        user_id = request.user_id
+        data = json.loads(request.body)
+        
+        from .models import Student, CareerDetails
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        areas = data.get('areasToImprove')
+        if areas is None:
+            return JsonResponse({'message': 'areasToImprove field is required'}, status=400)
+        
+        if not isinstance(areas, list):
+            return JsonResponse({'message': 'areasToImprove must be an array'}, status=400)
+        
+        career, created = CareerDetails.objects.get_or_create(student=student)
+        career.areasToImprove = areas
+        career.save()
+        
+        return JsonResponse({
+            'message': 'Areas to improve updated successfully',
+            'areasToImprove': career.areasToImprove
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update areas to improve error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "PATCH"])
+@require_role('STUDENT')
+def update_career_core(request):
+    """
+    Update student's core career interests (array of strings)
+    """
+    try:
+        user_id = request.user_id
+        data = json.loads(request.body)
+        
+        from .models import Student, CareerDetails
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        core = data.get('core')
+        if core is None:
+            return JsonResponse({'message': 'core field is required'}, status=400)
+        
+        if not isinstance(core, list):
+            return JsonResponse({'message': 'core must be an array'}, status=400)
+        
+        career, created = CareerDetails.objects.get_or_create(student=student)
+        career.core = core
+        career.save()
+        
+        return JsonResponse({
+            'message': 'Core interests updated successfully',
+            'core': career.core
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update core error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "PATCH"])
+@require_role('STUDENT')
+def update_career_it(request):
+    """
+    Update student's IT career interests (array of strings)
+    """
+    try:
+        user_id = request.user_id
+        data = json.loads(request.body)
+        
+        from .models import Student, CareerDetails
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        it = data.get('it')
+        if it is None:
+            return JsonResponse({'message': 'it field is required'}, status=400)
+        
+        if not isinstance(it, list):
+            return JsonResponse({'message': 'it must be an array'}, status=400)
+        
+        career, created = CareerDetails.objects.get_or_create(student=student)
+        career.it = it
+        career.save()
+        
+        return JsonResponse({
+            'message': 'IT interests updated successfully',
+            'it': career.it
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update IT error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "PATCH"])
+@require_role('STUDENT')
+def update_career_higher_education(request):
+    """
+    Update student's higher education interests (array of strings)
+    """
+    try:
+        user_id = request.user_id
+        data = json.loads(request.body)
+        
+        from .models import Student, CareerDetails
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        higher_ed = data.get('higherEducation')
+        if higher_ed is None:
+            return JsonResponse({'message': 'higherEducation field is required'}, status=400)
+        
+        if not isinstance(higher_ed, list):
+            return JsonResponse({'message': 'higherEducation must be an array'}, status=400)
+        
+        career, created = CareerDetails.objects.get_or_create(student=student)
+        career.higherEducation = higher_ed
+        career.save()
+        
+        return JsonResponse({
+            'message': 'Higher education interests updated successfully',
+            'higherEducation': career.higherEducation
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update higher education error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "PATCH"])
+@require_role('STUDENT')
+def update_career_startup(request):
+    """
+    Update student's startup interests (array of strings)
+    """
+    try:
+        user_id = request.user_id
+        data = json.loads(request.body)
+        
+        from .models import Student, CareerDetails
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        startup = data.get('startup')
+        if startup is None:
+            return JsonResponse({'message': 'startup field is required'}, status=400)
+        
+        if not isinstance(startup, list):
+            return JsonResponse({'message': 'startup must be an array'}, status=400)
+        
+        career, created = CareerDetails.objects.get_or_create(student=student)
+        career.startup = startup
+        career.save()
+        
+        return JsonResponse({
+            'message': 'Startup interests updated successfully',
+            'startup': career.startup
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update startup error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "PATCH"])
+@require_role('STUDENT')
+def update_career_family_business(request):
+    """
+    Update student's family business interests (array of strings)
+    """
+    try:
+        user_id = request.user_id
+        data = json.loads(request.body)
+        
+        from .models import Student, CareerDetails
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        family_business = data.get('familyBusiness')
+        if family_business is None:
+            return JsonResponse({'message': 'familyBusiness field is required'}, status=400)
+        
+        if not isinstance(family_business, list):
+            return JsonResponse({'message': 'familyBusiness must be an array'}, status=400)
+        
+        career, created = CareerDetails.objects.get_or_create(student=student)
+        career.familyBusiness = family_business
+        career.save()
+        
+        return JsonResponse({
+            'message': 'Family business interests updated successfully',
+            'familyBusiness': career.familyBusiness
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update family business error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "PATCH"])
+@require_role('STUDENT')
+def update_career_other_interests(request):
+    """
+    Update student's other interests (array of strings)
+    """
+    try:
+        user_id = request.user_id
+        data = json.loads(request.body)
+        
+        from .models import Student, CareerDetails
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        other = data.get('otherInterests')
+        if other is None:
+            return JsonResponse({'message': 'otherInterests field is required'}, status=400)
+        
+        if not isinstance(other, list):
+            return JsonResponse({'message': 'otherInterests must be an array'}, status=400)
+        
+        career, created = CareerDetails.objects.get_or_create(student=student)
+        career.otherInterests = other
+        career.save()
+        
+        return JsonResponse({
+            'message': 'Other interests updated successfully',
+            'otherInterests': career.otherInterests
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update other interests error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "PATCH"])
+@require_role('STUDENT')
+def update_career_details_all(request):
+    """
+    Update all career details at once
+    """
+    try:
+        user_id = request.user_id
+        data = json.loads(request.body)
+        
+        from .models import Student, CareerDetails
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        career, created = CareerDetails.objects.get_or_create(student=student)
+        
+        # Update fields if provided
+        array_fields = ['hobbies', 'strengths', 'areasToImprove', 'core', 'it', 
+                        'higherEducation', 'startup', 'familyBusiness', 'otherInterests']
+        
+        for field in array_fields:
+            if field in data:
+                if not isinstance(data[field], list):
+                    return JsonResponse({'message': f'{field} must be an array'}, status=400)
+                setattr(career, field, data[field])
+        
+        career.save()
+        
+        return JsonResponse({
+            'message': 'Career details updated successfully',
+            'id': str(career.id),
+            'studentId': str(student.id),
+            'hobbies': career.hobbies,
+            'strengths': career.strengths,
+            'areasToImprove': career.areasToImprove,
+            'careerInterests': {
+                'core': career.core,
+                'it': career.it,
+                'higherEducation': career.higherEducation,
+                'startup': career.startup,
+                'familyBusiness': career.familyBusiness,
+                'otherInterests': career.otherInterests
+            }
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update career details error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+

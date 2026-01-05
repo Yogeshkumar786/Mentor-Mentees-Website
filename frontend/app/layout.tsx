@@ -10,7 +10,7 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "MentorHub - College Mentor Management",
+  title: "NIT Andhra Pradesh - Mentor-Mentee Portal",
   description: "Comprehensive mentor-mentee management system for colleges",
   generator: "v0.app",
   icons: {

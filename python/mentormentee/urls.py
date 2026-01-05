@@ -66,4 +66,16 @@ urlpatterns = [
     # Mentor APIs - Student
     path('api/student/mentors', views.get_student_mentors, name='get_student_mentors'),
     path('api/student/mentorship/<uuid:mentorship_id>/meetings', views.get_mentorship_meetings, name='get_mentorship_meetings'),
+    # Student Update APIs
+    path('api/student/personal-problems/update', views.update_personal_problems, name='update_personal_problems'),
+    path('api/student/career-details/update', views.update_career_details_all, name='update_career_details_all'),
+    path('api/student/career-details/hobbies', views.update_career_hobbies, name='update_career_hobbies'),
+    path('api/student/career-details/strengths', views.update_career_strengths, name='update_career_strengths'),
+    path('api/student/career-details/areas-to-improve', views.update_career_areas_to_improve, name='update_career_areas_to_improve'),
+    path('api/student/career-details/core', views.update_career_core, name='update_career_core'),
+    path('api/student/career-details/it', views.update_career_it, name='update_career_it'),
+    path('api/student/career-details/higher-education', views.update_career_higher_education, name='update_career_higher_education'),
+    path('api/student/career-details/startup', views.update_career_startup, name='update_career_startup'),
+    path('api/student/career-details/family-business', views.update_career_family_business, name='update_career_family_business'),
+    path('api/student/career-details/other-interests', views.update_career_other_interests, name='update_career_other_interests'),
 ]

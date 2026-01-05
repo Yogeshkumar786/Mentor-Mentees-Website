@@ -83,7 +83,16 @@ export function DashboardLayout({ children, requiredRoles }: DashboardLayoutProp
                         {/* <GraduationCap className="w-5 h-5 text-primary-foreground" /> */}
                         <img src="/clglogo.jpg" alt="Logo" className="w-8 h-8 object-contain" />
                       </div>
-                      <span className="font-semibold text-lg">National Institute of Technology Andhra Pradesh</span>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-sm leading-tight">National Institute of Technology</span>
+                        <span className="font-semibold text-sm leading-tight">Andhra Pradesh</span>
+                        <span className="text-xs text-muted-foreground">
+                          {user?.role === 'STUDENT' && 'Student Portal'}
+                          {user?.role === 'FACULTY' && 'Faculty Portal'}
+                          {user?.role === 'HOD' && 'HOD Portal'}
+                          {user?.role === 'ADMIN' && 'Admin Portal'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <nav className="flex-1 p-4">
@@ -113,7 +122,16 @@ export function DashboardLayout({ children, requiredRoles }: DashboardLayoutProp
                 {/* <GraduationCap className="w-5 h-5 text-primary-foreground" /> */}
                  <img src="/clglogo.jpg" alt="Logo" className="w-8 h-8 object-contain" />
               </div>
-              <span className="font-semibold text-lg hidden sm:inline">MentorHub</span>
+              <div className="hidden sm:flex flex-col">
+                <span className="font-semibold text-sm leading-tight">National Institute of Technology</span>
+                <span className="font-semibold text-sm leading-tight">Andhra Pradesh</span>
+                <span className="text-xs text-muted-foreground">
+                  {user?.role === 'STUDENT' && 'Student Portal'}
+                  {user?.role === 'FACULTY' && 'Faculty Portal'}
+                  {user?.role === 'HOD' && 'HOD Portal'}
+                  {user?.role === 'ADMIN' && 'Admin Portal'}
+                </span>
+              </div>
             </Link>
           </div>
 

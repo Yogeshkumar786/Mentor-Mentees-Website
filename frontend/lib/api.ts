@@ -162,6 +162,29 @@ export interface StudentPersonalProblems {
   message?: string
 }
 
+// Update request types for Student APIs
+export interface UpdatePersonalProblemsRequest {
+  stress?: boolean | null
+  anger?: boolean | null
+  examinationAnxiety?: boolean | null
+  timeManagementProblem?: boolean | null
+  procrastination?: boolean | null
+  worriesAboutFuture?: boolean | null
+  fearOfPublicSpeaking?: boolean | null
+}
+
+export interface UpdateCareerDetailsRequest {
+  hobbies?: string[]
+  strengths?: string[]
+  areasToImprove?: string[]
+  core?: string[]
+  it?: string[]
+  higherEducation?: string[]
+  startup?: string[]
+  familyBusiness?: string[]
+  otherInterests?: string[]
+}
+
 export interface StudentProjects {
   studentId: string
   projects: Array<{
@@ -1253,6 +1276,84 @@ class ApiService {
     return this.request<CompleteGroupMeetingsResponse>('/api/meetings/complete-group', {
       method: 'POST',
       body: JSON.stringify(data),
+    })
+  }
+
+  // Student Update APIs
+  async updatePersonalProblems(data: UpdatePersonalProblemsRequest): Promise<StudentPersonalProblems> {
+    return this.request<StudentPersonalProblems>('/api/student/personal-problems/update', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateCareerDetailsAll(data: UpdateCareerDetailsRequest): Promise<StudentCareerDetails> {
+    return this.request<StudentCareerDetails>('/api/student/career-details/update', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateCareerHobbies(hobbies: string[]): Promise<{ message: string; hobbies: string[] }> {
+    return this.request<{ message: string; hobbies: string[] }>('/api/student/career-details/hobbies', {
+      method: 'PUT',
+      body: JSON.stringify({ hobbies }),
+    })
+  }
+
+  async updateCareerStrengths(strengths: string[]): Promise<{ message: string; strengths: string[] }> {
+    return this.request<{ message: string; strengths: string[] }>('/api/student/career-details/strengths', {
+      method: 'PUT',
+      body: JSON.stringify({ strengths }),
+    })
+  }
+
+  async updateCareerAreasToImprove(areasToImprove: string[]): Promise<{ message: string; areasToImprove: string[] }> {
+    return this.request<{ message: string; areasToImprove: string[] }>('/api/student/career-details/areas-to-improve', {
+      method: 'PUT',
+      body: JSON.stringify({ areasToImprove }),
+    })
+  }
+
+  async updateCareerCore(core: string[]): Promise<{ message: string; core: string[] }> {
+    return this.request<{ message: string; core: string[] }>('/api/student/career-details/core', {
+      method: 'PUT',
+      body: JSON.stringify({ core }),
+    })
+  }
+
+  async updateCareerIT(it: string[]): Promise<{ message: string; it: string[] }> {
+    return this.request<{ message: string; it: string[] }>('/api/student/career-details/it', {
+      method: 'PUT',
+      body: JSON.stringify({ it }),
+    })
+  }
+
+  async updateCareerHigherEducation(higherEducation: string[]): Promise<{ message: string; higherEducation: string[] }> {
+    return this.request<{ message: string; higherEducation: string[] }>('/api/student/career-details/higher-education', {
+      method: 'PUT',
+      body: JSON.stringify({ higherEducation }),
+    })
+  }
+
+  async updateCareerStartup(startup: string[]): Promise<{ message: string; startup: string[] }> {
+    return this.request<{ message: string; startup: string[] }>('/api/student/career-details/startup', {
+      method: 'PUT',
+      body: JSON.stringify({ startup }),
+    })
+  }
+
+  async updateCareerFamilyBusiness(familyBusiness: string[]): Promise<{ message: string; familyBusiness: string[] }> {
+    return this.request<{ message: string; familyBusiness: string[] }>('/api/student/career-details/family-business', {
+      method: 'PUT',
+      body: JSON.stringify({ familyBusiness }),
+    })
+  }
+
+  async updateCareerOtherInterests(otherInterests: string[]): Promise<{ message: string; otherInterests: string[] }> {
+    return this.request<{ message: string; otherInterests: string[] }>('/api/student/career-details/other-interests', {
+      method: 'PUT',
+      body: JSON.stringify({ otherInterests }),
     })
   }
 }

@@ -65,8 +65,8 @@ export default function LoginPage() {
             </div>
           </div>
           <div className="space-y-2">
-            <CardTitle className="text-2xl font-semibold">Welcome to MentorHub</CardTitle>
-            <CardDescription>Sign in to your account</CardDescription>
+            <CardTitle className="text-xl font-semibold">National Institute of Technology Andhra Pradesh</CardTitle>
+            <CardDescription>Mentor-Mentee Portal - Sign in to your account</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
