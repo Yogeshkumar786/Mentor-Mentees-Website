@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -14,10 +15,12 @@ import {
   Mail,
   Phone,
   Building,
-  BookOpen
+  BookOpen,
+  Loader2,
+  CheckCircle
 } from "lucide-react"
 import Link from "next/link"
-import type { ApiUser } from "@/lib/api"
+import { api, type ApiUser, type FacultyDashboardStats, type FacultyMenteesResponse } from "@/lib/api"
 
 interface FacultyDashboardProps {
   user: ApiUser
@@ -59,6 +62,27 @@ function StatsCard({
 export function FacultyDashboard({ user }: FacultyDashboardProps) {
   const faculty = user.faculty
   const facultyName = faculty?.name || user.email
+  const [stats, setStats] = useState<FacultyDashboardStats['stats'] | null>(null)
+  const [mentees, setMentees] = useState<FacultyMenteesResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [statsData, menteesData] = await Promise.all([
+          api.getFacultyDashboardStats(),
+          api.getFacultyMentees().catch(() => null)
+        ])
+        setStats(statsData.stats)
+        if (menteesData) setMentees(menteesData)
+      } catch (err) {
+        console.error('Failed to fetch dashboard data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   // Get initials for avatar
   const getInitials = (name: string) => {
@@ -72,6 +96,15 @@ export function FacultyDashboard({ user }: FacultyDashboardProps) {
     if (faculty?.mtech) programs.push('M.Tech')
     if (faculty?.phd) programs.push('PhD')
     return programs
+  }
+
+  // Get active mentees from all groups
+  const getActiveMentees = () => {
+    if (!mentees) return []
+    return mentees.menteeGroups
+      .filter(g => g.isActive)
+      .flatMap(g => g.mentees)
+      .slice(0, 5)
   }
 
   return (
@@ -92,32 +125,48 @@ export function FacultyDashboard({ user }: FacultyDashboardProps) {
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard 
-          title="My Mentees" 
-          value={0} 
-          icon={Users} 
-          description="Students under guidance"
-          variant="primary"
-        />
-        <StatsCard 
-          title="Upcoming Meetings" 
-          value={0} 
-          icon={Calendar} 
-          description="Scheduled this week"
-        />
-        <StatsCard 
-          title="Pending Requests" 
-          value={0} 
-          icon={MessageSquare} 
-          description="Student requests"
-          variant="warning"
-        />
-        <StatsCard 
-          title="Reports Submitted" 
-          value={0} 
-          icon={FileText} 
-          description="This semester"
-        />
+        {loading ? (
+          <>
+            {[1, 2, 3, 4].map(i => (
+              <Card key={i}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-center h-16">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </>
+        ) : (
+          <>
+            <StatsCard 
+              title="My Mentees" 
+              value={stats?.activeMentees ?? 0} 
+              icon={Users} 
+              description="Students under guidance"
+              variant="primary"
+            />
+            <StatsCard 
+              title="Upcoming Meetings" 
+              value={stats?.upcomingMeetings ?? 0} 
+              icon={Calendar} 
+              description="Scheduled sessions"
+            />
+            <StatsCard 
+              title="Pending Requests" 
+              value={stats?.pendingRequests ?? 0} 
+              icon={MessageSquare} 
+              description="Student requests"
+              variant="warning"
+            />
+            <StatsCard 
+              title="Completed Meetings" 
+              value={stats?.completedMeetings ?? 0} 
+              icon={CheckCircle} 
+              description="This semester"
+            />
+          </>
+        )}
       </div>
 
       {/* Profile and Schedule */}
@@ -193,23 +242,50 @@ export function FacultyDashboard({ user }: FacultyDashboardProps) {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
-                Upcoming Meetings
+                Meetings Overview
               </CardTitle>
-              <CardDescription>Your scheduled mentoring sessions</CardDescription>
+              <CardDescription>Your mentoring session statistics</CardDescription>
             </div>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/dashboard/mentor/meetings">View All</Link>
+              <Link href="/mentor">View All</Link>
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {/* Placeholder for empty state */}
+            {mentees && mentees.stats.totalMeetings > 0 ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-blue-600">{stats?.upcomingMeetings ?? 0}</p>
+                    <p className="text-sm text-muted-foreground">Upcoming</p>
+                  </div>
+                  <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-green-600">{mentees.stats.completedMeetings}</p>
+                    <p className="text-sm text-muted-foreground">Completed</p>
+                  </div>
+                </div>
+                <div className="p-3 border rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Total Meetings</span>
+                    <span className="font-medium">{mentees.stats.totalMeetings}</span>
+                  </div>
+                </div>
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/mentor">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Manage Meetings
+                  </Link>
+                </Button>
+              </div>
+            ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>No upcoming meetings scheduled</p>
-                <p className="text-sm">Schedule a meeting with your mentees</p>
+                <p>No meetings scheduled yet</p>
+                <p className="text-sm">Schedule meetings with your mentees</p>
+                <Button variant="outline" className="mt-4" asChild>
+                  <Link href="/mentor">Schedule Meeting</Link>
+                </Button>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -225,45 +301,46 @@ export function FacultyDashboard({ user }: FacultyDashboardProps) {
             <CardDescription>Students under your mentorship</CardDescription>
           </div>
           <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard/mentor/students">View All</Link>
+            <Link href="/mentor">View All</Link>
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>No mentees assigned yet</p>
-            <p className="text-sm">Students will appear here once assigned by HOD</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common mentoring tasks</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild>
-              <Link href="/dashboard/mentor/students">
-                <Users className="h-4 w-4 mr-2" />
-                View Mentees
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/mentor/meetings">
-                <Calendar className="h-4 w-4 mr-2" />
-                Schedule Meeting
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/mentor/reports">
-                <FileText className="h-4 w-4 mr-2" />
-                Submit Report
-              </Link>
-            </Button>
-          </div>
+          {getActiveMentees().length > 0 ? (
+            <div className="space-y-3">
+              {getActiveMentees().map((mentee) => (
+                <div key={mentee.studentId} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-primary/10 text-sm">
+                        {mentee.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{mentee.name}</p>
+                      <p className="text-sm text-muted-foreground">{mentee.program} - {mentee.branch}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground">Year {mentee.studentYear}</p>
+                    <Badge variant="outline" className="text-xs">
+                      Roll: {mentee.rollNumber}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+              {mentees && mentees.stats.activeMentees > 5 && (
+                <p className="text-sm text-muted-foreground text-center pt-2">
+                  +{mentees.stats.activeMentees - 5} more mentees
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No mentees assigned yet</p>
+              <p className="text-sm">Students will appear here once assigned by HOD</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

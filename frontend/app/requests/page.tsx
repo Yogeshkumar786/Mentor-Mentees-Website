@@ -9,6 +9,8 @@ import { api, StudentRequestsResponse, StudentRequest } from "@/lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   AlertDialog,
@@ -33,7 +35,8 @@ import {
   CalendarDays,
   User,
   Plus,
-  Trash2
+  Trash2,
+  Search
 } from "lucide-react"
 
 export default function RequestsPage() {
@@ -43,6 +46,8 @@ export default function RequestsPage() {
   const [error, setError] = useState<string | null>(null)
   const [cancelDialog, setCancelDialog] = useState<{ open: boolean; requestId: string | null }>({ open: false, requestId: null })
   const [cancelling, setCancelling] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<string>('all')
   const { toast } = useToast()
 
   const fetchRequests = async () => {
@@ -364,9 +369,37 @@ export default function RequestsPage() {
     )
   }
 
-  const pendingRequests = requestsData?.requests.filter(r => r.status === 'PENDING') || []
-  const approvedRequests = requestsData?.requests.filter(r => r.status === 'APPROVED') || []
-  const rejectedRequests = requestsData?.requests.filter(r => r.status === 'REJECTED') || []
+  // Filter requests based on search and type
+  const filterRequests = (requests: StudentRequest[]) => {
+    return requests.filter(r => {
+      // Type filter
+      if (typeFilter !== 'all' && r.type !== typeFilter) return false
+      
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase()
+        const data = r.requestData as unknown as Record<string, unknown>
+        const searchableText = [
+          data?.organisation,
+          data?.title,
+          data?.type,
+          data?.location,
+          data?.description,
+          r.remarks,
+          r.feedback
+        ].filter(Boolean).join(' ').toLowerCase()
+        
+        if (!searchableText.includes(query)) return false
+      }
+      
+      return true
+    })
+  }
+
+  const allFilteredRequests = filterRequests(requestsData?.requests || [])
+  const pendingRequests = filterRequests(requestsData?.requests.filter(r => r.status === 'PENDING') || [])
+  const approvedRequests = filterRequests(requestsData?.requests.filter(r => r.status === 'APPROVED') || [])
+  const rejectedRequests = filterRequests(requestsData?.requests.filter(r => r.status === 'REJECTED') || [])
 
   return (
     <DashboardLayout requiredRoles={['STUDENT']}>
@@ -451,44 +484,86 @@ export default function RequestsPage() {
           </Card>
         </div>
 
+        {/* Search and Filter */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by title, description..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="INTERNSHIP">Internship</SelectItem>
+                  <SelectItem value="PROJECT">Project</SelectItem>
+                  <SelectItem value="DELETE_INTERNSHIP">Delete Internship</SelectItem>
+                  <SelectItem value="DELETE_PROJECT">Delete Project</SelectItem>
+                  <SelectItem value="MEETING_REQUEST">Meeting Request</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Requests Tabs */}
         <Tabs defaultValue="all" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="all">All ({requestsData?.summary.total || 0})</TabsTrigger>
+            <TabsTrigger value="all">All ({allFilteredRequests.length})</TabsTrigger>
             <TabsTrigger value="pending">Pending ({pendingRequests.length})</TabsTrigger>
             <TabsTrigger value="approved">Approved ({approvedRequests.length})</TabsTrigger>
             <TabsTrigger value="rejected">Rejected ({rejectedRequests.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="space-y-4">
-            {requestsData?.requests && requestsData.requests.length > 0 ? (
+            {allFilteredRequests.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2">
-                {requestsData.requests.map(renderRequestCard)}
+                {allFilteredRequests.map(renderRequestCard)}
               </div>
             ) : (
               <Card>
                 <CardContent className="py-16 text-center">
-                  <ClipboardList className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
-                  <h3 className="text-lg font-semibold">No Requests Yet</h3>
-                  <p className="text-muted-foreground mt-2 mb-6">
-                    You haven&apos;t submitted any requests yet. Add a new internship or project to get started!
-                  </p>
-                  <div className="flex justify-center gap-4">
-                    <Link href="/internships">
-                      <Button className="gap-2">
-                        <Plus className="h-4 w-4" />
-                        <Briefcase className="h-4 w-4" />
-                        Add Internship
-                      </Button>
-                    </Link>
-                    <Link href="/projects">
-                      <Button variant="outline" className="gap-2">
-                        <Plus className="h-4 w-4" />
-                        <FolderKanban className="h-4 w-4" />
-                        Add Project
-                      </Button>
-                    </Link>
-                  </div>
+                  {requestsData?.requests && requestsData.requests.length > 0 ? (
+                    <>
+                      <Search className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+                      <h3 className="text-lg font-semibold">No Matching Requests</h3>
+                      <p className="text-muted-foreground mt-2">
+                        Try adjusting your search or filter criteria
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <ClipboardList className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+                      <h3 className="text-lg font-semibold">No Requests Yet</h3>
+                      <p className="text-muted-foreground mt-2 mb-6">
+                        You haven&apos;t submitted any requests yet. Add a new internship or project to get started!
+                      </p>
+                      <div className="flex justify-center gap-4">
+                        <Link href="/internships">
+                          <Button className="gap-2">
+                            <Plus className="h-4 w-4" />
+                            <Briefcase className="h-4 w-4" />
+                            Add Internship
+                          </Button>
+                        </Link>
+                        <Link href="/projects">
+                          <Button variant="outline" className="gap-2">
+                            <Plus className="h-4 w-4" />
+                            <FolderKanban className="h-4 w-4" />
+                            Add Project
+                          </Button>
+                        </Link>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             )}

@@ -272,6 +272,49 @@ export interface StudentMeetingRequest {
   description?: string
 }
 
+// Dashboard Stats Interfaces
+export interface StudentDashboardStats {
+  stats: {
+    pendingRequests: number
+    approvedRequests: number
+    rejectedRequests: number
+    upcomingMeetings: number
+    nextMeeting: { date: string; time: string } | null
+    hasMentor: boolean
+  }
+}
+
+export interface FacultyDashboardStats {
+  stats: {
+    activeMentees: number
+    pendingRequests: number
+    upcomingMeetings: number
+    completedMeetings: number
+  }
+}
+
+export interface HodDashboardStats {
+  stats: {
+    totalFaculty: number
+    totalStudents: number
+    activeMentorships: number
+    unassignedStudents: number
+    pendingRequests: number
+  }
+}
+
+export interface AdminDashboardStats {
+  stats: {
+    totalUsers: number
+    totalFaculty: number
+    totalStudents: number
+    totalHODs: number
+    activeMentorships: number
+    pendingRequests: number
+    unassignedStudents: number
+  }
+}
+
 export interface StudentRequest {
   id: string
   type: RequestType
@@ -1403,6 +1446,54 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(data),
     })
+  }
+
+  // Dashboard Stats APIs
+  async getStudentDashboardStats(): Promise<StudentDashboardStats> {
+    return this.request<StudentDashboardStats>('/api/student/dashboard/stats')
+  }
+
+  async getFacultyDashboardStats(): Promise<FacultyDashboardStats> {
+    return this.request<FacultyDashboardStats>('/api/faculty/dashboard/stats')
+  }
+
+  async getHodDashboardStats(): Promise<HodDashboardStats> {
+    return this.request<HodDashboardStats>('/api/hod/dashboard/stats')
+  }
+
+  async getAdminDashboardStats(): Promise<AdminDashboardStats> {
+    return this.request<AdminDashboardStats>('/api/admin/dashboard/stats')
+  }
+
+  // Export APIs
+  async exportStudentsCSV(department?: string, year?: number, programme?: string): Promise<void> {
+    const params = new URLSearchParams()
+    if (department) params.append('department', department)
+    if (year) params.append('year', year.toString())
+    if (programme) params.append('programme', programme)
+    
+    const url = `/api/export/students${params.toString() ? '?' + params.toString() : ''}`
+    
+    // For file downloads, we need to handle differently
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'GET',
+      credentials: 'include',
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to export students')
+    }
+    
+    // Get the blob and trigger download
+    const blob = await response.blob()
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = `students_export_${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(downloadUrl)
   }
 }
 

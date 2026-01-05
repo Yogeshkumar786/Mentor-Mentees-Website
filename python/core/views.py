@@ -4855,3 +4855,314 @@ def create_meeting_request(request):
         import traceback
         traceback.print_exc()
         return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role('STUDENT')
+def get_student_dashboard_stats(request):
+    """
+    Get dashboard statistics for a student
+    """
+    try:
+        user_id = request.user_id
+        
+        from .models import Student, Request, RequestStatus, Mentorship, Meeting, MeetingStatus
+        from datetime import datetime, date
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        # Get request counts
+        requests = Request.objects.filter(student=student)
+        pending_requests = requests.filter(status=RequestStatus.PENDING).count()
+        approved_requests = requests.filter(status=RequestStatus.APPROVED).count()
+        rejected_requests = requests.filter(status=RequestStatus.REJECTED).count()
+        
+        # Get active mentorship and upcoming meetings
+        active_mentorship = Mentorship.objects.filter(student=student, is_active=True).first()
+        upcoming_meetings = 0
+        next_meeting = None
+        
+        if active_mentorship:
+            upcoming = Meeting.objects.filter(
+                mentorship=active_mentorship,
+                status=MeetingStatus.UPCOMING,
+                date__gte=date.today()
+            ).order_by('date', 'time')
+            upcoming_meetings = upcoming.count()
+            
+            if upcoming.exists():
+                next_m = upcoming.first()
+                next_meeting = {
+                    'date': next_m.date.strftime('%b %d'),
+                    'time': next_m.time.strftime('%H:%M')
+                }
+        
+        return JsonResponse({
+            'stats': {
+                'pendingRequests': pending_requests,
+                'approvedRequests': approved_requests,
+                'rejectedRequests': rejected_requests,
+                'upcomingMeetings': upcoming_meetings,
+                'nextMeeting': next_meeting,
+                'hasMentor': active_mentorship is not None
+            }
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get student dashboard stats error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role('FACULTY', 'HOD')
+def get_faculty_dashboard_stats(request):
+    """
+    Get dashboard statistics for faculty/HOD
+    """
+    try:
+        user_id = request.user_id
+        
+        from .models import Faculty, Request, RequestStatus, Mentorship, Meeting, MeetingStatus
+        from datetime import date
+        
+        try:
+            faculty = Faculty.objects.get(user__id=user_id)
+        except Faculty.DoesNotExist:
+            return JsonResponse({'message': 'Faculty profile not found'}, status=404)
+        
+        # Get active mentees count
+        active_mentees = Mentorship.objects.filter(faculty=faculty, is_active=True).count()
+        
+        # Get pending requests count
+        pending_requests = Request.objects.filter(
+            assigned_to=faculty,
+            status=RequestStatus.PENDING
+        ).count()
+        
+        # Get upcoming meetings this week
+        from datetime import timedelta
+        today = date.today()
+        week_end = today + timedelta(days=7)
+        
+        upcoming_meetings = Meeting.objects.filter(
+            mentorship__faculty=faculty,
+            status=MeetingStatus.UPCOMING,
+            date__gte=today,
+            date__lte=week_end
+        ).count()
+        
+        # Get total meetings completed
+        completed_meetings = Meeting.objects.filter(
+            mentorship__faculty=faculty,
+            status=MeetingStatus.COMPLETED
+        ).count()
+        
+        return JsonResponse({
+            'stats': {
+                'activeMentees': active_mentees,
+                'pendingRequests': pending_requests,
+                'upcomingMeetings': upcoming_meetings,
+                'completedMeetings': completed_meetings
+            }
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get faculty dashboard stats error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role('HOD')
+def get_hod_dashboard_stats(request):
+    """
+    Get dashboard statistics for HOD
+    """
+    try:
+        user_id = request.user_id
+        
+        from .models import HOD, Faculty, Student, Mentorship, Request, RequestStatus
+        
+        try:
+            hod = HOD.objects.get(user__id=user_id)
+        except HOD.DoesNotExist:
+            return JsonResponse({'message': 'HOD profile not found'}, status=404)
+        
+        department = hod.department
+        
+        # Get department stats
+        total_faculty = Faculty.objects.filter(department=department).count()
+        total_students = Student.objects.filter(branch=department).count()
+        
+        # Get mentorship stats
+        active_mentorships = Mentorship.objects.filter(
+            faculty__department=department,
+            is_active=True
+        ).count()
+        
+        unassigned_students = Student.objects.filter(branch=department).exclude(
+            id__in=Mentorship.objects.filter(is_active=True).values_list('student_id', flat=True)
+        ).count()
+        
+        # Pending requests in department
+        pending_requests = Request.objects.filter(
+            assigned_to__department=department,
+            status=RequestStatus.PENDING
+        ).count()
+        
+        return JsonResponse({
+            'stats': {
+                'totalFaculty': total_faculty,
+                'totalStudents': total_students,
+                'activeMentorships': active_mentorships,
+                'unassignedStudents': unassigned_students,
+                'pendingRequests': pending_requests
+            }
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get HOD dashboard stats error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role('ADMIN')
+def get_admin_dashboard_stats(request):
+    """
+    Get dashboard statistics for Admin
+    """
+    try:
+        from .models import User, Faculty, Student, HOD, Mentorship, Request, RequestStatus
+        
+        # Get total counts
+        total_users = User.objects.count()
+        total_faculty = Faculty.objects.count()
+        total_students = Student.objects.count()
+        total_hods = HOD.objects.count()
+        
+        # Get mentorship stats
+        total_mentorships = Mentorship.objects.filter(is_active=True).count()
+        pending_requests = Request.objects.filter(status=RequestStatus.PENDING).count()
+        
+        # Unassigned students
+        unassigned_students = Student.objects.exclude(
+            id__in=Mentorship.objects.filter(is_active=True).values_list('student_id', flat=True)
+        ).count()
+        
+        return JsonResponse({
+            'stats': {
+                'totalUsers': total_users,
+                'totalFaculty': total_faculty,
+                'totalStudents': total_students,
+                'totalHODs': total_hods,
+                'totalMentorships': total_mentorships,
+                'pendingRequests': pending_requests,
+                'unassignedStudents': unassigned_students
+            }
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get Admin dashboard stats error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role('HOD', 'ADMIN')
+def export_students_csv(request):
+    """
+    Export students data as CSV
+    """
+    try:
+        import csv
+        from django.http import HttpResponse
+        from .models import Student, HOD, Mentorship
+        
+        user_id = request.user_id
+        user_role = request.user_role
+        
+        # Determine department filter
+        department = request.GET.get('department')
+        year = request.GET.get('year')
+        programme = request.GET.get('programme')
+        
+        if user_role == 'HOD':
+            try:
+                hod = HOD.objects.get(user__id=user_id)
+                department = hod.department  # Force HOD's department
+            except HOD.DoesNotExist:
+                return JsonResponse({'message': 'HOD profile not found'}, status=404)
+        
+        # Build query
+        students = Student.objects.all()
+        if department:
+            students = students.filter(branch=department)
+        if year:
+            students = students.filter(year=int(year))
+        if programme:
+            students = students.filter(programme=programme)
+        
+        students = students.select_related('user').order_by('rollNumber')
+        
+        # Create CSV response
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="students_export_{department or "all"}_{date.today().isoformat()}.csv"'
+        
+        writer = csv.writer(response)
+        
+        # Header row
+        writer.writerow([
+            'Roll Number', 'Registration Number', 'Name', 'Email', 'Phone',
+            'Department', 'Programme', 'Year', 'Section', 'Gender',
+            'Date of Birth', 'Community', 'Father Name', 'Mother Name',
+            'Address', 'Mentor Name', 'Mentor Employee ID'
+        ])
+        
+        # Data rows
+        for student in students:
+            # Get mentor info
+            active_mentorship = Mentorship.objects.filter(student=student, is_active=True).first()
+            mentor_name = active_mentorship.faculty.name if active_mentorship else ''
+            mentor_emp_id = active_mentorship.faculty.employeeId if active_mentorship else ''
+            
+            writer.writerow([
+                student.rollNumber,
+                student.registrationNumber,
+                student.name,
+                student.user.email if student.user else '',
+                student.phoneNumber or '',
+                student.branch,
+                student.programme,
+                student.year,
+                student.section or '',
+                student.gender or '',
+                student.dateOfBirth.isoformat() if student.dateOfBirth else '',
+                student.community or '',
+                student.fatherName or '',
+                student.motherName or '',
+                student.presentAddress or '',
+                mentor_name,
+                mentor_emp_id
+            ])
+        
+        return response
+        
+    except Exception as e:
+        print(f"Export students CSV error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)

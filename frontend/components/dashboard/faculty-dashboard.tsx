@@ -1,14 +1,32 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { StatsCard } from "@/components/stats-card"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Calendar, Users, FileCheck, ClipboardList } from "lucide-react"
+import { Calendar, Users, FileCheck, CheckCircle, Loader2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { api, FacultyDashboardStats } from "@/lib/api"
 import Link from "next/link"
 
 export function FacultyDashboard() {
   const { user } = useAuth()
+  const [stats, setStats] = useState<FacultyDashboardStats['stats'] | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await api.getFacultyDashboardStats()
+        setStats(data.stats)
+      } catch (err) {
+        console.error('Failed to fetch dashboard stats:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchStats()
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -24,12 +42,18 @@ export function FacultyDashboard() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Assigned Students" value={0} icon={Users} description="Mentees under your guidance" />
-        <StatsCard title="Scheduled Meetings" value={0} icon={Calendar} description="Upcoming this week" />
-        <StatsCard title="Pending Requests" value={0} icon={FileCheck} description="Awaiting your review" />
-        <StatsCard title="Reports Due" value={0} icon={ClipboardList} description="This semester" />
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <StatsCard title="Assigned Mentees" value={stats?.activeMentees || 0} icon={Users} description="Students under your guidance" />
+          <StatsCard title="Upcoming Meetings" value={stats?.upcomingMeetings || 0} icon={Calendar} description="Scheduled this week" />
+          <StatsCard title="Pending Requests" value={stats?.pendingRequests || 0} icon={FileCheck} description="Awaiting your review" />
+          <StatsCard title="Meetings Completed" value={stats?.completedMeetings || 0} icon={CheckCircle} description="Total completed" />
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

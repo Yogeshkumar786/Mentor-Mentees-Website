@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -11,10 +12,15 @@ import {
   Activity,
   Database,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Loader2,
+  GraduationCap,
+  Briefcase,
+  UserCheck,
+  ArrowRight
 } from "lucide-react"
 import Link from "next/link"
-import type { ApiUser } from "@/lib/api"
+import { api, type ApiUser, type AdminDashboardStats } from "@/lib/api"
 
 interface AdminDashboardProps {
   user: ApiUser
@@ -54,6 +60,22 @@ function StatsCard({
 
 export function AdminDashboard({ user }: AdminDashboardProps) {
   const adminName = user.admin?.name || user.email
+  const [stats, setStats] = useState<AdminDashboardStats['stats'] | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const statsData = await api.getAdminDashboardStats()
+        setStats(statsData.stats)
+      } catch (err) {
+        console.error('Failed to fetch dashboard data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -73,31 +95,46 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard 
-          title="Total Users" 
-          value={0} 
-          icon={Users} 
-          description="Registered in system"
-          trend={{ value: 12, positive: true }}
-        />
-        <StatsCard 
-          title="Active Faculty" 
-          value={0} 
-          icon={Users} 
-          description="Teaching staff"
-        />
-        <StatsCard 
-          title="Total Students" 
-          value={0} 
-          icon={Users} 
-          description="Enrolled students"
-        />
-        <StatsCard 
-          title="HODs" 
-          value={0} 
-          icon={Shield} 
-          description="Department heads"
-        />
+        {loading ? (
+          <>
+            {[1, 2, 3, 4].map(i => (
+              <Card key={i}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-center h-16">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </>
+        ) : (
+          <>
+            <StatsCard 
+              title="Total Users" 
+              value={stats?.totalUsers ?? 0} 
+              icon={Users} 
+              description="Registered in system"
+            />
+            <StatsCard 
+              title="Active Faculty" 
+              value={stats?.totalFaculty ?? 0} 
+              icon={Briefcase} 
+              description="Teaching staff"
+            />
+            <StatsCard 
+              title="Total Students" 
+              value={stats?.totalStudents ?? 0} 
+              icon={GraduationCap} 
+              description="Enrolled students"
+            />
+            <StatsCard 
+              title="HODs" 
+              value={stats?.totalHODs ?? 0} 
+              icon={Shield} 
+              description="Department heads"
+            />
+          </>
+        )}
       </div>
 
       {/* Admin Info Card */}
@@ -144,71 +181,77 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
-              System Status
+              System Overview
             </CardTitle>
-            <CardDescription>Current system health</CardDescription>
+            <CardDescription>Current system status</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
+                <UserCheck className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">Active Mentorships</span>
+              </div>
+              <Badge variant="default" className="bg-green-600">
+                {stats?.activeMentorships ?? 0}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">Pending Requests</span>
+              </div>
+              <Badge variant={stats?.pendingRequests ? "destructive" : "secondary"}>
+                {stats?.pendingRequests ?? 0}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">Unassigned Students</span>
+              </div>
+              <Badge variant={stats?.unassignedStudents ? "destructive" : "secondary"}>
+                {stats?.unassignedStudents ?? 0}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t">
+              <div className="flex items-center gap-2">
                 <Database className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Database</span>
+                <span className="text-sm">System Status</span>
               </div>
               <Badge variant="default" className="bg-green-600">
                 <CheckCircle className="h-3 w-3 mr-1" />
                 Online
               </Badge>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">API Server</span>
-              </div>
-              <Badge variant="default" className="bg-green-600">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Running
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Pending Issues</span>
-              </div>
-              <Badge variant="secondary">0</Badge>
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <Link href="/students" className="block">
+                <Button variant="outline" size="sm" className="w-full">
+                  <GraduationCap className="h-4 w-4 mr-2" />
+                  Students
+                </Button>
+              </Link>
+              <Link href="/faculty" className="block">
+                <Button variant="outline" size="sm" className="w-full">
+                  <Briefcase className="h-4 w-4 mr-2" />
+                  Faculty
+                </Button>
+              </Link>
+              <Link href="/hods" className="block">
+                <Button variant="outline" size="sm" className="w-full">
+                  <Shield className="h-4 w-4 mr-2" />
+                  HODs
+                </Button>
+              </Link>
+              <Link href="/requests" className="block">
+                <Button variant="outline" size="sm" className="w-full">
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  Requests
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common administrative tasks</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild>
-              <Link href="/students">
-                <Users className="h-4 w-4 mr-2" />
-                View Students
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/faculty">
-                <UserPlus className="h-4 w-4 mr-2" />
-                View Faculty
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/hods">
-                <Settings className="h-4 w-4 mr-2" />
-                Manage HODs
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

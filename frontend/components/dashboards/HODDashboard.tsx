@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -11,10 +12,12 @@ import {
   ClipboardList,
   GraduationCap,
   Briefcase,
-  ArrowRight
+  ArrowRight,
+  Loader2,
+  Download
 } from "lucide-react"
 import Link from "next/link"
-import type { ApiUser } from "@/lib/api"
+import { api, type ApiUser, type HodDashboardStats } from "@/lib/api"
 
 interface HODDashboardProps {
   user: ApiUser
@@ -56,6 +59,34 @@ function StatsCard({
 export function HODDashboard({ user }: HODDashboardProps) {
   const hodName = user.faculty?.name || user.email
   const department = user.hod?.department || user.faculty?.department || 'Not Assigned'
+  const [stats, setStats] = useState<HodDashboardStats['stats'] | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const statsData = await api.getHodDashboardStats()
+        setStats(statsData.stats)
+      } catch (err) {
+        console.error('Failed to fetch dashboard data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
+  const handleExport = async () => {
+    try {
+      setExporting(true)
+      await api.exportStudentsCSV()
+    } catch (err) {
+      console.error('Failed to export:', err)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -68,6 +99,10 @@ export function HODDashboard({ user }: HODDashboardProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>
+            {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            Export Students
+          </Button>
           <Badge variant="secondary" className="flex items-center gap-1">
             <Building2 className="h-3 w-3" />
             {department}
@@ -78,32 +113,48 @@ export function HODDashboard({ user }: HODDashboardProps) {
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard 
-          title="Department Faculty" 
-          value={0} 
-          icon={Briefcase} 
-          description="Faculty members"
-        />
-        <StatsCard 
-          title="Total Students" 
-          value={0} 
-          icon={GraduationCap} 
-          description="In your department"
-        />
-        <StatsCard 
-          title="Unassigned Students" 
-          value={0} 
-          icon={Users} 
-          description="Need mentor assignment"
-          variant="warning"
-        />
-        <StatsCard 
-          title="Active Mentorships" 
-          value={0} 
-          icon={UserCheck} 
-          description="Ongoing mentoring"
-          variant="success"
-        />
+        {loading ? (
+          <>
+            {[1, 2, 3, 4].map(i => (
+              <Card key={i}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-center h-16">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </>
+        ) : (
+          <>
+            <StatsCard 
+              title="Department Faculty" 
+              value={stats?.totalFaculty ?? 0} 
+              icon={Briefcase} 
+              description="Faculty members"
+            />
+            <StatsCard 
+              title="Total Students" 
+              value={stats?.totalStudents ?? 0} 
+              icon={GraduationCap} 
+              description="In your department"
+            />
+            <StatsCard 
+              title="Unassigned Students" 
+              value={stats?.unassignedStudents ?? 0} 
+              icon={Users} 
+              description="Need mentor assignment"
+              variant="warning"
+            />
+            <StatsCard 
+              title="Active Mentorships" 
+              value={stats?.activeMentorships ?? 0} 
+              icon={UserCheck} 
+              description="Ongoing mentoring"
+              variant="success"
+            />
+          </>
+        )}
       </div>
 
       {/* HOD Info and Department Overview */}
@@ -164,66 +215,40 @@ export function HODDashboard({ user }: HODDashboardProps) {
             <CardDescription>Tasks requiring your attention</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-              <div>
-                <p className="text-sm font-medium">Students without mentors</p>
-                <p className="text-xs text-muted-foreground">Assign faculty mentors</p>
+            <Link href="/students" className="block">
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                <div>
+                  <p className="text-sm font-medium">Students without mentors</p>
+                  <p className="text-xs text-muted-foreground">Assign faculty mentors</p>
+                </div>
+                <Badge variant={stats?.unassignedStudents ? "destructive" : "secondary"}>
+                  {stats?.unassignedStudents ?? 0}
+                </Badge>
               </div>
-              <Badge variant="secondary">0</Badge>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-              <div>
-                <p className="text-sm font-medium">Pending meeting approvals</p>
-                <p className="text-xs text-muted-foreground">Review scheduled meetings</p>
+            </Link>
+            <Link href="/requests" className="block">
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                <div>
+                  <p className="text-sm font-medium">Pending requests</p>
+                  <p className="text-xs text-muted-foreground">Student requests awaiting approval</p>
+                </div>
+                <Badge variant={stats?.pendingRequests ? "destructive" : "secondary"}>
+                  {stats?.pendingRequests ?? 0}
+                </Badge>
               </div>
-              <Badge variant="secondary">0</Badge>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-              <div>
-                <p className="text-sm font-medium">Faculty reports due</p>
-                <p className="text-xs text-muted-foreground">Monthly mentoring reports</p>
+            </Link>
+            <Link href="/faculty" className="block">
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                <div>
+                  <p className="text-sm font-medium">Faculty overview</p>
+                  <p className="text-xs text-muted-foreground">View department faculty</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </div>
-              <Badge variant="secondary">0</Badge>
-            </div>
+            </Link>
           </CardContent>
         </Card>
       </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common department management tasks</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild>
-              <Link href="/requests">
-                <UserCheck className="h-4 w-4 mr-2" />
-                View Requests
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/faculty">
-                <Briefcase className="h-4 w-4 mr-2" />
-                View Faculty
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/students">
-                <GraduationCap className="h-4 w-4 mr-2" />
-                View Students
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/settings">
-                <Calendar className="h-4 w-4 mr-2" />
-                Settings
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

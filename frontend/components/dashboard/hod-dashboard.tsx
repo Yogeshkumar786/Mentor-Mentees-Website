@@ -3,42 +3,52 @@
 import { StatsCard } from "@/components/stats-card"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, UserCheck, FileCheck, ClipboardList, UserPlus, GraduationCap } from "lucide-react"
+import { Users, UserCheck, FileCheck, ClipboardList, UserPlus, GraduationCap, Download, Loader2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useEffect, useState } from "react"
-import { storage } from "@/lib/storage"
+import { api, HodDashboardStats } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 
 export function HodDashboard() {
   const { user } = useAuth()
-  const [stats, setStats] = useState({
-    deptFaculty: 0,
-    deptStudents: 0,
-    pendingApprovals: 0,
-    unassignedStudents: 0,
-  })
+  const { toast } = useToast()
+  const [stats, setStats] = useState<HodDashboardStats['stats'] | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
-    const users = storage.getUsers()
-    const requests = storage.getRequests()
-    const relationships = storage.getRelationships()
+    const fetchStats = async () => {
+      try {
+        const data = await api.getHodDashboardStats()
+        setStats(data.stats)
+      } catch (err) {
+        console.error('Failed to fetch dashboard stats:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchStats()
+  }, [])
 
-    const userDept = user?.hod?.department
-    const deptUsers = users.filter((u) => u.department === userDept)
-    const faculty = deptUsers.filter((u) => u.role === "faculty")
-    const students = deptUsers.filter((u) => u.role === "student")
-
-    // Simple check for unassigned students in department
-    const assignedStudentIds = new Set(relationships.filter((r) => r.status === "active").map((r) => r.studentId))
-    const unassigned = students.filter((s) => !assignedStudentIds.has(s.id))
-
-    setStats({
-      deptFaculty: faculty.length,
-      deptStudents: students.length,
-      pendingApprovals: requests.filter((r) => r.status === "pending").length,
-      unassignedStudents: unassigned.length,
-    })
-  }, [user])
+  const handleExport = async () => {
+    try {
+      setExporting(true)
+      await api.exportStudentsCSV()
+      toast({
+        title: "Export Successful",
+        description: "Students data has been downloaded as CSV",
+      })
+    } catch (err) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export students data",
+        variant: "destructive",
+      })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -49,18 +59,25 @@ export function HodDashboard() {
             Managing <span className="font-semibold text-primary">{user?.hod?.department || "N/A"}</span> Department
           </p>
         </div>
-        <Button variant="outline" className="hidden sm:flex bg-transparent">
-          <ClipboardList className="w-4 h-4 mr-2" />
-          View Dept Reports
+        <Button variant="outline" className="hidden sm:flex bg-transparent" onClick={handleExport} disabled={exporting}>
+          {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+          Export Students
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Faculty" value={stats.deptFaculty} icon={UserCheck} description="Active faculty" />
-        <StatsCard title="Students" value={stats.deptStudents} icon={Users} description="Total enrolled" />
-        <StatsCard title="Unassigned" value={stats.unassignedStudents} icon={UserPlus} description="Awaiting mentors" />
-        <StatsCard title="Approvals" value={stats.pendingApprovals} icon={FileCheck} description="Requests to review" />
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <StatsCard title="Faculty" value={stats?.totalFaculty || 0} icon={UserCheck} description="Active faculty" />
+          <StatsCard title="Students" value={stats?.totalStudents || 0} icon={Users} description="Total enrolled" />
+          <StatsCard title="Mentorships" value={stats?.activeMentorships || 0} icon={GraduationCap} description="Active assignments" />
+          <StatsCard title="Unassigned" value={stats?.unassignedStudents || 0} icon={UserPlus} description="Awaiting mentors" />
+          <StatsCard title="Approvals" value={stats?.pendingRequests || 0} icon={FileCheck} description="Requests to review" />
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

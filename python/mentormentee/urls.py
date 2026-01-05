@@ -83,4 +83,11 @@ urlpatterns = [
     path('api/student/internships/delete-request', views.create_delete_internship_request, name='create_delete_internship_request'),
     path('api/student/projects/delete-request', views.create_delete_project_request, name='create_delete_project_request'),
     path('api/student/meeting/request', views.create_meeting_request, name='create_meeting_request'),
+    # Dashboard Stats APIs
+    path('api/student/dashboard/stats', views.get_student_dashboard_stats, name='get_student_dashboard_stats'),
+    path('api/faculty/dashboard/stats', views.get_faculty_dashboard_stats, name='get_faculty_dashboard_stats'),
+    path('api/hod/dashboard/stats', views.get_hod_dashboard_stats, name='get_hod_dashboard_stats'),
+    path('api/admin/dashboard/stats', views.get_admin_dashboard_stats, name='get_admin_dashboard_stats'),
+    # Export APIs
+    path('api/export/students', views.export_students_csv, name='export_students_csv'),
 ]
