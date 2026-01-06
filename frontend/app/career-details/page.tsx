@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { api, StudentCareerDetails } from "@/lib/api"
+import { api, StudentCareerDetails, UpdateCareerRankingsRequest } from "@/lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -31,7 +32,10 @@ import {
   AlertCircle,
   Pencil,
   Plus,
-  X
+  X,
+  Award,
+  Building,
+  Save
 } from "lucide-react"
 
 interface EditDialogState {
@@ -47,6 +51,9 @@ export default function CareerDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [savingRankings, setSavingRankings] = useState(false)
+  const [editingRankings, setEditingRankings] = useState(false)
+  const [rankings, setRankings] = useState<UpdateCareerRankingsRequest>({})
   const [editDialog, setEditDialog] = useState<EditDialogState>({
     open: false,
     field: '',
@@ -62,6 +69,17 @@ export default function CareerDetailsPage() {
       setLoading(true)
       const data = await api.getStudentCareerDetails()
       setCareerData(data)
+      // Initialize rankings from data
+      if (data.careerRankings) {
+        setRankings({
+          govt_sector_rank: data.careerRankings.govt_sector_rank,
+          core_rank: data.careerRankings.core_rank,
+          it_rank: data.careerRankings.it_rank,
+          higher_education_rank: data.careerRankings.higher_education_rank,
+          startup_rank: data.careerRankings.startup_rank,
+          family_business_rank: data.careerRankings.family_business_rank,
+        })
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch career details')
     } finally {
@@ -162,6 +180,59 @@ export default function CareerDetailsPage() {
       handleAddItem()
     }
   }
+
+  const handleSaveRankings = async () => {
+    try {
+      setSavingRankings(true)
+      await api.updateCareerRankings(rankings)
+      await fetchCareerData()
+      setEditingRankings(false)
+      toast({
+        title: "Success",
+        description: "Career rankings updated successfully",
+      })
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to update rankings',
+        variant: "destructive",
+      })
+    } finally {
+      setSavingRankings(false)
+    }
+  }
+
+  const handleCancelRankings = () => {
+    if (careerData?.careerRankings) {
+      setRankings({
+        govt_sector_rank: careerData.careerRankings.govt_sector_rank,
+        core_rank: careerData.careerRankings.core_rank,
+        it_rank: careerData.careerRankings.it_rank,
+        higher_education_rank: careerData.careerRankings.higher_education_rank,
+        startup_rank: careerData.careerRankings.startup_rank,
+        family_business_rank: careerData.careerRankings.family_business_rank,
+      })
+    }
+    setEditingRankings(false)
+  }
+
+  const rankingOptions = [
+    { value: '1', label: '1 - Highest Priority' },
+    { value: '2', label: '2' },
+    { value: '3', label: '3' },
+    { value: '4', label: '4' },
+    { value: '5', label: '5' },
+    { value: '6', label: '6 - Lowest Priority' },
+  ]
+
+  const careerRankingFields = [
+    { key: 'govt_sector_rank' as const, label: 'Govt. Sector', icon: Building, color: 'text-blue-600' },
+    { key: 'core_rank' as const, label: 'Core Engineering', icon: Briefcase, color: 'text-indigo-500' },
+    { key: 'it_rank' as const, label: 'IT / Software', icon: Code, color: 'text-green-500' },
+    { key: 'higher_education_rank' as const, label: 'Higher Education', icon: GraduationCap, color: 'text-purple-500' },
+    { key: 'startup_rank' as const, label: 'Startup', icon: Rocket, color: 'text-orange-500' },
+    { key: 'family_business_rank' as const, label: 'Family Business', icon: Building2, color: 'text-amber-500' },
+  ]
 
   if (loading) {
     return (
@@ -364,6 +435,83 @@ export default function CareerDetailsPage() {
                   {renderBadgeList(section.items, 'Not specified')}
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Career Rankings */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-yellow-500" />
+                  Career Path Priority Rankings
+                </CardTitle>
+                <CardDescription>Rank your career preferences from 1 (highest) to 6 (lowest)</CardDescription>
+              </div>
+              {!editingRankings ? (
+                <Button variant="outline" onClick={() => setEditingRankings(true)}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit Rankings
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleCancelRankings} disabled={savingRankings}>
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveRankings} disabled={savingRankings}>
+                    {savingRankings ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                    Save
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {careerRankingFields.map((field) => {
+                const Icon = field.icon
+                const currentRank = editingRankings 
+                  ? rankings[field.key] 
+                  : careerData?.careerRankings?.[field.key] ?? 0
+                
+                return (
+                  <div key={field.key} className="p-4 border rounded-lg space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Icon className={`h-5 w-5 ${field.color}`} />
+                      <span className="font-medium">{field.label}</span>
+                    </div>
+                    {editingRankings ? (
+                      <Select
+                        value={String(rankings[field.key] ?? '')}
+                        onValueChange={(value) => setRankings(prev => ({ ...prev, [field.key]: parseInt(value) }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select rank" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {rankingOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Badge variant={currentRank <= 2 ? "default" : currentRank <= 4 ? "secondary" : "outline"}>
+                          Rank #{currentRank}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          {currentRank === 1 ? '(Top Priority)' : currentRank === 6 ? '(Lowest)' : ''}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </CardContent>
         </Card>

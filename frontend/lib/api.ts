@@ -132,6 +132,14 @@ export interface StudentCareerDetails {
     familyBusiness: string[]
     otherInterests: string[]
   }
+  careerRankings: {
+    govt_sector_rank: number
+    core_rank: number
+    it_rank: number
+    higher_education_rank: number
+    startup_rank: number
+    family_business_rank: number
+  }
   message?: string
 }
 
@@ -152,25 +160,83 @@ export interface StudentInternships {
 export interface StudentPersonalProblems {
   id: string | null
   studentId: string
+  // Column 1
   stress: boolean | null
   anger: boolean | null
-  examinationAnxiety: boolean | null
-  timeManagementProblem: boolean | null
+  emotional_problem: boolean | null
+  low_self_esteem: boolean | null
+  examination_anxiety: boolean | null
+  negative_thoughts: boolean | null
+  exam_phobia: boolean | null
+  stammering: boolean | null
+  financial_problems: boolean | null
+  disturbed_relationship_with_teachers: boolean | null
+  disturbed_relationship_with_parents: boolean | null
+  // Column 2
+  mood_swings: boolean | null
+  stage_phobia: boolean | null
+  poor_concentration: boolean | null
+  poor_memory_problem: boolean | null
+  adjustment_problem: boolean | null
+  frustration: boolean | null
+  migraine_headache: boolean | null
+  relationship_problems: boolean | null
+  fear_of_public_speaking: boolean | null
+  disciplinary_problems_in_college: boolean | null
+  disturbed_peer_relationship_with_friends: boolean | null
+  // Column 3
+  worries_about_future: boolean | null
+  disappointment_with_course: boolean | null
+  time_management_problem: boolean | null
+  lack_of_expression: boolean | null
+  poor_decisive_power: boolean | null
+  conflicts: boolean | null
+  low_self_motivation: boolean | null
   procrastination: boolean | null
-  worriesAboutFuture: boolean | null
-  fearOfPublicSpeaking: boolean | null
+  suicidal_attempt_or_thought: boolean | null
+  tobacco_or_alcohol_use: boolean | null
+  poor_command_of_english: boolean | null
   message?: string
 }
 
 // Update request types for Student APIs
 export interface UpdatePersonalProblemsRequest {
+  // Column 1
   stress?: boolean | null
   anger?: boolean | null
-  examinationAnxiety?: boolean | null
-  timeManagementProblem?: boolean | null
+  emotional_problem?: boolean | null
+  low_self_esteem?: boolean | null
+  examination_anxiety?: boolean | null
+  negative_thoughts?: boolean | null
+  exam_phobia?: boolean | null
+  stammering?: boolean | null
+  financial_problems?: boolean | null
+  disturbed_relationship_with_teachers?: boolean | null
+  disturbed_relationship_with_parents?: boolean | null
+  // Column 2
+  mood_swings?: boolean | null
+  stage_phobia?: boolean | null
+  poor_concentration?: boolean | null
+  poor_memory_problem?: boolean | null
+  adjustment_problem?: boolean | null
+  frustration?: boolean | null
+  migraine_headache?: boolean | null
+  relationship_problems?: boolean | null
+  fear_of_public_speaking?: boolean | null
+  disciplinary_problems_in_college?: boolean | null
+  disturbed_peer_relationship_with_friends?: boolean | null
+  // Column 3
+  worries_about_future?: boolean | null
+  disappointment_with_course?: boolean | null
+  time_management_problem?: boolean | null
+  lack_of_expression?: boolean | null
+  poor_decisive_power?: boolean | null
+  conflicts?: boolean | null
+  low_self_motivation?: boolean | null
   procrastination?: boolean | null
-  worriesAboutFuture?: boolean | null
-  fearOfPublicSpeaking?: boolean | null
+  suicidal_attempt_or_thought?: boolean | null
+  tobacco_or_alcohol_use?: boolean | null
+  poor_command_of_english?: boolean | null
 }
 
 export interface UpdateCareerDetailsRequest {
@@ -183,6 +249,22 @@ export interface UpdateCareerDetailsRequest {
   startup?: string[]
   familyBusiness?: string[]
   otherInterests?: string[]
+  // Career rankings (1-6)
+  govt_sector_rank?: number
+  core_rank?: number
+  it_rank?: number
+  higher_education_rank?: number
+  startup_rank?: number
+  family_business_rank?: number
+}
+
+export interface UpdateCareerRankingsRequest {
+  govt_sector_rank?: number
+  core_rank?: number
+  it_rank?: number
+  higher_education_rank?: number
+  startup_rank?: number
+  family_business_rank?: number
 }
 
 export interface StudentProjects {
@@ -1352,6 +1434,13 @@ class ApiService {
 
   async updateCareerDetailsAll(data: UpdateCareerDetailsRequest): Promise<StudentCareerDetails> {
     return this.request<StudentCareerDetails>('/api/student/career-details/update', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateCareerRankings(data: UpdateCareerRankingsRequest): Promise<{ message: string; careerRankings: StudentCareerDetails['careerRankings'] }> {
+    return this.request<{ message: string; careerRankings: StudentCareerDetails['careerRankings'] }>('/api/student/career-details/rankings', {
       method: 'PUT',
       body: JSON.stringify(data),
     })

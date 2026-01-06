@@ -178,7 +178,7 @@ class Student(models.Model):
     address = models.TextField()
     program = models.CharField(max_length=20, choices=Programme.choices)
     branch = models.CharField(max_length=20, choices=Department.choices)
-    year = models.IntegerField(default=1)
+    year = models.IntegerField(default=1)  # Year of study: 1, 2, 3, 4
     bloodGroup = models.CharField(max_length=10)
     dayScholar = models.BooleanField()
     fatherName = models.CharField(max_length=255)
@@ -201,11 +201,13 @@ class Student(models.Model):
     
     @property
     def current_mentor(self):
+        """Returns the current active mentorship"""
         mentorship = self.mentorships.filter(is_active=True).first()
         return mentorship.faculty if mentorship else None
     
     @property
     def past_mentors(self):
+        """Returns all past mentors"""
         return Faculty.objects.filter(mentorships__student=self, mentorships__is_active=False).distinct()
     
     class Meta:
@@ -213,6 +215,7 @@ class Student(models.Model):
 
 
 class Mentorship(models.Model):
+    """Through table for Faculty-Student mentorship relationships"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='mentorships', db_column='facultyId')
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='mentorships', db_column='studentId')
@@ -252,42 +255,43 @@ class Meeting(models.Model):
 
 class Internship(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='internships', db_column='studentId', null=True, blank=True)
     semester = models.IntegerField()
     type = models.CharField(max_length=255)
     organisation = models.CharField(max_length=255)
     stipend = models.IntegerField()
     duration = models.CharField(max_length=255)
     location = models.CharField(max_length=255)
+    students = models.ManyToManyField(Student, related_name='internships')
     class Meta:
         db_table = 'internships'
 
 
 class Project(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='projects', db_column='studentId', null=True, blank=True)
     semester = models.IntegerField()
     title = models.CharField(max_length=255)
     description = models.TextField()
     technologies = ArrayField(models.CharField(max_length=100), default=list, blank=True)
-    mentor = models.ForeignKey(Faculty, on_delete=models.SET_NULL, null=True, blank=True, related_name='projects_mentored')
+    mentor = models.ForeignKey(Faculty, on_delete=models.SET_NULL, null=True, related_name='projects_mentored')
+    students = models.ManyToManyField(Student, related_name='projects')
     class Meta:
         db_table = 'projects'
 
 
 class CoCurricular(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='co_curriculars', db_column='studentId', null=True, blank=True)
     sem = models.IntegerField()
-    date = models.DateField()
+    date = models.DateTimeField()
     eventDetails = models.TextField()
     participationDetails = models.TextField()
     awards = models.CharField(max_length=255)
+    students = models.ManyToManyField(Student, related_name='co_curriculars')
     class Meta:
         db_table = 'co_curriculars'
 
 
 class Subject(models.Model):
+    """Subject master table - contains subject info without grade"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     subjectName = models.CharField(max_length=255)
     subjectCode = models.CharField(max_length=50, unique=True)
@@ -297,6 +301,7 @@ class Subject(models.Model):
 
 
 class Semester(models.Model):
+    """Semester record for a student"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='semesters')
     semester = models.IntegerField()
@@ -308,11 +313,12 @@ class Semester(models.Model):
 
 
 class StudentSubject(models.Model):
+    """Through table for Student-Subject-Semester with grade"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='subject_grades')
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='student_grades')
     semester = models.ForeignKey(Semester, on_delete=models.CASCADE, related_name='subject_grades')
-    grade = models.CharField(max_length=5)
+    grade = models.CharField(max_length=5)  # Grade belongs to student+subject+semester
     class Meta:
         db_table = 'student_subjects'
         unique_together = [['student', 'subject', 'semester']]
@@ -333,12 +339,6 @@ class CareerDetails(models.Model):
     startup = ArrayField(models.CharField(max_length=255), default=list, blank=True)
     familyBusiness = ArrayField(models.CharField(max_length=255), default=list, blank=True)
     otherInterests = ArrayField(models.CharField(max_length=255), default=list, blank=True)
-    govt_sector_rank = models.IntegerField(default=1)
-    core_rank = models.IntegerField(default=2)
-    it_rank = models.IntegerField(default=3)
-    higher_education_rank = models.IntegerField(default=4)
-    startup_rank = models.IntegerField(default=5)
-    family_business_rank = models.IntegerField(default=6)
     class Meta:
         db_table = 'career_details'
 
@@ -348,37 +348,11 @@ class PersonalProblem(models.Model):
     student = models.OneToOneField(Student, on_delete=models.CASCADE, related_name='personalProblem', db_column='studentId')
     stress = models.BooleanField(null=True, blank=True)
     anger = models.BooleanField(null=True, blank=True)
-    emotional_problem = models.BooleanField(null=True, blank=True)
-    low_self_esteem = models.BooleanField(null=True, blank=True)
-    examination_anxiety = models.BooleanField(null=True, blank=True)
-    negative_thoughts = models.BooleanField(null=True, blank=True)
-    exam_phobia = models.BooleanField(null=True, blank=True)
-    stammering = models.BooleanField(null=True, blank=True)
-    financial_problems = models.BooleanField(null=True, blank=True)
-    disturbed_relationship_with_teachers = models.BooleanField(null=True, blank=True)
-    disturbed_relationship_with_parents = models.BooleanField(null=True, blank=True)
-    mood_swings = models.BooleanField(null=True, blank=True)
-    stage_phobia = models.BooleanField(null=True, blank=True)
-    poor_concentration = models.BooleanField(null=True, blank=True)
-    poor_memory_problem = models.BooleanField(null=True, blank=True)
-    adjustment_problem = models.BooleanField(null=True, blank=True)
-    frustration = models.BooleanField(null=True, blank=True)
-    migraine_headache = models.BooleanField(null=True, blank=True)
-    relationship_problems = models.BooleanField(null=True, blank=True)
-    fear_of_public_speaking = models.BooleanField(null=True, blank=True)
-    disciplinary_problems_in_college = models.BooleanField(null=True, blank=True)
-    disturbed_peer_relationship_with_friends = models.BooleanField(null=True, blank=True)
-    worries_about_future = models.BooleanField(null=True, blank=True)
-    disappointment_with_course = models.BooleanField(null=True, blank=True)
-    time_management_problem = models.BooleanField(null=True, blank=True)
-    lack_of_expression = models.BooleanField(null=True, blank=True)
-    poor_decisive_power = models.BooleanField(null=True, blank=True)
-    conflicts = models.BooleanField(null=True, blank=True)
-    low_self_motivation = models.BooleanField(null=True, blank=True)
+    examinationAnxiety = models.BooleanField(null=True, blank=True)
+    timeManagementProblem = models.BooleanField(null=True, blank=True)
     procrastination = models.BooleanField(null=True, blank=True)
-    suicidal_attempt_or_thought = models.BooleanField(null=True, blank=True)
-    tobacco_or_alcohol_use = models.BooleanField(null=True, blank=True)
-    poor_command_of_english = models.BooleanField(null=True, blank=True)
+    worriesAboutFuture = models.BooleanField(null=True, blank=True)
+    fearOfPublicSpeaking = models.BooleanField(null=True, blank=True)
     class Meta:
         db_table = 'personal_problems'
 
@@ -386,16 +360,19 @@ class PersonalProblem(models.Model):
 class Request(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='requests', db_column='studentId')
+    # Faculty assigned to handle/review this request (mentor)
     assigned_to = models.ForeignKey('Faculty', on_delete=models.SET_NULL, null=True, blank=True, 
                                      related_name='assigned_requests', db_column='assignedToId')
     type = models.CharField(max_length=50, choices=RequestType.choices)
+    # Store request data as JSON for pending requests
     request_data = models.JSONField(null=True, blank=True)
+    # Generic foreign key for polymorphic target (Internship, Project, etc.) - populated after approval
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
     object_id = models.UUIDField(null=True, blank=True)
     target = GenericForeignKey('content_type', 'object_id')
     status = models.CharField(max_length=20, choices=RequestStatus.choices, default=RequestStatus.PENDING)
-    remarks = models.TextField(null=True, blank=True)
-    feedback = models.TextField(null=True, blank=True)
+    remarks = models.TextField(null=True, blank=True)  # Student's remarks when submitting
+    feedback = models.TextField(null=True, blank=True)  # Mentor/HOD feedback when approving/rejecting
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
     
@@ -406,4 +383,3 @@ class Request(models.Model):
             models.Index(fields=['student', 'status']),
             models.Index(fields=['assigned_to', 'status']),
         ]
-

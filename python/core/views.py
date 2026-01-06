@@ -1334,6 +1334,14 @@ def get_student_career_details(request):
                     'startup': career.startup,
                     'familyBusiness': career.familyBusiness,
                     'otherInterests': career.otherInterests
+                },
+                'careerRankings': {
+                    'govt_sector_rank': career.govt_sector_rank,
+                    'core_rank': career.core_rank,
+                    'it_rank': career.it_rank,
+                    'higher_education_rank': career.higher_education_rank,
+                    'startup_rank': career.startup_rank,
+                    'family_business_rank': career.family_business_rank
                 }
             }, status=200)
         except CareerDetails.DoesNotExist:
@@ -1350,6 +1358,14 @@ def get_student_career_details(request):
                     'startup': [],
                     'familyBusiness': [],
                     'otherInterests': []
+                },
+                'careerRankings': {
+                    'govt_sector_rank': 1,
+                    'core_rank': 2,
+                    'it_rank': 3,
+                    'higher_education_rank': 4,
+                    'startup_rank': 5,
+                    'family_business_rank': 6
                 },
                 'message': 'No career details found. Please add your career information.'
             }, status=200)
@@ -1384,7 +1400,7 @@ def get_student_internships(request):
                 status=404
             )
         
-        internships = Internship.objects.filter(students=student).order_by('-semester')
+        internships = Internship.objects.filter(student=student).order_by('-semester')
         
         internships_list = []
         for internship in internships:
@@ -1441,11 +1457,37 @@ def get_student_personal_problems(request):
                 'studentId': str(student.id),
                 'stress': problems.stress,
                 'anger': problems.anger,
-                'examinationAnxiety': problems.examinationAnxiety,
-                'timeManagementProblem': problems.timeManagementProblem,
+                'emotional_problem': problems.emotional_problem,
+                'low_self_esteem': problems.low_self_esteem,
+                'examination_anxiety': problems.examination_anxiety,
+                'negative_thoughts': problems.negative_thoughts,
+                'exam_phobia': problems.exam_phobia,
+                'stammering': problems.stammering,
+                'financial_problems': problems.financial_problems,
+                'disturbed_relationship_with_teachers': problems.disturbed_relationship_with_teachers,
+                'disturbed_relationship_with_parents': problems.disturbed_relationship_with_parents,
+                'mood_swings': problems.mood_swings,
+                'stage_phobia': problems.stage_phobia,
+                'poor_concentration': problems.poor_concentration,
+                'poor_memory_problem': problems.poor_memory_problem,
+                'adjustment_problem': problems.adjustment_problem,
+                'frustration': problems.frustration,
+                'migraine_headache': problems.migraine_headache,
+                'relationship_problems': problems.relationship_problems,
+                'fear_of_public_speaking': problems.fear_of_public_speaking,
+                'disciplinary_problems_in_college': problems.disciplinary_problems_in_college,
+                'disturbed_peer_relationship_with_friends': problems.disturbed_peer_relationship_with_friends,
+                'worries_about_future': problems.worries_about_future,
+                'disappointment_with_course': problems.disappointment_with_course,
+                'time_management_problem': problems.time_management_problem,
+                'lack_of_expression': problems.lack_of_expression,
+                'poor_decisive_power': problems.poor_decisive_power,
+                'conflicts': problems.conflicts,
+                'low_self_motivation': problems.low_self_motivation,
                 'procrastination': problems.procrastination,
-                'worriesAboutFuture': problems.worriesAboutFuture,
-                'fearOfPublicSpeaking': problems.fearOfPublicSpeaking
+                'suicidal_attempt_or_thought': problems.suicidal_attempt_or_thought,
+                'tobacco_or_alcohol_use': problems.tobacco_or_alcohol_use,
+                'poor_command_of_english': problems.poor_command_of_english
             }, status=200)
         except PersonalProblem.DoesNotExist:
             return JsonResponse({
@@ -1453,11 +1495,37 @@ def get_student_personal_problems(request):
                 'studentId': str(student.id),
                 'stress': None,
                 'anger': None,
-                'examinationAnxiety': None,
-                'timeManagementProblem': None,
+                'emotional_problem': None,
+                'low_self_esteem': None,
+                'examination_anxiety': None,
+                'negative_thoughts': None,
+                'exam_phobia': None,
+                'stammering': None,
+                'financial_problems': None,
+                'disturbed_relationship_with_teachers': None,
+                'disturbed_relationship_with_parents': None,
+                'mood_swings': None,
+                'stage_phobia': None,
+                'poor_concentration': None,
+                'poor_memory_problem': None,
+                'adjustment_problem': None,
+                'frustration': None,
+                'migraine_headache': None,
+                'relationship_problems': None,
+                'fear_of_public_speaking': None,
+                'disciplinary_problems_in_college': None,
+                'disturbed_peer_relationship_with_friends': None,
+                'worries_about_future': None,
+                'disappointment_with_course': None,
+                'time_management_problem': None,
+                'lack_of_expression': None,
+                'poor_decisive_power': None,
+                'conflicts': None,
+                'low_self_motivation': None,
                 'procrastination': None,
-                'worriesAboutFuture': None,
-                'fearOfPublicSpeaking': None,
+                'suicidal_attempt_or_thought': None,
+                'tobacco_or_alcohol_use': None,
+                'poor_command_of_english': None,
                 'message': 'No personal problems record found.'
             }, status=200)
         
@@ -1491,7 +1559,7 @@ def get_student_projects(request):
                 status=404
             )
         
-        projects = Project.objects.filter(students=student).select_related('mentor').order_by('-semester')
+        projects = Project.objects.filter(student=student).select_related('mentor').order_by('-semester')
         
         projects_list = []
         for project in projects:
@@ -1873,18 +1941,20 @@ def approve_request(request, request_id):
         # Create the actual record based on request type
         created_object = None
         
+        # Handle None request_data
+        request_data = req.request_data or {}
+        
         if req.type == 'INTERNSHIP':
-            # Create Internship
+            # Create Internship with ForeignKey to student
             internship = Internship.objects.create(
-                semester=req.request_data['semester'],
-                type=req.request_data['type'],
-                organisation=req.request_data['organisation'],
-                stipend=req.request_data.get('stipend', 0),
-                duration=req.request_data['duration'],
-                location=req.request_data['location']
+                student=req.student,
+                semester=request_data.get('semester', 1),
+                type=request_data.get('type', 'SUMMER'),
+                organisation=request_data.get('organisation', ''),
+                stipend=request_data.get('stipend', 0),
+                duration=request_data.get('duration', ''),
+                location=request_data.get('location', '')
             )
-            # Add student to internship
-            internship.students.add(req.student)
             created_object = internship
             
             # Update request with reference to created internship
@@ -1894,22 +1964,21 @@ def approve_request(request, request_id):
         elif req.type == 'PROJECT':
             # Get project mentor if specified
             project_mentor = None
-            if req.request_data.get('mentorId'):
+            if request_data.get('mentorId'):
                 try:
-                    project_mentor = Faculty.objects.get(id=req.request_data['mentorId'])
+                    project_mentor = Faculty.objects.get(id=request_data['mentorId'])
                 except Faculty.DoesNotExist:
                     pass
             
-            # Create Project
+            # Create Project with ForeignKey to student
             project = Project.objects.create(
-                semester=req.request_data['semester'],
-                title=req.request_data['title'],
-                description=req.request_data['description'],
-                technologies=req.request_data.get('technologies', []),
+                student=req.student,
+                semester=request_data.get('semester', 1),
+                title=request_data.get('title', ''),
+                description=request_data.get('description', ''),
+                technologies=request_data.get('technologies', []),
                 mentor=project_mentor
             )
-            # Add student to project
-            project.students.add(req.student)
             created_object = project
             
             # Update request with reference to created project
@@ -1917,30 +1986,22 @@ def approve_request(request, request_id):
             req.object_id = project.id
         
         elif req.type == 'DELETE_INTERNSHIP':
-            # Delete the internship
-            internship_id = req.request_data.get('internshipId')
+            # Delete the internship (ForeignKey relationship - one student per internship)
+            internship_id = request_data.get('internshipId')
             if internship_id:
                 try:
-                    internship = Internship.objects.get(id=internship_id)
-                    # Remove student from internship
-                    internship.students.remove(req.student)
-                    # If no students left, delete the internship
-                    if internship.students.count() == 0:
-                        internship.delete()
+                    internship = Internship.objects.get(id=internship_id, student=req.student)
+                    internship.delete()
                 except Internship.DoesNotExist:
                     pass
         
         elif req.type == 'DELETE_PROJECT':
-            # Delete the project
-            project_id = req.request_data.get('projectId')
+            # Delete the project (ForeignKey relationship - one student per project)
+            project_id = request_data.get('projectId')
             if project_id:
                 try:
-                    project = Project.objects.get(id=project_id)
-                    # Remove student from project
-                    project.students.remove(req.student)
-                    # If no students left, delete the project
-                    if project.students.count() == 0:
-                        project.delete()
+                    project = Project.objects.get(id=project_id, student=req.student)
+                    project.delete()
                 except Project.DoesNotExist:
                     pass
         
@@ -1948,15 +2009,15 @@ def approve_request(request, request_id):
             # Create a meeting when approved
             from .models import Meeting, MeetingStatus, Mentorship
             
-            mentorship_id = req.request_data.get('mentorshipId')
+            mentorship_id = request_data.get('mentorshipId')
             if mentorship_id:
                 try:
                     mentorship = Mentorship.objects.get(id=mentorship_id)
                     
                     # Parse date and time from request data
                     from datetime import datetime
-                    meeting_date_str = req.request_data.get('date')
-                    meeting_time_str = req.request_data.get('time', '10:00')
+                    meeting_date_str = request_data.get('date')
+                    meeting_time_str = request_data.get('time', '10:00')
                     
                     meeting_date = datetime.strptime(meeting_date_str, '%Y-%m-%d').date() if meeting_date_str else datetime.now().date()
                     meeting_time = datetime.strptime(meeting_time_str, '%H:%M').time() if meeting_time_str else datetime.now().time()
@@ -1966,7 +2027,7 @@ def approve_request(request, request_id):
                         mentorship=mentorship,
                         date=meeting_date,
                         time=meeting_time,
-                        description=req.request_data.get('description', ''),
+                        description=request_data.get('description', ''),
                         status=MeetingStatus.UPCOMING
                     )
                     created_object = meeting
@@ -4137,9 +4198,19 @@ def update_personal_problems(request):
         # Get or create personal problem record
         problems, created = PersonalProblem.objects.get_or_create(student=student)
         
-        # Update fields if provided
-        fields = ['stress', 'anger', 'examinationAnxiety', 'timeManagementProblem', 
-                  'procrastination', 'worriesAboutFuture', 'fearOfPublicSpeaking']
+        # Update fields if provided - all 32 fields
+        fields = ['stress', 'anger', 'emotional_problem', 'low_self_esteem', 
+                  'examination_anxiety', 'negative_thoughts', 'exam_phobia', 'stammering',
+                  'financial_problems', 'disturbed_relationship_with_teachers', 
+                  'disturbed_relationship_with_parents', 'mood_swings', 'stage_phobia',
+                  'poor_concentration', 'poor_memory_problem', 'adjustment_problem',
+                  'frustration', 'migraine_headache', 'relationship_problems',
+                  'fear_of_public_speaking', 'disciplinary_problems_in_college',
+                  'disturbed_peer_relationship_with_friends', 'worries_about_future',
+                  'disappointment_with_course', 'time_management_problem', 'lack_of_expression',
+                  'poor_decisive_power', 'conflicts', 'low_self_motivation',
+                  'procrastination', 'suicidal_attempt_or_thought', 'tobacco_or_alcohol_use',
+                  'poor_command_of_english']
         
         for field in fields:
             if field in data:
@@ -4153,11 +4224,37 @@ def update_personal_problems(request):
             'studentId': str(student.id),
             'stress': problems.stress,
             'anger': problems.anger,
-            'examinationAnxiety': problems.examinationAnxiety,
-            'timeManagementProblem': problems.timeManagementProblem,
+            'emotional_problem': problems.emotional_problem,
+            'low_self_esteem': problems.low_self_esteem,
+            'examination_anxiety': problems.examination_anxiety,
+            'negative_thoughts': problems.negative_thoughts,
+            'exam_phobia': problems.exam_phobia,
+            'stammering': problems.stammering,
+            'financial_problems': problems.financial_problems,
+            'disturbed_relationship_with_teachers': problems.disturbed_relationship_with_teachers,
+            'disturbed_relationship_with_parents': problems.disturbed_relationship_with_parents,
+            'mood_swings': problems.mood_swings,
+            'stage_phobia': problems.stage_phobia,
+            'poor_concentration': problems.poor_concentration,
+            'poor_memory_problem': problems.poor_memory_problem,
+            'adjustment_problem': problems.adjustment_problem,
+            'frustration': problems.frustration,
+            'migraine_headache': problems.migraine_headache,
+            'relationship_problems': problems.relationship_problems,
+            'fear_of_public_speaking': problems.fear_of_public_speaking,
+            'disciplinary_problems_in_college': problems.disciplinary_problems_in_college,
+            'disturbed_peer_relationship_with_friends': problems.disturbed_peer_relationship_with_friends,
+            'worries_about_future': problems.worries_about_future,
+            'disappointment_with_course': problems.disappointment_with_course,
+            'time_management_problem': problems.time_management_problem,
+            'lack_of_expression': problems.lack_of_expression,
+            'poor_decisive_power': problems.poor_decisive_power,
+            'conflicts': problems.conflicts,
+            'low_self_motivation': problems.low_self_motivation,
             'procrastination': problems.procrastination,
-            'worriesAboutFuture': problems.worriesAboutFuture,
-            'fearOfPublicSpeaking': problems.fearOfPublicSpeaking
+            'suicidal_attempt_or_thought': problems.suicidal_attempt_or_thought,
+            'tobacco_or_alcohol_use': problems.tobacco_or_alcohol_use,
+            'poor_command_of_english': problems.poor_command_of_english
         }, status=200)
         
     except json.JSONDecodeError:
@@ -4559,6 +4656,59 @@ def update_career_other_interests(request):
 @csrf_exempt
 @require_http_methods(["PUT", "PATCH"])
 @require_role('STUDENT')
+def update_career_rankings(request):
+    """
+    Update student's career rankings (1-6 for each career path)
+    """
+    try:
+        user_id = request.user_id
+        data = json.loads(request.body)
+        
+        from .models import Student, CareerDetails
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        career, created = CareerDetails.objects.get_or_create(student=student)
+        
+        # Validate and update ranking fields
+        ranking_fields = ['govt_sector_rank', 'core_rank', 'it_rank', 
+                          'higher_education_rank', 'startup_rank', 'family_business_rank']
+        
+        for field in ranking_fields:
+            if field in data:
+                if not isinstance(data[field], int) or not (1 <= data[field] <= 6):
+                    return JsonResponse({'message': f'{field} must be an integer between 1 and 6'}, status=400)
+                setattr(career, field, data[field])
+        
+        career.save()
+        
+        return JsonResponse({
+            'message': 'Career rankings updated successfully',
+            'careerRankings': {
+                'govt_sector_rank': career.govt_sector_rank,
+                'core_rank': career.core_rank,
+                'it_rank': career.it_rank,
+                'higher_education_rank': career.higher_education_rank,
+                'startup_rank': career.startup_rank,
+                'family_business_rank': career.family_business_rank
+            }
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update career rankings error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "PATCH"])
+@require_role('STUDENT')
 def update_career_details_all(request):
     """
     Update all career details at once
@@ -4586,6 +4736,16 @@ def update_career_details_all(request):
                     return JsonResponse({'message': f'{field} must be an array'}, status=400)
                 setattr(career, field, data[field])
         
+        # Update ranking fields if provided
+        ranking_fields = ['govt_sector_rank', 'core_rank', 'it_rank', 
+                          'higher_education_rank', 'startup_rank', 'family_business_rank']
+        
+        for field in ranking_fields:
+            if field in data:
+                if not isinstance(data[field], int) or not (1 <= data[field] <= 6):
+                    return JsonResponse({'message': f'{field} must be an integer between 1 and 6'}, status=400)
+                setattr(career, field, data[field])
+        
         career.save()
         
         return JsonResponse({
@@ -4602,6 +4762,14 @@ def update_career_details_all(request):
                 'startup': career.startup,
                 'familyBusiness': career.familyBusiness,
                 'otherInterests': career.otherInterests
+            },
+            'careerRankings': {
+                'govt_sector_rank': career.govt_sector_rank,
+                'core_rank': career.core_rank,
+                'it_rank': career.it_rank,
+                'higher_education_rank': career.higher_education_rank,
+                'startup_rank': career.startup_rank,
+                'family_business_rank': career.family_business_rank
             }
         }, status=200)
         

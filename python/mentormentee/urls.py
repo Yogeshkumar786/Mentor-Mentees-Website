@@ -78,6 +78,7 @@ urlpatterns = [
     path('api/student/career-details/startup', views.update_career_startup, name='update_career_startup'),
     path('api/student/career-details/family-business', views.update_career_family_business, name='update_career_family_business'),
     path('api/student/career-details/other-interests', views.update_career_other_interests, name='update_career_other_interests'),
+    path('api/student/career-details/rankings', views.update_career_rankings, name='update_career_rankings'),
     # Request Management APIs
     path('api/student/requests/<uuid:request_id>/cancel', views.cancel_request, name='cancel_request'),
     path('api/student/internships/delete-request', views.create_delete_internship_request, name='create_delete_internship_request'),
