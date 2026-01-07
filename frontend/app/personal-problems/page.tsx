@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { api, StudentPersonalProblems, UpdatePersonalProblemsRequest } from "@/lib/api"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 import { 
   HeartPulse, 
@@ -35,7 +37,11 @@ import {
   Flame,
   Headphones,
   Shield,
-  Languages
+  Languages,
+  DollarSign,
+  Stethoscope,
+  UserX,
+  FileText
 } from "lucide-react"
 
 interface ProblemItem {
@@ -60,7 +66,7 @@ export default function PersonalProblemsPage() {
         setLoading(true)
         const data = await api.getStudentPersonalProblems()
         setProblemsData(data)
-        // Initialize edit data with all 32 fields
+        // Initialize edit data with all fields
         setEditData({
           stress: data.stress,
           anger: data.anger,
@@ -95,6 +101,13 @@ export default function PersonalProblemsPage() {
           suicidal_attempt_or_thought: data.suicidal_attempt_or_thought,
           tobacco_or_alcohol_use: data.tobacco_or_alcohol_use,
           poor_command_of_english: data.poor_command_of_english,
+          // Special Issues
+          economic_issues: data.economic_issues,
+          teenage_issues: data.teenage_issues,
+          health_issues: data.health_issues,
+          emotional_issues: data.emotional_issues,
+          psychological_issues: data.psychological_issues,
+          additional_comments: data.additional_comments,
         })
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch data')
@@ -163,12 +176,23 @@ export default function PersonalProblemsPage() {
         suicidal_attempt_or_thought: problemsData.suicidal_attempt_or_thought,
         tobacco_or_alcohol_use: problemsData.tobacco_or_alcohol_use,
         poor_command_of_english: problemsData.poor_command_of_english,
+        // Special Issues
+        economic_issues: problemsData.economic_issues,
+        teenage_issues: problemsData.teenage_issues,
+        health_issues: problemsData.health_issues,
+        emotional_issues: problemsData.emotional_issues,
+        psychological_issues: problemsData.psychological_issues,
+        additional_comments: problemsData.additional_comments,
       })
     }
     setIsEditing(false)
   }
 
   const handleToggle = (key: keyof UpdatePersonalProblemsRequest, value: boolean) => {
+    setEditData(prev => ({ ...prev, [key]: value }))
+  }
+
+  const handleTextChange = (key: string, value: string) => {
     setEditData(prev => ({ ...prev, [key]: value }))
   }
 
@@ -389,6 +413,254 @@ export default function PersonalProblemsPage() {
             </CardContent>
           </Card>
         ))}
+
+        {/* Special Issues Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-purple-500" />
+              <CardTitle>Special Issues</CardTitle>
+            </div>
+            <CardDescription>
+              Describe any specific issues you are facing. Your mentor, HOD, or admin can provide suggestions and outcomes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Economic Issues */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-green-500" />
+                <h4 className="font-medium">Economic Issues</h4>
+              </div>
+              <div className="grid gap-3">
+                <div>
+                  <label className="text-sm text-muted-foreground">Your Issue</label>
+                  {isEditing ? (
+                    <Textarea
+                      placeholder="Describe any economic/financial issues you are facing..."
+                      value={editData.economic_issues || ''}
+                      onChange={(e) => handleTextChange('economic_issues', e.target.value)}
+                      className="mt-1"
+                      rows={2}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm bg-muted/30 p-3 rounded-lg min-h-10">
+                      {displayData?.economic_issues || <span className="text-muted-foreground italic">Not specified</span>}
+                    </p>
+                  )}
+                </div>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm text-muted-foreground">Suggestion (by Mentor/HOD)</label>
+                    <p className="mt-1 text-sm bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-lg min-h-10 border border-blue-200/50 dark:border-blue-800/50">
+                      {displayData?.economic_issues_suggestion || <span className="text-muted-foreground italic">Awaiting suggestion</span>}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">Outcome</label>
+                    <p className="mt-1 text-sm bg-green-50/50 dark:bg-green-950/20 p-3 rounded-lg min-h-10 border border-green-200/50 dark:border-green-800/50">
+                      {displayData?.economic_issues_outcome || <span className="text-muted-foreground italic">Pending</span>}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Teenage Issues */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <UserX className="h-4 w-4 text-orange-500" />
+                <h4 className="font-medium">Teenage Issues</h4>
+              </div>
+              <div className="grid gap-3">
+                <div>
+                  <label className="text-sm text-muted-foreground">Your Issue</label>
+                  {isEditing ? (
+                    <Textarea
+                      placeholder="Describe any teenage-related issues you are facing..."
+                      value={editData.teenage_issues || ''}
+                      onChange={(e) => handleTextChange('teenage_issues', e.target.value)}
+                      className="mt-1"
+                      rows={2}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm bg-muted/30 p-3 rounded-lg min-h-10">
+                      {displayData?.teenage_issues || <span className="text-muted-foreground italic">Not specified</span>}
+                    </p>
+                  )}
+                </div>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm text-muted-foreground">Suggestion (by Mentor/HOD)</label>
+                    <p className="mt-1 text-sm bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-lg min-h-10 border border-blue-200/50 dark:border-blue-800/50">
+                      {displayData?.teenage_issues_suggestion || <span className="text-muted-foreground italic">Awaiting suggestion</span>}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">Outcome</label>
+                    <p className="mt-1 text-sm bg-green-50/50 dark:bg-green-950/20 p-3 rounded-lg min-h-10 border border-green-200/50 dark:border-green-800/50">
+                      {displayData?.teenage_issues_outcome || <span className="text-muted-foreground italic">Pending</span>}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Health Issues */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Stethoscope className="h-4 w-4 text-red-500" />
+                <h4 className="font-medium">Health Issues</h4>
+              </div>
+              <div className="grid gap-3">
+                <div>
+                  <label className="text-sm text-muted-foreground">Your Issue</label>
+                  {isEditing ? (
+                    <Textarea
+                      placeholder="Describe any health-related issues you are facing..."
+                      value={editData.health_issues || ''}
+                      onChange={(e) => handleTextChange('health_issues', e.target.value)}
+                      className="mt-1"
+                      rows={2}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm bg-muted/30 p-3 rounded-lg min-h-10">
+                      {displayData?.health_issues || <span className="text-muted-foreground italic">Not specified</span>}
+                    </p>
+                  )}
+                </div>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm text-muted-foreground">Suggestion (by Mentor/HOD)</label>
+                    <p className="mt-1 text-sm bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-lg min-h-10 border border-blue-200/50 dark:border-blue-800/50">
+                      {displayData?.health_issues_suggestion || <span className="text-muted-foreground italic">Awaiting suggestion</span>}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">Outcome</label>
+                    <p className="mt-1 text-sm bg-green-50/50 dark:bg-green-950/20 p-3 rounded-lg min-h-10 border border-green-200/50 dark:border-green-800/50">
+                      {displayData?.health_issues_outcome || <span className="text-muted-foreground italic">Pending</span>}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Emotional Issues */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Heart className="h-4 w-4 text-pink-500" />
+                <h4 className="font-medium">Emotional Issues</h4>
+              </div>
+              <div className="grid gap-3">
+                <div>
+                  <label className="text-sm text-muted-foreground">Your Issue</label>
+                  {isEditing ? (
+                    <Textarea
+                      placeholder="Describe any emotional issues you are facing..."
+                      value={editData.emotional_issues || ''}
+                      onChange={(e) => handleTextChange('emotional_issues', e.target.value)}
+                      className="mt-1"
+                      rows={2}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm bg-muted/30 p-3 rounded-lg min-h-10">
+                      {displayData?.emotional_issues || <span className="text-muted-foreground italic">Not specified</span>}
+                    </p>
+                  )}
+                </div>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm text-muted-foreground">Suggestion (by Mentor/HOD)</label>
+                    <p className="mt-1 text-sm bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-lg min-h-10 border border-blue-200/50 dark:border-blue-800/50">
+                      {displayData?.emotional_issues_suggestion || <span className="text-muted-foreground italic">Awaiting suggestion</span>}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">Outcome</label>
+                    <p className="mt-1 text-sm bg-green-50/50 dark:bg-green-950/20 p-3 rounded-lg min-h-10 border border-green-200/50 dark:border-green-800/50">
+                      {displayData?.emotional_issues_outcome || <span className="text-muted-foreground italic">Pending</span>}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Psychological Issues */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Brain className="h-4 w-4 text-purple-500" />
+                <h4 className="font-medium">Psychological Issues</h4>
+              </div>
+              <div className="grid gap-3">
+                <div>
+                  <label className="text-sm text-muted-foreground">Your Issue</label>
+                  {isEditing ? (
+                    <Textarea
+                      placeholder="Describe any psychological issues you are facing..."
+                      value={editData.psychological_issues || ''}
+                      onChange={(e) => handleTextChange('psychological_issues', e.target.value)}
+                      className="mt-1"
+                      rows={2}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm bg-muted/30 p-3 rounded-lg min-h-10">
+                      {displayData?.psychological_issues || <span className="text-muted-foreground italic">Not specified</span>}
+                    </p>
+                  )}
+                </div>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm text-muted-foreground">Suggestion (by Mentor/HOD)</label>
+                    <p className="mt-1 text-sm bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-lg min-h-10 border border-blue-200/50 dark:border-blue-800/50">
+                      {displayData?.psychological_issues_suggestion || <span className="text-muted-foreground italic">Awaiting suggestion</span>}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">Outcome</label>
+                    <p className="mt-1 text-sm bg-green-50/50 dark:bg-green-950/20 p-3 rounded-lg min-h-10 border border-green-200/50 dark:border-green-800/50">
+                      {displayData?.psychological_issues_outcome || <span className="text-muted-foreground italic">Pending</span>}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Additional Comments */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-gray-500" />
+                <h4 className="font-medium">Additional Comments</h4>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Any other issues or comments</label>
+                {isEditing ? (
+                  <Textarea
+                    placeholder="Any additional comments or issues not covered above..."
+                    value={editData.additional_comments || ''}
+                    onChange={(e) => handleTextChange('additional_comments', e.target.value)}
+                    className="mt-1"
+                    rows={3}
+                  />
+                ) : (
+                  <p className="mt-1 text-sm bg-muted/30 p-3 rounded-lg min-h-12">
+                    {displayData?.additional_comments || <span className="text-muted-foreground italic">No additional comments</span>}
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Summary */}
         {issuesCount > 0 && !isEditing && (
