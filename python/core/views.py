@@ -734,6 +734,600 @@ def get_department_students(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@require_role(['FACULTY', 'HOD', 'ADMIN'])
+def get_student_by_rollno(request, rollno):
+    """
+    Get complete student details by roll number
+    Accessible by: FACULTY, HOD, ADMIN (not STUDENT)
+    """
+    try:
+        from .models import Student, Mentorship
+        
+        try:
+            student = Student.objects.select_related('user').get(rollNumber=rollno)
+        except Student.DoesNotExist:
+            return JsonResponse(
+                {'message': 'Student not found'},
+                status=404
+            )
+        
+        # Get active mentorship info
+        active_mentorship = Mentorship.objects.filter(student=student, is_active=True).first()
+        mentor_info = None
+        if active_mentorship:
+            mentor_info = {
+                'id': str(active_mentorship.faculty.id),
+                'name': active_mentorship.faculty.name,
+                'employeeId': active_mentorship.faculty.employeeId,
+                'department': active_mentorship.faculty.department,
+                'email': active_mentorship.faculty.collegeEmail
+            }
+        
+        return JsonResponse({
+            'id': str(student.id),
+            'userId': str(student.user.id),
+            'name': student.name,
+            'email': student.user.email,
+            'aadhar': student.aadhar,
+            'phoneNumber': student.phoneNumber,
+            'phoneCode': student.phoneCode,
+            'registrationNumber': student.registrationNumber,
+            'rollNumber': student.rollNumber,
+            'passPort': student.passPort,
+            'emergencyContact': student.emergencyContact,
+            'personalEmail': student.personalEmail,
+            'collegeEmail': student.collegeEmail,
+            'dob': student.dob.isoformat() if student.dob else None,
+            'address': student.address,
+            'program': student.program,
+            'branch': student.branch,
+            'year': student.year,
+            'bloodGroup': student.bloodGroup,
+            'dayScholar': student.dayScholar,
+            'gender': student.gender,
+            'community': student.community,
+            'status': student.status,
+            'profilePicture': student.user.profilePicture,
+            'accountStatus': student.user.accountStatus,
+            'father': {
+                'name': student.fatherName,
+                'occupation': student.fatherOccupation,
+                'aadhar': student.fatherAadhar,
+                'phone': student.fatherNumber
+            },
+            'mother': {
+                'name': student.motherName,
+                'occupation': student.motherOccupation,
+                'aadhar': student.motherAadhar,
+                'phone': student.motherNumber
+            },
+            'academicBackground': {
+                'xMarks': student.xMarks,
+                'xiiMarks': student.xiiMarks,
+                'jeeMains': student.jeeMains,
+                'jeeAdvanced': student.jeeAdvanced
+            },
+            'mentor': mentor_info,
+            'createdAt': student.createdAt.isoformat() if student.createdAt else None,
+            'updatedAt': student.updatedAt.isoformat() if student.updatedAt else None
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get student by rollno error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse(
+            {'message': 'Server error'},
+            status=500
+        )
+
+
+@csrf_exempt
+@require_http_methods(["PUT"])
+@require_role(['ADMIN'])
+def update_student_by_rollno(request, rollno):
+    """
+    Update student details by roll number
+    Only ADMIN can update student details
+    Updatable fields: name, phoneNumber, emergencyContact, address, year, dayScholar, status,
+                      fatherName, fatherOccupation, fatherNumber, motherName, motherOccupation, motherNumber
+    """
+    try:
+        from .models import Student, StudentStatus
+        
+        data = json.loads(request.body)
+        
+        try:
+            student = Student.objects.select_related('user').get(rollNumber=rollno)
+        except Student.DoesNotExist:
+            return JsonResponse(
+                {'message': 'Student not found'},
+                status=404
+            )
+        
+        # Fields that admin can update
+        updatable_fields = [
+            'name', 'phoneNumber', 'emergencyContact', 'address', 'year',
+            'dayScholar', 'fatherName', 'fatherOccupation', 'fatherNumber',
+            'motherName', 'motherOccupation', 'motherNumber'
+        ]
+        
+        updated_fields = []
+        
+        for field in updatable_fields:
+            if field in data:
+                setattr(student, field, data[field])
+                updated_fields.append(field)
+        
+        # Handle status separately (needs validation)
+        if 'status' in data:
+            status_value = data['status']
+            if status_value in [s.value for s in StudentStatus]:
+                student.status = status_value
+                updated_fields.append('status')
+            else:
+                return JsonResponse(
+                    {'message': f'Invalid status. Valid values: {[s.value for s in StudentStatus]}'},
+                    status=400
+                )
+        
+        # Handle account status update (on User model)
+        if 'accountStatus' in data:
+            from .models import AccountStatus
+            account_status = data['accountStatus']
+            if account_status in [s.value for s in AccountStatus]:
+                student.user.accountStatus = account_status
+                student.user.save()
+                updated_fields.append('accountStatus')
+            else:
+                return JsonResponse(
+                    {'message': f'Invalid account status. Valid values: {[s.value for s in AccountStatus]}'},
+                    status=400
+                )
+        
+        if updated_fields:
+            student.save()
+        
+        return JsonResponse({
+            'message': 'Student updated successfully',
+            'updatedFields': updated_fields,
+            'student': {
+                'id': str(student.id),
+                'name': student.name,
+                'rollNumber': student.rollNumber,
+                'status': student.status,
+                'accountStatus': student.user.accountStatus
+            }
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {'message': 'Invalid JSON data'},
+            status=400
+        )
+    except Exception as e:
+        print(f"Update student by rollno error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse(
+            {'message': 'Server error'},
+            status=500
+        )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role(['FACULTY', 'HOD', 'ADMIN'])
+def get_student_projects_by_rollno(request, rollno):
+    """
+    Get student's projects by roll number
+    Accessible by: FACULTY, HOD, ADMIN
+    """
+    try:
+        from .models import Student, Project
+        
+        try:
+            student = Student.objects.get(rollNumber=rollno)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student not found'}, status=404)
+        
+        projects = Project.objects.filter(student=student).order_by('-semester')
+        
+        projects_list = []
+        for project in projects:
+            projects_list.append({
+                'id': str(project.id),
+                'semester': project.semester,
+                'title': project.title,
+                'description': project.description,
+                'technologies': project.technologies or [],
+                'mentor': {
+                    'name': project.mentor.name if project.mentor else None,
+                    'employeeId': project.mentor.employeeId if project.mentor else None,
+                    'department': project.mentor.department if project.mentor else None
+                } if project.mentor else None
+            })
+        
+        return JsonResponse({
+            'studentId': str(student.id),
+            'studentName': student.name,
+            'rollNumber': student.rollNumber,
+            'projects': projects_list,
+            'total': len(projects_list)
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get student projects by rollno error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role(['FACULTY', 'HOD', 'ADMIN'])
+def get_student_internships_by_rollno(request, rollno):
+    """
+    Get student's internships by roll number
+    Accessible by: FACULTY, HOD, ADMIN
+    """
+    try:
+        from .models import Student, Internship
+        
+        try:
+            student = Student.objects.get(rollNumber=rollno)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student not found'}, status=404)
+        
+        internships = Internship.objects.filter(student=student).order_by('-semester')
+        
+        internships_list = []
+        for internship in internships:
+            internships_list.append({
+                'id': str(internship.id),
+                'semester': internship.semester,
+                'type': internship.type,
+                'organisation': internship.organisation,
+                'stipend': internship.stipend,
+                'duration': internship.duration,
+                'location': internship.location
+            })
+        
+        return JsonResponse({
+            'studentId': str(student.id),
+            'studentName': student.name,
+            'rollNumber': student.rollNumber,
+            'internships': internships_list,
+            'total': len(internships_list)
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get student internships by rollno error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role(['FACULTY', 'HOD', 'ADMIN'])
+def get_student_career_by_rollno(request, rollno):
+    """
+    Get student's career details by roll number
+    Accessible by: FACULTY, HOD, ADMIN
+    """
+    try:
+        from .models import Student, CareerDetails
+        
+        try:
+            student = Student.objects.get(rollNumber=rollno)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student not found'}, status=404)
+        
+        try:
+            career = CareerDetails.objects.get(student=student)
+            return JsonResponse({
+                'id': str(career.id),
+                'studentId': str(student.id),
+                'studentName': student.name,
+                'rollNumber': student.rollNumber,
+                'hobbies': career.hobbies or [],
+                'strengths': career.strengths or [],
+                'areasToImprove': career.areasToImprove or [],
+                'careerInterests': {
+                    'core': career.core or [],
+                    'it': career.it or [],
+                    'higherEducation': career.higherEducation or [],
+                    'startup': career.startup or [],
+                    'familyBusiness': career.familyBusiness or [],
+                    'otherInterests': career.otherInterests or []
+                },
+                'careerRankings': {
+                    'govt_sector_rank': career.govt_sector_rank,
+                    'core_rank': career.core_rank,
+                    'it_rank': career.it_rank,
+                    'higher_education_rank': career.higher_education_rank,
+                    'startup_rank': career.startup_rank,
+                    'family_business_rank': career.family_business_rank
+                }
+            }, status=200)
+        except CareerDetails.DoesNotExist:
+            return JsonResponse({
+                'id': None,
+                'studentId': str(student.id),
+                'studentName': student.name,
+                'rollNumber': student.rollNumber,
+                'hobbies': [],
+                'strengths': [],
+                'areasToImprove': [],
+                'careerInterests': {
+                    'core': [],
+                    'it': [],
+                    'higherEducation': [],
+                    'startup': [],
+                    'familyBusiness': [],
+                    'otherInterests': []
+                },
+                'careerRankings': {
+                    'govt_sector_rank': 1,
+                    'core_rank': 2,
+                    'it_rank': 3,
+                    'higher_education_rank': 4,
+                    'startup_rank': 5,
+                    'family_business_rank': 6
+                },
+                'message': 'No career details found for this student'
+            }, status=200)
+        
+    except Exception as e:
+        print(f"Get student career by rollno error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role(['FACULTY', 'HOD', 'ADMIN'])
+def get_student_problems_by_rollno(request, rollno):
+    """
+    Get student's personal problems by roll number
+    Accessible by: FACULTY, HOD, ADMIN
+    """
+    try:
+        from .models import Student, PersonalProblem
+        
+        try:
+            student = Student.objects.get(rollNumber=rollno)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student not found'}, status=404)
+        
+        try:
+            problem = PersonalProblem.objects.get(student=student)
+            return JsonResponse({
+                'id': str(problem.id),
+                'studentId': str(student.id),
+                'studentName': student.name,
+                'rollNumber': student.rollNumber,
+                # Column 1
+                'stress': problem.stress,
+                'anger': problem.anger,
+                'emotional_problem': problem.emotional_problem,
+                'low_self_esteem': problem.low_self_esteem,
+                'examination_anxiety': problem.examination_anxiety,
+                'negative_thoughts': problem.negative_thoughts,
+                'exam_phobia': problem.exam_phobia,
+                'stammering': problem.stammering,
+                'financial_problems': problem.financial_problems,
+                'disturbed_relationship_with_teachers': problem.disturbed_relationship_with_teachers,
+                'disturbed_relationship_with_parents': problem.disturbed_relationship_with_parents,
+                # Column 2
+                'mood_swings': problem.mood_swings,
+                'stage_phobia': problem.stage_phobia,
+                'poor_concentration': problem.poor_concentration,
+                'poor_memory_problem': problem.poor_memory_problem,
+                'adjustment_problem': problem.adjustment_problem,
+                'frustration': problem.frustration,
+                'migraine_headache': problem.migraine_headache,
+                'relationship_problems': problem.relationship_problems,
+                'fear_of_public_speaking': problem.fear_of_public_speaking,
+                'disciplinary_problems_in_college': problem.disciplinary_problems_in_college,
+                'disturbed_peer_relationship_with_friends': problem.disturbed_peer_relationship_with_friends,
+                # Column 3
+                'worries_about_future': problem.worries_about_future,
+                'disappointment_with_course': problem.disappointment_with_course,
+                'time_management_problem': problem.time_management_problem,
+                'lack_of_expression': problem.lack_of_expression,
+                'poor_decisive_power': problem.poor_decisive_power,
+                'conflicts': problem.conflicts,
+                'low_self_motivation': problem.low_self_motivation,
+                'procrastination': problem.procrastination,
+                'suicidal_attempt_or_thought': problem.suicidal_attempt_or_thought,
+                'tobacco_or_alcohol_use': problem.tobacco_or_alcohol_use,
+                'poor_command_of_english': problem.poor_command_of_english
+            }, status=200)
+        except PersonalProblem.DoesNotExist:
+            return JsonResponse({
+                'id': None,
+                'studentId': str(student.id),
+                'studentName': student.name,
+                'rollNumber': student.rollNumber,
+                'stress': None, 'anger': None, 'emotional_problem': None,
+                'low_self_esteem': None, 'examination_anxiety': None,
+                'negative_thoughts': None, 'exam_phobia': None,
+                'stammering': None, 'financial_problems': None,
+                'disturbed_relationship_with_teachers': None,
+                'disturbed_relationship_with_parents': None,
+                'mood_swings': None, 'stage_phobia': None,
+                'poor_concentration': None, 'poor_memory_problem': None,
+                'adjustment_problem': None, 'frustration': None,
+                'migraine_headache': None, 'relationship_problems': None,
+                'fear_of_public_speaking': None,
+                'disciplinary_problems_in_college': None,
+                'disturbed_peer_relationship_with_friends': None,
+                'worries_about_future': None, 'disappointment_with_course': None,
+                'time_management_problem': None, 'lack_of_expression': None,
+                'poor_decisive_power': None, 'conflicts': None,
+                'low_self_motivation': None, 'procrastination': None,
+                'suicidal_attempt_or_thought': None, 'tobacco_or_alcohol_use': None,
+                'poor_command_of_english': None,
+                'message': 'No personal problems data found for this student'
+            }, status=200)
+        
+    except Exception as e:
+        print(f"Get student problems by rollno error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role(['FACULTY', 'HOD', 'ADMIN'])
+def get_student_mentoring_by_rollno(request, rollno):
+    """
+    Get student's mentoring details by roll number
+    Accessible by: FACULTY, HOD, ADMIN
+    """
+    try:
+        from .models import Student, Mentorship, Meeting
+        
+        try:
+            student = Student.objects.get(rollNumber=rollno)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student not found'}, status=404)
+        
+        # Get all mentorships for this student
+        mentorships = Mentorship.objects.filter(student=student).select_related('faculty', 'faculty__user').order_by('-is_active', '-start_date')
+        
+        mentorships_list = []
+        for mentorship in mentorships:
+            # Get meetings for this mentorship
+            meetings = Meeting.objects.filter(mentorship=mentorship).order_by('-date', '-time')
+            meetings_list = []
+            for meeting in meetings:
+                meetings_list.append({
+                    'id': str(meeting.id),
+                    'date': meeting.date.isoformat() if meeting.date else None,
+                    'time': meeting.time.strftime('%H:%M') if meeting.time else None,
+                    'description': meeting.description,
+                    'status': meeting.status,
+                    'feedback': meeting.facultyReview,
+                    'remarks': None
+                })
+            
+            mentorships_list.append({
+                'id': str(mentorship.id),
+                'faculty': {
+                    'id': str(mentorship.faculty.id),
+                    'name': mentorship.faculty.name,
+                    'employeeId': mentorship.faculty.employeeId,
+                    'department': mentorship.faculty.department,
+                    'email': mentorship.faculty.collegeEmail,
+                    'phone': mentorship.faculty.phone1
+                },
+                'startDate': mentorship.start_date.isoformat() if mentorship.start_date else None,
+                'endDate': mentorship.end_date.isoformat() if mentorship.end_date else None,
+                'isActive': mentorship.is_active,
+                'meetings': meetings_list,
+                'totalMeetings': len(meetings_list)
+            })
+        
+        # Get active mentorship
+        active_mentorship = next((m for m in mentorships_list if m['isActive']), None)
+        
+        return JsonResponse({
+            'studentId': str(student.id),
+            'studentName': student.name,
+            'rollNumber': student.rollNumber,
+            'activeMentorship': active_mentorship,
+            'mentorships': mentorships_list,
+            'totalMentorships': len(mentorships_list)
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get student mentoring by rollno error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role(['FACULTY', 'HOD', 'ADMIN'])
+def get_student_academic_by_rollno(request, rollno):
+    """
+    Get student's academic details by roll number
+    Accessible by: FACULTY, HOD, ADMIN
+    """
+    try:
+        from .models import Student, Semester, StudentSubject
+        
+        try:
+            student = Student.objects.get(rollNumber=rollno)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student not found'}, status=404)
+        
+        # Get all semesters for this student
+        semesters = Semester.objects.filter(student=student).order_by('semester')
+        
+        semesters_list = []
+        latest_cgpa = None
+        
+        for sem in semesters:
+            # Get subjects for this semester via StudentSubject
+            student_subjects = StudentSubject.objects.filter(
+                student=student, 
+                semester=sem
+            ).select_related('subject')
+            
+            subjects_list = []
+            for ss in student_subjects:
+                subjects_list.append({
+                    'subjectCode': ss.subject.subjectCode,
+                    'subjectName': ss.subject.subjectName,
+                    'credits': ss.subject.credits,
+                    'grade': ss.grade
+                })
+            
+            semesters_list.append({
+                'semester': sem.semester,
+                'sgpa': float(sem.sgpa) if sem.sgpa else None,
+                'cgpa': float(sem.cgpa) if sem.cgpa else None,
+                'subjects': subjects_list,
+                'totalCredits': sum(s['credits'] for s in subjects_list)
+            })
+            
+            if sem.cgpa:
+                latest_cgpa = float(sem.cgpa)
+        
+        return JsonResponse({
+            'studentId': str(student.id),
+            'studentName': student.name,
+            'rollNumber': student.rollNumber,
+            'program': student.program,
+            'branch': student.branch,
+            'currentYear': student.year,
+            'latestCGPA': latest_cgpa,
+            'semesters': semesters_list,
+            'totalSemesters': len(semesters_list),
+            'preAdmission': {
+                'xMarks': student.xMarks,
+                'xiiMarks': student.xiiMarks,
+                'jeeMains': student.jeeMains,
+                'jeeAdvanced': student.jeeAdvanced
+            }
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get student academic by rollno error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
 @require_role(['HOD', 'ADMIN'])
 def get_faculty(request):
     """
@@ -5287,6 +5881,7 @@ def export_students_csv(request):
         students = students.select_related('user').order_by('rollNumber')
         
         # Create CSV response
+        from datetime import date
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename="students_export_{department or "all"}_{date.today().isoformat()}.csv"'
         

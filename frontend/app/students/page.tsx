@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Search, Users, Mail, Phone } from "lucide-react"
+import { Loader2, Search, Users, Mail, Phone, Eye } from "lucide-react"
 
 const DEPARTMENTS = [
   { value: "all", label: "All Departments" },
@@ -262,12 +262,20 @@ export default function StudentsPage() {
                     <TableHead>Year</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredStudents.map((student) => (
                     <TableRow key={student.id}>
-                      <TableCell className="font-medium">{student.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <button
+                          onClick={() => router.push(`/students/${student.rollNumber}`)}
+                          className="text-primary hover:underline cursor-pointer text-left"
+                        >
+                          {student.name}
+                        </button>
+                      </TableCell>
                       <TableCell>{student.rollNumber}</TableCell>
                       <TableCell>{student.program}</TableCell>
                       <TableCell>{student.year}</TableCell>
@@ -291,6 +299,16 @@ export default function StudentsPage() {
                         >
                           {student.status}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => router.push(`/students/${student.rollNumber}`)}
+                          title="View Student Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

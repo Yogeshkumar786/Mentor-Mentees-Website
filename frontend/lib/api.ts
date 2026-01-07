@@ -267,6 +267,269 @@ export interface UpdateCareerRankingsRequest {
   family_business_rank?: number
 }
 
+// Student Details (for viewing by Faculty/HOD/Admin)
+export interface StudentDetails {
+  id: string
+  userId: string
+  name: string
+  email: string
+  aadhar: string
+  phoneNumber: string
+  phoneCode: number
+  registrationNumber: number
+  rollNumber: number
+  passPort: string
+  emergencyContact: string
+  personalEmail: string
+  collegeEmail: string
+  dob: string | null
+  address: string
+  program: string
+  branch: string
+  year: number
+  bloodGroup: string
+  dayScholar: boolean
+  gender: string
+  community: string
+  status: string
+  profilePicture: string | null
+  accountStatus: string
+  father: {
+    name: string
+    occupation: string | null
+    aadhar: string | null
+    phone: string | null
+  }
+  mother: {
+    name: string
+    occupation: string | null
+    aadhar: string | null
+    phone: string | null
+  }
+  academicBackground: {
+    xMarks: number
+    xiiMarks: number
+    jeeMains: number
+    jeeAdvanced: number | null
+  }
+  mentor: {
+    id: string
+    name: string
+    employeeId: string
+    department: string
+    email: string
+  } | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+// Update Student Request (Admin only)
+export interface UpdateStudentRequest {
+  name?: string
+  phoneNumber?: string
+  emergencyContact?: string
+  address?: string
+  year?: number
+  dayScholar?: boolean
+  status?: string
+  accountStatus?: string
+  fatherName?: string
+  fatherOccupation?: string
+  fatherNumber?: string
+  motherName?: string
+  motherOccupation?: string
+  motherNumber?: string
+}
+
+// Student Data by Roll Number (for Faculty/HOD/Admin viewing)
+export interface StudentProjectsByRollno {
+  studentId: string
+  studentName: string
+  rollNumber: number
+  projects: Array<{
+    id: string
+    semester: number
+    title: string
+    description: string
+    technologies: string[]
+    mentor: {
+      name: string | null
+      employeeId: string | null
+      department: string | null
+    } | null
+  }>
+  total: number
+}
+
+export interface StudentInternshipsByRollno {
+  studentId: string
+  studentName: string
+  rollNumber: number
+  internships: Array<{
+    id: string
+    semester: number
+    type: string
+    organisation: string
+    stipend: number
+    duration: string
+    location: string
+  }>
+  total: number
+}
+
+export interface StudentCareerByRollno {
+  id: string | null
+  studentId: string
+  studentName: string
+  rollNumber: number
+  hobbies: string[]
+  strengths: string[]
+  areasToImprove: string[]
+  careerInterests: {
+    core: string[]
+    it: string[]
+    higherEducation: string[]
+    startup: string[]
+    familyBusiness: string[]
+    otherInterests: string[]
+  }
+  careerRankings: {
+    govt_sector_rank: number
+    core_rank: number
+    it_rank: number
+    higher_education_rank: number
+    startup_rank: number
+    family_business_rank: number
+  }
+  message?: string
+}
+
+export interface StudentProblemsByRollno {
+  id: string | null
+  studentId: string
+  studentName: string
+  rollNumber: number
+  // All 32 personal problem fields
+  stress: boolean | null
+  anger: boolean | null
+  emotional_problem: boolean | null
+  low_self_esteem: boolean | null
+  examination_anxiety: boolean | null
+  negative_thoughts: boolean | null
+  exam_phobia: boolean | null
+  stammering: boolean | null
+  financial_problems: boolean | null
+  disturbed_relationship_with_teachers: boolean | null
+  disturbed_relationship_with_parents: boolean | null
+  mood_swings: boolean | null
+  stage_phobia: boolean | null
+  poor_concentration: boolean | null
+  poor_memory_problem: boolean | null
+  adjustment_problem: boolean | null
+  frustration: boolean | null
+  migraine_headache: boolean | null
+  relationship_problems: boolean | null
+  fear_of_public_speaking: boolean | null
+  disciplinary_problems_in_college: boolean | null
+  disturbed_peer_relationship_with_friends: boolean | null
+  worries_about_future: boolean | null
+  disappointment_with_course: boolean | null
+  time_management_problem: boolean | null
+  lack_of_expression: boolean | null
+  poor_decisive_power: boolean | null
+  conflicts: boolean | null
+  low_self_motivation: boolean | null
+  procrastination: boolean | null
+  suicidal_attempt_or_thought: boolean | null
+  tobacco_or_alcohol_use: boolean | null
+  poor_command_of_english: boolean | null
+  message?: string
+}
+
+export interface StudentMentoringByRollno {
+  studentId: string
+  studentName: string
+  rollNumber: number
+  activeMentorship: {
+    id: string
+    faculty: {
+      id: string
+      name: string
+      employeeId: string
+      department: string
+      email: string
+      phone: string
+    }
+    startDate: string | null
+    endDate: string | null
+    isActive: boolean
+    meetings: Array<{
+      id: string
+      date: string | null
+      time: string | null
+      description: string
+      status: string
+      feedback: string | null
+      remarks: string | null
+    }>
+    totalMeetings: number
+  } | null
+  mentorships: Array<{
+    id: string
+    faculty: {
+      id: string
+      name: string
+      employeeId: string
+      department: string
+      email: string
+      phone: string
+    }
+    startDate: string | null
+    endDate: string | null
+    isActive: boolean
+    meetings: Array<{
+      id: string
+      date: string | null
+      time: string | null
+      description: string
+      status: string
+      feedback: string | null
+      remarks: string | null
+    }>
+    totalMeetings: number
+  }>
+  totalMentorships: number
+}
+
+export interface StudentAcademicByRollno {
+  studentId: string
+  studentName: string
+  rollNumber: number
+  program: string
+  branch: string
+  currentYear: number
+  latestCGPA: number | null
+  semesters: Array<{
+    semester: number
+    sgpa: number | null
+    cgpa: number | null
+    subjects: Array<{
+      subjectCode: string
+      subjectName: string
+      credits: number
+      grade: string
+    }>
+    totalCredits: number
+  }>
+  totalSemesters: number
+  preAdmission: {
+    xMarks: number
+    xiiMarks: number
+    jeeMains: number
+    jeeAdvanced: number | null
+  }
+}
+
 export interface StudentProjects {
   studentId: string
   projects: Array<{
@@ -1583,6 +1846,44 @@ class ApiService {
     a.click()
     document.body.removeChild(a)
     window.URL.revokeObjectURL(downloadUrl)
+  }
+
+  // Student Details APIs (for Faculty/HOD/Admin)
+  async getStudentByRollNumber(rollno: number): Promise<StudentDetails> {
+    return this.request<StudentDetails>(`/api/department/student/${rollno}`)
+  }
+
+  // Update Student (Admin only)
+  async updateStudentByRollNumber(rollno: number, data: UpdateStudentRequest): Promise<{ message: string; updatedFields: string[]; student: { id: string; name: string; rollNumber: number; status: string; accountStatus: string } }> {
+    return this.request<{ message: string; updatedFields: string[]; student: { id: string; name: string; rollNumber: number; status: string; accountStatus: string } }>(`/api/admin/student/${rollno}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  // Student Data by Roll Number APIs (for Faculty/HOD/Admin viewing)
+  async getStudentProjectsByRollNumber(rollno: number): Promise<StudentProjectsByRollno> {
+    return this.request<StudentProjectsByRollno>(`/api/department/student/${rollno}/projects`)
+  }
+
+  async getStudentInternshipsByRollNumber(rollno: number): Promise<StudentInternshipsByRollno> {
+    return this.request<StudentInternshipsByRollno>(`/api/department/student/${rollno}/internships`)
+  }
+
+  async getStudentCareerByRollNumber(rollno: number): Promise<StudentCareerByRollno> {
+    return this.request<StudentCareerByRollno>(`/api/department/student/${rollno}/career`)
+  }
+
+  async getStudentProblemsByRollNumber(rollno: number): Promise<StudentProblemsByRollno> {
+    return this.request<StudentProblemsByRollno>(`/api/department/student/${rollno}/problems`)
+  }
+
+  async getStudentMentoringByRollNumber(rollno: number): Promise<StudentMentoringByRollno> {
+    return this.request<StudentMentoringByRollno>(`/api/department/student/${rollno}/mentoring`)
+  }
+
+  async getStudentAcademicByRollNumber(rollno: number): Promise<StudentAcademicByRollno> {
+    return this.request<StudentAcademicByRollno>(`/api/department/student/${rollno}/academic`)
   }
 }
 
