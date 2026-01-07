@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from "recharts"
 import { Loader2, GraduationCap, BookOpen, TrendingUp } from "lucide-react"
 
 export default function StudentAcademicPage() {
@@ -179,33 +181,112 @@ export default function StudentAcademicPage() {
       </Card>
 
       {/* CGPA Trend */}
-      {data.semesters.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" /> CGPA Progression
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end gap-2 h-32">
-              {data.semesters.map((sem) => {
-                const cgpaValue = sem.cgpa ?? 0
-                const heightPercent = (cgpaValue / 10) * 100
-                return (
-                  <div key={sem.semester} className="flex-1 flex flex-col items-center">
-                    <div
-                      className={`w-full bg-primary rounded-t h-[${Math.round(heightPercent)}%]`}
-                      style={{ height: `${heightPercent}%` }}
-                    />
-                    <span className="text-xs mt-1">S{sem.semester}</span>
-                    <span className="text-xs font-medium">{cgpaValue.toFixed(1)}</span>
-                  </div>
-                )
-              })}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" /> CGPA & SGPA Progression
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(() => {
+            // Create data for all 8 semesters, with null for missing data
+            const chartData = Array.from({ length: 8 }, (_, i) => {
+              const semNum = i + 1
+              const semData = data.semesters.find(s => s.semester === semNum)
+              return {
+                semester: `Sem ${semNum}`,
+                cgpa: semData?.cgpa ?? null,
+                sgpa: semData?.sgpa ?? null,
+              }
+            })
+
+            const chartConfig: ChartConfig = {
+              cgpa: {
+                label: "CGPA",
+                color: "hsl(217, 91%, 50%)", // Blue color like City A in the image
+              },
+              sgpa: {
+                label: "SGPA",
+                color: "hsl(30, 90%, 55%)", // Orange color like City B in the image
+              },
+            }
+
+            return (
+              <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="semester" 
+                    tick={{ fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={{ stroke: '#ccc' }}
+                  />
+                  <YAxis 
+                    domain={[0, 10]} 
+                    tick={{ fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={{ stroke: '#ccc' }}
+                    tickFormatter={(value) => value.toFixed(1)}
+                    ticks={[0, 2, 4, 6, 8, 10]}
+                  />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent />}
+                  />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="cgpa" 
+                    stroke="var(--color-cgpa)" 
+                    strokeWidth={2}
+                    dot={{ r: 4, fill: "var(--color-cgpa)", strokeWidth: 0 }}
+                    activeDot={{ r: 6 }}
+                    name="CGPA"
+                    connectNulls={false}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="sgpa" 
+                    stroke="var(--color-sgpa)" 
+                    strokeWidth={2}
+                    dot={{ r: 4, fill: "var(--color-sgpa)", strokeWidth: 0 }}
+                    activeDot={{ r: 6 }}
+                    name="SGPA"
+                    connectNulls={false}
+                  />
+                </LineChart>
+              </ChartContainer>
+            )
+          })()}
+          
+          {/* Summary stats below chart */}
+          <div className="flex justify-center gap-8 mt-4 pt-4 border-t">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-primary">
+                {data.semesters.length > 0 
+                  ? Math.max(...data.semesters.map(s => s.sgpa ?? 0)).toFixed(2)
+                  : "N/A"
+                }
+              </p>
+              <p className="text-sm text-muted-foreground">Highest SGPA</p>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className="text-center">
+              <p className="text-2xl font-bold text-primary">
+                {data.latestCGPA?.toFixed(2) || "N/A"}
+              </p>
+              <p className="text-sm text-muted-foreground">Current CGPA</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-primary">
+                {data.semesters.length > 0 
+                  ? (data.semesters.reduce((sum, s) => sum + (s.sgpa ?? 0), 0) / data.semesters.length).toFixed(2)
+                  : "N/A"
+                }
+              </p>
+              <p className="text-sm text-muted-foreground">Average SGPA</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -577,7 +577,14 @@ export default function MentorGroupClient() {
                 <TableBody>
                   {data.mentees.map((mentee) => (
                     <TableRow key={mentee.mentorshipId}>
-                      <TableCell className="font-medium">{mentee.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <button 
+                          onClick={() => router.push(`/students/${mentee.rollNumber}`)}
+                          className="text-primary hover:underline cursor-pointer text-left"
+                        >
+                          {mentee.name}
+                        </button>
+                      </TableCell>
                       <TableCell>{mentee.rollNumber}</TableCell>
                       <TableCell>{mentee.registrationNumber}</TableCell>
                       <TableCell>
@@ -721,7 +728,15 @@ export default function MentorGroupClient() {
                         key={student.id} 
                         className={`flex items-center justify-between p-2 text-sm ${idx !== selectedGroupedMeeting.students.length - 1 ? 'border-b' : ''}`}
                       >
-                        <span className="font-medium">{student.name}</span>
+                        <button 
+                          onClick={() => {
+                            setMeetingDialogOpen(false)
+                            router.push(`/students/${student.rollNumber}`)
+                          }}
+                          className="font-medium text-primary hover:underline cursor-pointer text-left"
+                        >
+                          {student.name}
+                        </button>
                         <span className="text-muted-foreground">Roll No: {student.rollNumber}</span>
                       </div>
                     ))}

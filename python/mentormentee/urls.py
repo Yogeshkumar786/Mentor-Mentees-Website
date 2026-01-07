@@ -35,8 +35,10 @@ urlpatterns = [
     path('api/department/student/<int:rollno>/internships', views.get_student_internships_by_rollno, name='get_student_internships_by_rollno'),
     path('api/department/student/<int:rollno>/career', views.get_student_career_by_rollno, name='get_student_career_by_rollno'),
     path('api/department/student/<int:rollno>/problems', views.get_student_problems_by_rollno, name='get_student_problems_by_rollno'),
+    path('api/department/student/<int:rollno>/special-issues', views.update_student_special_issues, name='update_student_special_issues'),
     path('api/department/student/<int:rollno>/mentoring', views.get_student_mentoring_by_rollno, name='get_student_mentoring_by_rollno'),
     path('api/department/student/<int:rollno>/academic', views.get_student_academic_by_rollno, name='get_student_academic_by_rollno'),
+    path('api/department/student/<int:rollno>/cocurricular', views.get_student_cocurricular_by_rollno, name='get_student_cocurricular_by_rollno'),
     path('api/admin/student/<int:rollno>', views.update_student_by_rollno, name='update_student_by_rollno'),
     path('api/faculty', views.get_faculty, name='get_faculty'),
     # Faculty Mentorship APIs

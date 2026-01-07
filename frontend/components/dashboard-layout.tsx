@@ -6,7 +6,7 @@ import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { useAuth, type UserRole } from "./auth-provider"
 import { Button } from "./ui/button"
-import { LogOut, Menu } from "lucide-react"
+import { LogOut, Menu, X } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet"
 import { getNavigationForRole, canAccessRoute, getUserDisplayName, type NavItem } from "@/lib/navigation"
 
@@ -20,9 +20,20 @@ export function DashboardLayout({ children, requiredRoles }: DashboardLayoutProp
   const pathname = usePathname()
   const { user, loading, logout } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const navigation = user ? getNavigationForRole(user.role) : []
   const displayName = user ? getUserDisplayName(user) : ''
+
+  // Check if current page is a student detail page
+  const isStudentDetailPage = /^\/students\/\d+/.test(pathname)
+
+  // Auto-close sidebar when navigating to student detail pages
+  useEffect(() => {
+    if (isStudentDetailPage) {
+      setSidebarOpen(false)
+    }
+  }, [isStudentDetailPage, pathname])
 
   useEffect(() => {
     if (!loading) {
@@ -69,6 +80,7 @@ export function DashboardLayout({ children, requiredRoles }: DashboardLayoutProp
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="flex h-16 items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-4">
+            {/* Mobile menu - always for small screens */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild className="lg:hidden">
                 <Button variant="ghost" size="icon" aria-label="Open menu">
@@ -117,6 +129,19 @@ export function DashboardLayout({ children, requiredRoles }: DashboardLayoutProp
               </SheetContent>
             </Sheet>
 
+            {/* Desktop hamburger for student detail pages only */}
+            {isStudentDetailPage && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="hidden lg:flex"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+              >
+                {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </Button>
+            )}
+
             <Link href="/dashboard" className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 {/* <GraduationCap className="w-5 h-5 text-primary-foreground" /> */}
@@ -150,7 +175,17 @@ export function DashboardLayout({ children, requiredRoles }: DashboardLayoutProp
 
       <div className="flex h-[calc(100vh-4rem)]">
         {/* Sidebar - Desktop */}
-        <aside className="hidden lg:block w-64 border-r bg-background shrink-0 overflow-y-auto">
+        {/* On student detail pages: hidden by default, toggle with hamburger */}
+        {/* On other pages: always visible */}
+        <aside 
+          className={`
+            ${isStudentDetailPage 
+              ? (sidebarOpen ? 'lg:block' : 'lg:hidden') 
+              : 'lg:block'
+            } 
+            hidden w-64 border-r bg-background shrink-0 overflow-y-auto transition-all duration-200
+          `}
+        >
           <nav className="p-4 sticky top-0">
             <ul className="space-y-1">
               {navigation.map((item) => (

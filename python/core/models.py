@@ -379,6 +379,30 @@ class PersonalProblem(models.Model):
     suicidal_attempt_or_thought = models.BooleanField(null=True, blank=True)
     tobacco_or_alcohol_use = models.BooleanField(null=True, blank=True)
     poor_command_of_english = models.BooleanField(null=True, blank=True)
+    
+    # Special Issues Section - Student writes issue, Mentor/HOD/Admin writes suggestion & outcome
+    economic_issues = models.TextField(null=True, blank=True)
+    economic_issues_suggestion = models.TextField(null=True, blank=True)
+    economic_issues_outcome = models.TextField(null=True, blank=True)
+    
+    teenage_issues = models.TextField(null=True, blank=True)
+    teenage_issues_suggestion = models.TextField(null=True, blank=True)
+    teenage_issues_outcome = models.TextField(null=True, blank=True)
+    
+    health_issues = models.TextField(null=True, blank=True)
+    health_issues_suggestion = models.TextField(null=True, blank=True)
+    health_issues_outcome = models.TextField(null=True, blank=True)
+    
+    emotional_issues = models.TextField(null=True, blank=True)
+    emotional_issues_suggestion = models.TextField(null=True, blank=True)
+    emotional_issues_outcome = models.TextField(null=True, blank=True)
+    
+    psychological_issues = models.TextField(null=True, blank=True)
+    psychological_issues_suggestion = models.TextField(null=True, blank=True)
+    psychological_issues_outcome = models.TextField(null=True, blank=True)
+    
+    additional_comments = models.TextField(null=True, blank=True)
+    
     class Meta:
         db_table = 'personal_problems'
 

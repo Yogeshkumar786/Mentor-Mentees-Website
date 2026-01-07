@@ -12,6 +12,7 @@ import {
   FolderKanban,
   HeartPulse,
   Shield,
+  Trophy,
 } from "lucide-react"
 import type { UserRole } from "@/lib/api"
 import type { ReactNode } from "react"
@@ -55,6 +56,7 @@ export const roleNavigations: Record<UserRole, NavItem[]> = {
     { id: "career", label: "Career Details", href: "/career-details", icon: <Target className="w-4 h-4" /> },
     { id: "internships", label: "Internships", href: "/internships", icon: <Briefcase className="w-4 h-4" /> },
     { id: "projects", label: "Projects", href: "/projects", icon: <FolderKanban className="w-4 h-4" /> },
+    { id: "cocurricular", label: "Co-Curricular", href: "/cocurricular", icon: <Trophy className="w-4 h-4" /> },
     { id: "requests", label: "My Requests", href: "/requests", icon: <ClipboardList className="w-4 h-4" /> },
     { id: "problems", label: "Personal Challenges", href: "/personal-problems", icon: <HeartPulse className="w-4 h-4" /> },
     { id: "settings", label: "Settings", href: "/settings", icon: <Settings className="w-4 h-4" /> },
@@ -80,6 +82,7 @@ export const routeAccess: Record<string, UserRole[]> = {
   '/career-details': ['STUDENT'],
   '/internships': ['STUDENT'],
   '/projects': ['STUDENT'],
+  '/cocurricular': ['STUDENT'],
   '/personal-problems': ['STUDENT'],
 }
 

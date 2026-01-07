@@ -196,6 +196,23 @@ export interface StudentPersonalProblems {
   suicidal_attempt_or_thought: boolean | null
   tobacco_or_alcohol_use: boolean | null
   poor_command_of_english: boolean | null
+  // Special Issues
+  economic_issues: string | null
+  economic_issues_suggestion: string | null
+  economic_issues_outcome: string | null
+  teenage_issues: string | null
+  teenage_issues_suggestion: string | null
+  teenage_issues_outcome: string | null
+  health_issues: string | null
+  health_issues_suggestion: string | null
+  health_issues_outcome: string | null
+  emotional_issues: string | null
+  emotional_issues_suggestion: string | null
+  emotional_issues_outcome: string | null
+  psychological_issues: string | null
+  psychological_issues_suggestion: string | null
+  psychological_issues_outcome: string | null
+  additional_comments: string | null
   message?: string
 }
 
@@ -237,6 +254,27 @@ export interface UpdatePersonalProblemsRequest {
   suicidal_attempt_or_thought?: boolean | null
   tobacco_or_alcohol_use?: boolean | null
   poor_command_of_english?: boolean | null
+  // Special Issues (student can only update issue text, not suggestions/outcomes)
+  economic_issues?: string | null
+  teenage_issues?: string | null
+  health_issues?: string | null
+  emotional_issues?: string | null
+  psychological_issues?: string | null
+  additional_comments?: string | null
+}
+
+// Update request for mentor/HOD/admin to update suggestions and outcomes
+export interface UpdateSpecialIssuesRequest {
+  economic_issues_suggestion?: string | null
+  economic_issues_outcome?: string | null
+  teenage_issues_suggestion?: string | null
+  teenage_issues_outcome?: string | null
+  health_issues_suggestion?: string | null
+  health_issues_outcome?: string | null
+  emotional_issues_suggestion?: string | null
+  emotional_issues_outcome?: string | null
+  psychological_issues_suggestion?: string | null
+  psychological_issues_outcome?: string | null
 }
 
 export interface UpdateCareerDetailsRequest {
@@ -443,6 +481,23 @@ export interface StudentProblemsByRollno {
   suicidal_attempt_or_thought: boolean | null
   tobacco_or_alcohol_use: boolean | null
   poor_command_of_english: boolean | null
+  // Special Issues
+  economic_issues: string | null
+  economic_issues_suggestion: string | null
+  economic_issues_outcome: string | null
+  teenage_issues: string | null
+  teenage_issues_suggestion: string | null
+  teenage_issues_outcome: string | null
+  health_issues: string | null
+  health_issues_suggestion: string | null
+  health_issues_outcome: string | null
+  emotional_issues: string | null
+  emotional_issues_suggestion: string | null
+  emotional_issues_outcome: string | null
+  psychological_issues: string | null
+  psychological_issues_suggestion: string | null
+  psychological_issues_outcome: string | null
+  additional_comments: string | null
   message?: string
 }
 
@@ -499,6 +554,21 @@ export interface StudentMentoringByRollno {
     totalMeetings: number
   }>
   totalMentorships: number
+}
+
+export interface StudentCoCurricularByRollno {
+  studentId: string
+  studentName: string
+  rollNumber: number
+  activities: Array<{
+    id: string
+    semester: number
+    date: string | null
+    eventDetails: string
+    participationDetails: string
+    awards: string
+  }>
+  total: number
 }
 
 export interface StudentAcademicByRollno {
@@ -1695,6 +1765,14 @@ class ApiService {
     })
   }
 
+  // Faculty/HOD/Admin update special issues suggestions and outcomes
+  async updateStudentSpecialIssues(rollno: number, data: UpdateSpecialIssuesRequest): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/department/student/${rollno}/special-issues`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
   async updateCareerDetailsAll(data: UpdateCareerDetailsRequest): Promise<StudentCareerDetails> {
     return this.request<StudentCareerDetails>('/api/student/career-details/update', {
       method: 'PUT',
@@ -1884,6 +1962,10 @@ class ApiService {
 
   async getStudentAcademicByRollNumber(rollno: number): Promise<StudentAcademicByRollno> {
     return this.request<StudentAcademicByRollno>(`/api/department/student/${rollno}/academic`)
+  }
+
+  async getStudentCoCurricularByRollNumber(rollno: number): Promise<StudentCoCurricularByRollno> {
+    return this.request<StudentCoCurricularByRollno>(`/api/department/student/${rollno}/cocurricular`)
   }
 }
 

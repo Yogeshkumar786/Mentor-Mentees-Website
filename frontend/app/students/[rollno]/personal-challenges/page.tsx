@@ -2,10 +2,19 @@
 
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
-import { api, type StudentProblemsByRollno } from "@/lib/api"
+import { useAuth } from "@/components/auth-provider"
+import { api, type StudentProblemsByRollno, type UpdateSpecialIssuesRequest } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Heart, AlertTriangle, CheckCircle, XCircle, Brain, Users, MessageSquare, Activity } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
+import { useToast } from "@/hooks/use-toast"
+import { 
+  Loader2, Heart, AlertTriangle, CheckCircle, XCircle, Brain, Users, MessageSquare, Activity,
+  Edit, Save, X, DollarSign, UserX, Stethoscope, FileText
+} from "lucide-react"
 
 // Problem categories
 const PROBLEM_CATEGORIES = {
@@ -82,16 +91,37 @@ const PROBLEM_CATEGORIES = {
 export default function StudentPersonalChallengesPage() {
   const params = useParams()
   const rollno = parseInt(params.rollno as string)
+  const { user } = useAuth()
+  const { toast } = useToast()
 
   const [data, setData] = useState<StudentProblemsByRollno | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isEditingSpecialIssues, setIsEditingSpecialIssues] = useState(false)
+  const [savingSpecialIssues, setSavingSpecialIssues] = useState(false)
+  const [specialIssuesForm, setSpecialIssuesForm] = useState<UpdateSpecialIssuesRequest>({})
+
+  // Check if user can edit special issues (Mentor, HOD, Admin)
+  const canEditSpecialIssues = user?.role === 'FACULTY' || user?.role === 'HOD' || user?.role === 'ADMIN'
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const result = await api.getStudentProblemsByRollNumber(rollno)
         setData(result)
+        // Initialize special issues form
+        setSpecialIssuesForm({
+          economic_issues_suggestion: result.economic_issues_suggestion || '',
+          economic_issues_outcome: result.economic_issues_outcome || '',
+          teenage_issues_suggestion: result.teenage_issues_suggestion || '',
+          teenage_issues_outcome: result.teenage_issues_outcome || '',
+          health_issues_suggestion: result.health_issues_suggestion || '',
+          health_issues_outcome: result.health_issues_outcome || '',
+          emotional_issues_suggestion: result.emotional_issues_suggestion || '',
+          emotional_issues_outcome: result.emotional_issues_outcome || '',
+          psychological_issues_suggestion: result.psychological_issues_suggestion || '',
+          psychological_issues_outcome: result.psychological_issues_outcome || '',
+        })
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to fetch personal challenges")
       } finally {
@@ -100,6 +130,44 @@ export default function StudentPersonalChallengesPage() {
     }
     fetchData()
   }, [rollno])
+
+  const handleSaveSpecialIssues = async () => {
+    setSavingSpecialIssues(true)
+    try {
+      await api.updateStudentSpecialIssues(rollno, specialIssuesForm)
+      // Refresh data
+      const result = await api.getStudentProblemsByRollNumber(rollno)
+      setData(result)
+      setIsEditingSpecialIssues(false)
+      toast({ title: "Success", description: "Special issues updated successfully" })
+    } catch (err) {
+      toast({ 
+        title: "Error", 
+        description: err instanceof Error ? err.message : "Failed to update special issues", 
+        variant: "destructive" 
+      })
+    } finally {
+      setSavingSpecialIssues(false)
+    }
+  }
+
+  const handleCancelSpecialIssues = () => {
+    if (data) {
+      setSpecialIssuesForm({
+        economic_issues_suggestion: data.economic_issues_suggestion || '',
+        economic_issues_outcome: data.economic_issues_outcome || '',
+        teenage_issues_suggestion: data.teenage_issues_suggestion || '',
+        teenage_issues_outcome: data.teenage_issues_outcome || '',
+        health_issues_suggestion: data.health_issues_suggestion || '',
+        health_issues_outcome: data.health_issues_outcome || '',
+        emotional_issues_suggestion: data.emotional_issues_suggestion || '',
+        emotional_issues_outcome: data.emotional_issues_outcome || '',
+        psychological_issues_suggestion: data.psychological_issues_suggestion || '',
+        psychological_issues_outcome: data.psychological_issues_outcome || '',
+      })
+    }
+    setIsEditingSpecialIssues(false)
+  }
 
   if (loading) {
     return (
@@ -267,6 +335,315 @@ export default function StudentPersonalChallengesPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Special Issues Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-purple-500" />
+              <CardTitle>Special Issues</CardTitle>
+            </div>
+            {canEditSpecialIssues && (
+              <div className="flex gap-2">
+                {isEditingSpecialIssues ? (
+                  <>
+                    <Button variant="outline" size="sm" onClick={handleCancelSpecialIssues} disabled={savingSpecialIssues}>
+                      <X className="mr-1 h-4 w-4" /> Cancel
+                    </Button>
+                    <Button size="sm" onClick={handleSaveSpecialIssues} disabled={savingSpecialIssues}>
+                      {savingSpecialIssues ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+                      Save
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => setIsEditingSpecialIssues(true)}>
+                    <Edit className="mr-1 h-4 w-4" /> Edit Suggestions
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+          <CardDescription>
+            Issues reported by the student with mentor suggestions and outcomes
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Economic Issues */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-green-500" />
+              <h4 className="font-medium">Economic Issues</h4>
+            </div>
+            <div className="grid gap-3">
+              <div>
+                <Label className="text-muted-foreground">Student&apos;s Issue</Label>
+                <p className="mt-1 text-sm bg-muted/30 p-3 rounded-lg min-h-[60px]">
+                  {data?.economic_issues || <span className="text-muted-foreground italic">Not specified</span>}
+                </p>
+              </div>
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-muted-foreground">Suggestion</Label>
+                  {isEditingSpecialIssues ? (
+                    <Textarea
+                      placeholder="Enter your suggestion..."
+                      value={specialIssuesForm.economic_issues_suggestion || ''}
+                      onChange={(e) => setSpecialIssuesForm({ ...specialIssuesForm, economic_issues_suggestion: e.target.value })}
+                      className="mt-1"
+                      rows={2}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-lg min-h-[60px] border border-blue-200/50 dark:border-blue-800/50">
+                      {data?.economic_issues_suggestion || <span className="text-muted-foreground italic">No suggestion yet</span>}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Outcome</Label>
+                  {isEditingSpecialIssues ? (
+                    <Textarea
+                      placeholder="Enter the outcome..."
+                      value={specialIssuesForm.economic_issues_outcome || ''}
+                      onChange={(e) => setSpecialIssuesForm({ ...specialIssuesForm, economic_issues_outcome: e.target.value })}
+                      className="mt-1"
+                      rows={2}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm bg-green-50/50 dark:bg-green-950/20 p-3 rounded-lg min-h-[60px] border border-green-200/50 dark:border-green-800/50">
+                      {data?.economic_issues_outcome || <span className="text-muted-foreground italic">Pending</span>}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Teenage Issues */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <UserX className="h-4 w-4 text-orange-500" />
+              <h4 className="font-medium">Teenage Issues</h4>
+            </div>
+            <div className="grid gap-3">
+              <div>
+                <Label className="text-muted-foreground">Student&apos;s Issue</Label>
+                <p className="mt-1 text-sm bg-muted/30 p-3 rounded-lg min-h-[60px]">
+                  {data?.teenage_issues || <span className="text-muted-foreground italic">Not specified</span>}
+                </p>
+              </div>
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-muted-foreground">Suggestion</Label>
+                  {isEditingSpecialIssues ? (
+                    <Textarea
+                      placeholder="Enter your suggestion..."
+                      value={specialIssuesForm.teenage_issues_suggestion || ''}
+                      onChange={(e) => setSpecialIssuesForm({ ...specialIssuesForm, teenage_issues_suggestion: e.target.value })}
+                      className="mt-1"
+                      rows={2}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-lg min-h-[60px] border border-blue-200/50 dark:border-blue-800/50">
+                      {data?.teenage_issues_suggestion || <span className="text-muted-foreground italic">No suggestion yet</span>}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Outcome</Label>
+                  {isEditingSpecialIssues ? (
+                    <Textarea
+                      placeholder="Enter the outcome..."
+                      value={specialIssuesForm.teenage_issues_outcome || ''}
+                      onChange={(e) => setSpecialIssuesForm({ ...specialIssuesForm, teenage_issues_outcome: e.target.value })}
+                      className="mt-1"
+                      rows={2}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm bg-green-50/50 dark:bg-green-950/20 p-3 rounded-lg min-h-[60px] border border-green-200/50 dark:border-green-800/50">
+                      {data?.teenage_issues_outcome || <span className="text-muted-foreground italic">Pending</span>}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Health Issues */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Stethoscope className="h-4 w-4 text-red-500" />
+              <h4 className="font-medium">Health Issues</h4>
+            </div>
+            <div className="grid gap-3">
+              <div>
+                <Label className="text-muted-foreground">Student&apos;s Issue</Label>
+                <p className="mt-1 text-sm bg-muted/30 p-3 rounded-lg min-h-[60px]">
+                  {data?.health_issues || <span className="text-muted-foreground italic">Not specified</span>}
+                </p>
+              </div>
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-muted-foreground">Suggestion</Label>
+                  {isEditingSpecialIssues ? (
+                    <Textarea
+                      placeholder="Enter your suggestion..."
+                      value={specialIssuesForm.health_issues_suggestion || ''}
+                      onChange={(e) => setSpecialIssuesForm({ ...specialIssuesForm, health_issues_suggestion: e.target.value })}
+                      className="mt-1"
+                      rows={2}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-lg min-h-[60px] border border-blue-200/50 dark:border-blue-800/50">
+                      {data?.health_issues_suggestion || <span className="text-muted-foreground italic">No suggestion yet</span>}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Outcome</Label>
+                  {isEditingSpecialIssues ? (
+                    <Textarea
+                      placeholder="Enter the outcome..."
+                      value={specialIssuesForm.health_issues_outcome || ''}
+                      onChange={(e) => setSpecialIssuesForm({ ...specialIssuesForm, health_issues_outcome: e.target.value })}
+                      className="mt-1"
+                      rows={2}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm bg-green-50/50 dark:bg-green-950/20 p-3 rounded-lg min-h-[60px] border border-green-200/50 dark:border-green-800/50">
+                      {data?.health_issues_outcome || <span className="text-muted-foreground italic">Pending</span>}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Emotional Issues */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Heart className="h-4 w-4 text-pink-500" />
+              <h4 className="font-medium">Emotional Issues</h4>
+            </div>
+            <div className="grid gap-3">
+              <div>
+                <Label className="text-muted-foreground">Student&apos;s Issue</Label>
+                <p className="mt-1 text-sm bg-muted/30 p-3 rounded-lg min-h-[60px]">
+                  {data?.emotional_issues || <span className="text-muted-foreground italic">Not specified</span>}
+                </p>
+              </div>
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-muted-foreground">Suggestion</Label>
+                  {isEditingSpecialIssues ? (
+                    <Textarea
+                      placeholder="Enter your suggestion..."
+                      value={specialIssuesForm.emotional_issues_suggestion || ''}
+                      onChange={(e) => setSpecialIssuesForm({ ...specialIssuesForm, emotional_issues_suggestion: e.target.value })}
+                      className="mt-1"
+                      rows={2}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-lg min-h-[60px] border border-blue-200/50 dark:border-blue-800/50">
+                      {data?.emotional_issues_suggestion || <span className="text-muted-foreground italic">No suggestion yet</span>}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Outcome</Label>
+                  {isEditingSpecialIssues ? (
+                    <Textarea
+                      placeholder="Enter the outcome..."
+                      value={specialIssuesForm.emotional_issues_outcome || ''}
+                      onChange={(e) => setSpecialIssuesForm({ ...specialIssuesForm, emotional_issues_outcome: e.target.value })}
+                      className="mt-1"
+                      rows={2}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm bg-green-50/50 dark:bg-green-950/20 p-3 rounded-lg min-h-[60px] border border-green-200/50 dark:border-green-800/50">
+                      {data?.emotional_issues_outcome || <span className="text-muted-foreground italic">Pending</span>}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Psychological Issues */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Brain className="h-4 w-4 text-purple-500" />
+              <h4 className="font-medium">Psychological Issues</h4>
+            </div>
+            <div className="grid gap-3">
+              <div>
+                <Label className="text-muted-foreground">Student&apos;s Issue</Label>
+                <p className="mt-1 text-sm bg-muted/30 p-3 rounded-lg min-h-[60px]">
+                  {data?.psychological_issues || <span className="text-muted-foreground italic">Not specified</span>}
+                </p>
+              </div>
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-muted-foreground">Suggestion</Label>
+                  {isEditingSpecialIssues ? (
+                    <Textarea
+                      placeholder="Enter your suggestion..."
+                      value={specialIssuesForm.psychological_issues_suggestion || ''}
+                      onChange={(e) => setSpecialIssuesForm({ ...specialIssuesForm, psychological_issues_suggestion: e.target.value })}
+                      className="mt-1"
+                      rows={2}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-lg min-h-[60px] border border-blue-200/50 dark:border-blue-800/50">
+                      {data?.psychological_issues_suggestion || <span className="text-muted-foreground italic">No suggestion yet</span>}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Outcome</Label>
+                  {isEditingSpecialIssues ? (
+                    <Textarea
+                      placeholder="Enter the outcome..."
+                      value={specialIssuesForm.psychological_issues_outcome || ''}
+                      onChange={(e) => setSpecialIssuesForm({ ...specialIssuesForm, psychological_issues_outcome: e.target.value })}
+                      className="mt-1"
+                      rows={2}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm bg-green-50/50 dark:bg-green-950/20 p-3 rounded-lg min-h-[60px] border border-green-200/50 dark:border-green-800/50">
+                      {data?.psychological_issues_outcome || <span className="text-muted-foreground italic">Pending</span>}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Additional Comments */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-gray-500" />
+              <h4 className="font-medium">Additional Comments</h4>
+            </div>
+            <div>
+              <Label className="text-muted-foreground">Student&apos;s Additional Comments</Label>
+              <p className="mt-1 text-sm bg-muted/30 p-3 rounded-lg min-h-[80px]">
+                {data?.additional_comments || <span className="text-muted-foreground italic">No additional comments</span>}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

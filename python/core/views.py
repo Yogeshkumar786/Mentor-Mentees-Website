@@ -917,6 +917,55 @@ def update_student_by_rollno(request, rollno):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@require_role(['STUDENT', 'FACULTY', 'HOD', 'ADMIN'])
+def get_student_cocurricular_by_rollno(request, rollno):
+    """
+    Get student's co-curricular activities by roll number
+    Accessible by: STUDENT (own data only), FACULTY, HOD, ADMIN
+    """
+    try:
+        from .models import Student, CoCurricular
+        
+        # If student, verify they can only access their own data
+        if request.user_role == 'STUDENT':
+            if not hasattr(request, 'user_student') or request.user_student.rollNumber != rollno:
+                return JsonResponse({'message': 'You can only view your own co-curricular activities'}, status=403)
+        
+        try:
+            student = Student.objects.get(rollNumber=rollno)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student not found'}, status=404)
+        
+        activities = CoCurricular.objects.filter(student=student).order_by('-sem', '-date')
+        
+        activities_list = []
+        for activity in activities:
+            activities_list.append({
+                'id': str(activity.id),
+                'semester': activity.sem,
+                'date': activity.date.isoformat() if activity.date else None,
+                'eventDetails': activity.eventDetails,
+                'participationDetails': activity.participationDetails,
+                'awards': activity.awards
+            })
+        
+        return JsonResponse({
+            'studentId': str(student.id),
+            'studentName': student.name,
+            'rollNumber': student.rollNumber,
+            'activities': activities_list,
+            'total': len(activities_list)
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get student co-curricular by rollno error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
 @require_role(['FACULTY', 'HOD', 'ADMIN'])
 def get_student_projects_by_rollno(request, rollno):
     """
@@ -1144,7 +1193,24 @@ def get_student_problems_by_rollno(request, rollno):
                 'procrastination': problem.procrastination,
                 'suicidal_attempt_or_thought': problem.suicidal_attempt_or_thought,
                 'tobacco_or_alcohol_use': problem.tobacco_or_alcohol_use,
-                'poor_command_of_english': problem.poor_command_of_english
+                'poor_command_of_english': problem.poor_command_of_english,
+                # Special Issues
+                'economic_issues': problem.economic_issues,
+                'economic_issues_suggestion': problem.economic_issues_suggestion,
+                'economic_issues_outcome': problem.economic_issues_outcome,
+                'teenage_issues': problem.teenage_issues,
+                'teenage_issues_suggestion': problem.teenage_issues_suggestion,
+                'teenage_issues_outcome': problem.teenage_issues_outcome,
+                'health_issues': problem.health_issues,
+                'health_issues_suggestion': problem.health_issues_suggestion,
+                'health_issues_outcome': problem.health_issues_outcome,
+                'emotional_issues': problem.emotional_issues,
+                'emotional_issues_suggestion': problem.emotional_issues_suggestion,
+                'emotional_issues_outcome': problem.emotional_issues_outcome,
+                'psychological_issues': problem.psychological_issues,
+                'psychological_issues_suggestion': problem.psychological_issues_suggestion,
+                'psychological_issues_outcome': problem.psychological_issues_outcome,
+                'additional_comments': problem.additional_comments
             }, status=200)
         except PersonalProblem.DoesNotExist:
             return JsonResponse({
@@ -1171,6 +1237,13 @@ def get_student_problems_by_rollno(request, rollno):
                 'low_self_motivation': None, 'procrastination': None,
                 'suicidal_attempt_or_thought': None, 'tobacco_or_alcohol_use': None,
                 'poor_command_of_english': None,
+                # Special Issues
+                'economic_issues': None, 'economic_issues_suggestion': None, 'economic_issues_outcome': None,
+                'teenage_issues': None, 'teenage_issues_suggestion': None, 'teenage_issues_outcome': None,
+                'health_issues': None, 'health_issues_suggestion': None, 'health_issues_outcome': None,
+                'emotional_issues': None, 'emotional_issues_suggestion': None, 'emotional_issues_outcome': None,
+                'psychological_issues': None, 'psychological_issues_suggestion': None, 'psychological_issues_outcome': None,
+                'additional_comments': None,
                 'message': 'No personal problems data found for this student'
             }, status=200)
         
@@ -2081,7 +2154,24 @@ def get_student_personal_problems(request):
                 'procrastination': problems.procrastination,
                 'suicidal_attempt_or_thought': problems.suicidal_attempt_or_thought,
                 'tobacco_or_alcohol_use': problems.tobacco_or_alcohol_use,
-                'poor_command_of_english': problems.poor_command_of_english
+                'poor_command_of_english': problems.poor_command_of_english,
+                # Special Issues
+                'economic_issues': problems.economic_issues,
+                'economic_issues_suggestion': problems.economic_issues_suggestion,
+                'economic_issues_outcome': problems.economic_issues_outcome,
+                'teenage_issues': problems.teenage_issues,
+                'teenage_issues_suggestion': problems.teenage_issues_suggestion,
+                'teenage_issues_outcome': problems.teenage_issues_outcome,
+                'health_issues': problems.health_issues,
+                'health_issues_suggestion': problems.health_issues_suggestion,
+                'health_issues_outcome': problems.health_issues_outcome,
+                'emotional_issues': problems.emotional_issues,
+                'emotional_issues_suggestion': problems.emotional_issues_suggestion,
+                'emotional_issues_outcome': problems.emotional_issues_outcome,
+                'psychological_issues': problems.psychological_issues,
+                'psychological_issues_suggestion': problems.psychological_issues_suggestion,
+                'psychological_issues_outcome': problems.psychological_issues_outcome,
+                'additional_comments': problems.additional_comments
             }, status=200)
         except PersonalProblem.DoesNotExist:
             return JsonResponse({
@@ -2120,6 +2210,13 @@ def get_student_personal_problems(request):
                 'suicidal_attempt_or_thought': None,
                 'tobacco_or_alcohol_use': None,
                 'poor_command_of_english': None,
+                # Special Issues
+                'economic_issues': None, 'economic_issues_suggestion': None, 'economic_issues_outcome': None,
+                'teenage_issues': None, 'teenage_issues_suggestion': None, 'teenage_issues_outcome': None,
+                'health_issues': None, 'health_issues_suggestion': None, 'health_issues_outcome': None,
+                'emotional_issues': None, 'emotional_issues_suggestion': None, 'emotional_issues_outcome': None,
+                'psychological_issues': None, 'psychological_issues_suggestion': None, 'psychological_issues_outcome': None,
+                'additional_comments': None,
                 'message': 'No personal problems record found.'
             }, status=200)
         
@@ -4792,7 +4889,7 @@ def update_personal_problems(request):
         # Get or create personal problem record
         problems, created = PersonalProblem.objects.get_or_create(student=student)
         
-        # Update fields if provided - all 32 fields
+        # Update fields if provided - all 32 boolean fields
         fields = ['stress', 'anger', 'emotional_problem', 'low_self_esteem', 
                   'examination_anxiety', 'negative_thoughts', 'exam_phobia', 'stammering',
                   'financial_problems', 'disturbed_relationship_with_teachers', 
@@ -4807,6 +4904,13 @@ def update_personal_problems(request):
                   'poor_command_of_english']
         
         for field in fields:
+            if field in data:
+                setattr(problems, field, data[field])
+        
+        # Student can only update the issue text fields, not suggestions/outcomes
+        student_text_fields = ['economic_issues', 'teenage_issues', 'health_issues', 
+                               'emotional_issues', 'psychological_issues', 'additional_comments']
+        for field in student_text_fields:
             if field in data:
                 setattr(problems, field, data[field])
         
@@ -4848,13 +4952,106 @@ def update_personal_problems(request):
             'procrastination': problems.procrastination,
             'suicidal_attempt_or_thought': problems.suicidal_attempt_or_thought,
             'tobacco_or_alcohol_use': problems.tobacco_or_alcohol_use,
-            'poor_command_of_english': problems.poor_command_of_english
+            'poor_command_of_english': problems.poor_command_of_english,
+            # Special Issues
+            'economic_issues': problems.economic_issues,
+            'economic_issues_suggestion': problems.economic_issues_suggestion,
+            'economic_issues_outcome': problems.economic_issues_outcome,
+            'teenage_issues': problems.teenage_issues,
+            'teenage_issues_suggestion': problems.teenage_issues_suggestion,
+            'teenage_issues_outcome': problems.teenage_issues_outcome,
+            'health_issues': problems.health_issues,
+            'health_issues_suggestion': problems.health_issues_suggestion,
+            'health_issues_outcome': problems.health_issues_outcome,
+            'emotional_issues': problems.emotional_issues,
+            'emotional_issues_suggestion': problems.emotional_issues_suggestion,
+            'emotional_issues_outcome': problems.emotional_issues_outcome,
+            'psychological_issues': problems.psychological_issues,
+            'psychological_issues_suggestion': problems.psychological_issues_suggestion,
+            'psychological_issues_outcome': problems.psychological_issues_outcome,
+            'additional_comments': problems.additional_comments
         }, status=200)
         
     except json.JSONDecodeError:
         return JsonResponse({'message': 'Invalid JSON'}, status=400)
     except Exception as e:
         print(f"Update personal problems error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "PATCH"])
+@require_role(['FACULTY', 'HOD', 'ADMIN'])
+def update_student_special_issues(request, rollno):
+    """
+    Update student's special issues suggestions and outcomes
+    Only FACULTY (mentor), HOD, ADMIN can update suggestions and outcomes
+    """
+    try:
+        data = json.loads(request.body)
+        
+        from .models import Student, PersonalProblem, Mentorship
+        
+        try:
+            student = Student.objects.get(rollNumber=rollno)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student not found'}, status=404)
+        
+        # Check if faculty is mentor of this student (for FACULTY role)
+        if request.user_role == 'FACULTY':
+            is_mentor = Mentorship.objects.filter(
+                faculty__user_id=request.user_id,
+                student=student,
+                is_active=True
+            ).exists()
+            if not is_mentor:
+                return JsonResponse({'message': 'You are not the mentor of this student'}, status=403)
+        
+        # Get or create personal problem record
+        problems, created = PersonalProblem.objects.get_or_create(student=student)
+        
+        # Mentor/HOD/Admin can update suggestions and outcomes
+        suggestion_outcome_fields = [
+            'economic_issues_suggestion', 'economic_issues_outcome',
+            'teenage_issues_suggestion', 'teenage_issues_outcome',
+            'health_issues_suggestion', 'health_issues_outcome',
+            'emotional_issues_suggestion', 'emotional_issues_outcome',
+            'psychological_issues_suggestion', 'psychological_issues_outcome'
+        ]
+        
+        for field in suggestion_outcome_fields:
+            if field in data:
+                setattr(problems, field, data[field])
+        
+        problems.save()
+        
+        return JsonResponse({
+            'message': 'Special issues updated successfully',
+            'studentId': str(student.id),
+            'economic_issues': problems.economic_issues,
+            'economic_issues_suggestion': problems.economic_issues_suggestion,
+            'economic_issues_outcome': problems.economic_issues_outcome,
+            'teenage_issues': problems.teenage_issues,
+            'teenage_issues_suggestion': problems.teenage_issues_suggestion,
+            'teenage_issues_outcome': problems.teenage_issues_outcome,
+            'health_issues': problems.health_issues,
+            'health_issues_suggestion': problems.health_issues_suggestion,
+            'health_issues_outcome': problems.health_issues_outcome,
+            'emotional_issues': problems.emotional_issues,
+            'emotional_issues_suggestion': problems.emotional_issues_suggestion,
+            'emotional_issues_outcome': problems.emotional_issues_outcome,
+            'psychological_issues': problems.psychological_issues,
+            'psychological_issues_suggestion': problems.psychological_issues_suggestion,
+            'psychological_issues_outcome': problems.psychological_issues_outcome,
+            'additional_comments': problems.additional_comments
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update special issues error: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({'message': 'Server error'}, status=500)

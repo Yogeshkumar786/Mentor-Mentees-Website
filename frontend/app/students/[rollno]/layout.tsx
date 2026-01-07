@@ -8,7 +8,7 @@ import { api, type StudentDetails } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2, ArrowLeft, User, Briefcase, GraduationCap, FolderKanban, Heart, Brain, BookOpen } from "lucide-react"
+import { Loader2, ArrowLeft, User, Briefcase, GraduationCap, FolderKanban, Heart, Brain, BookOpen, Trophy } from "lucide-react"
 
 const NAV_ITEMS = [
   { value: "profile", label: "Profile", icon: User, path: "" },
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { value: "mentoring", label: "Mentoring", icon: GraduationCap, path: "/mentoring" },
   { value: "projects", label: "Projects", icon: FolderKanban, path: "/projects" },
   { value: "internships", label: "Internships", icon: Briefcase, path: "/internships" },
+  { value: "cocurricular", label: "Co-Curricular", icon: Trophy, path: "/cocurricular" },
   { value: "career", label: "Career Details", icon: Brain, path: "/career-details" },
   { value: "challenges", label: "Personal Challenges", icon: Heart, path: "/personal-challenges" },
 ]

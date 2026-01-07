@@ -398,7 +398,14 @@ function FacultyGroupContent() {
               <TableBody>
                               {mentees.map((mentee) => (
                   <TableRow key={mentee.id || mentee.mentorshipId}>
-                    <TableCell className="font-medium">{mentee.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <button
+                        onClick={() => router.push(`/students/${mentee.rollNumber}`)}
+                        className="text-left hover:text-primary hover:underline transition-colors"
+                      >
+                        {mentee.name}
+                      </button>
+                    </TableCell>
                     <TableCell>{mentee.rollNumber}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -559,7 +566,15 @@ function FacultyGroupContent() {
                       key={student.id} 
                       className={`flex items-center justify-between p-2 text-sm ${idx !== selectedGroupMeeting.students.length - 1 ? 'border-b' : ''}`}
                     >
-                      <span className="font-medium">{student.name}</span>
+                      <button
+                        onClick={() => {
+                          setGroupMeetingDialogOpen(false)
+                          router.push(`/students/${student.rollNumber}`)
+                        }}
+                        className="font-medium text-left hover:text-primary hover:underline transition-colors"
+                      >
+                        {student.name}
+                      </button>
                       <span className="text-muted-foreground">Roll No: {student.rollNumber}</span>
                     </div>
                   ))}
