@@ -1645,12 +1645,12 @@ def schedule_meetings(request):
 def schedule_group_meetings(request):
     """
     HOD schedules meetings for ALL students in a mentorship group at once.
+    Creates a single GroupMeeting record with GroupMeetingStudent records for each student.
     Required fields:
         - facultyId: UUID of the faculty
         - year: Academic year (1-4)
-        - semester: Semester (1-2)
+        - semester: Semester (1-8)
         - meetings: Array of {date: "YYYY-MM-DD", time: "HH:MM", description: "optional"}
-    Creates meetings for all students in the specified group.
     """
     try:
         data = json.loads(request.body)
@@ -1672,7 +1672,7 @@ def schedule_group_meetings(request):
                 status=400
             )
         
-        from .models import Faculty, Mentorship, Meeting, MeetingStatus, HOD
+        from .models import Faculty, Mentorship, GroupMeeting, GroupMeetingStudent, MeetingStatus, HOD
         from datetime import datetime
         
         hod_user_id = request.user_id
@@ -1696,7 +1696,7 @@ def schedule_group_meetings(request):
                 status=403
             )
         
-        # Get all active mentorships in this group
+        # Get all active mentorships in this group (to get the students)
         mentorships = Mentorship.objects.filter(
             faculty=faculty,
             year=year,
@@ -1712,7 +1712,7 @@ def schedule_group_meetings(request):
         
         # Parse meeting dates
         parsed_meetings = []
-        for idx, meeting_data in enumerate(meetings_data):
+        for meeting_data in meetings_data:
             meeting_date = meeting_data.get('date')
             meeting_time = meeting_data.get('time')
             description = meeting_data.get('description', '')
@@ -1737,50 +1737,46 @@ def schedule_group_meetings(request):
                 status=400
             )
         
-        # Create meetings for all students
-        students_with_meetings = []
-        failed_students = []
+        # Create GroupMeeting records and student entries
+        students = [m.student for m in mentorships]
         total_meetings_created = 0
         
-        for mentorship in mentorships:
-            try:
-                meetings_created = 0
-                for meeting_data in parsed_meetings:
-                    Meeting.objects.create(
-                        mentorship=mentorship,
-                        date=meeting_data['date'],
-                        time=meeting_data['time'],
-                        description=meeting_data['description'],
-                        status=MeetingStatus.YET_TO_DONE
-                    )
-                    meetings_created += 1
-                    total_meetings_created += 1
-                
-                students_with_meetings.append({
-                    'studentId': str(mentorship.student.id),
-                    'studentName': mentorship.student.name,
-                    'meetingsCreated': meetings_created
-                })
-            except Exception as e:
-                failed_students.append({
-                    'studentName': mentorship.student.name,
-                    'reason': str(e)
-                })
+        for meeting_data in parsed_meetings:
+            # Create the group meeting
+            group_meeting = GroupMeeting.objects.create(
+                faculty=faculty,
+                department=faculty.department,
+                year=year,
+                semester=semester,
+                date=meeting_data['date'],
+                time=meeting_data['time'],
+                description=meeting_data['description'],
+                status=MeetingStatus.YET_TO_DONE
+            )
+            
+            # Create student entries for this meeting
+            for student in students:
+                GroupMeetingStudent.objects.create(
+                    group_meeting=group_meeting,
+                    student=student,
+                    review='',
+                    attended=True
+                )
+            
+            total_meetings_created += 1
         
         return JsonResponse({
-            'message': f'Scheduled {total_meetings_created} meeting(s) for {len(students_with_meetings)} student(s)',
+            'message': f'Scheduled {total_meetings_created} group meeting(s) for {len(students)} student(s)',
             'group': {
                 'facultyId': str(faculty.id),
                 'facultyName': faculty.name,
                 'year': year,
                 'semester': semester,
-                'studentCount': len(students_with_meetings)
+                'studentCount': len(students)
             },
             'results': {
-                'totalStudents': len(students_with_meetings),
-                'totalMeetingsCreated': total_meetings_created,
-                'studentsWithMeetings': students_with_meetings,
-                'failed': failed_students
+                'totalStudents': len(students),
+                'totalMeetingsCreated': total_meetings_created
             }
         }, status=201)
         
@@ -3661,15 +3657,15 @@ def get_mentorship_group(request):
     Query params:
         - faculty: Faculty ID (UUID)
         - year: Academic year (1-4)
-        - semester: Semester (1-2)
+        - semester: Semester (1-8)
         - active: Whether to get active or past mentorships (true/false)
     Returns:
         - Faculty info
         - List of mentees with their mentorship details
-        - Meetings for all mentorships in the group
+        - GroupMeetings for this faculty/year/semester with individual student reviews
     """
     try:
-        from .models import Mentorship, Meeting, HOD, Faculty
+        from .models import Mentorship, GroupMeeting, GroupMeetingStudent, HOD, Faculty
         
         hod_user_id = request.user_id
         
@@ -3723,8 +3719,6 @@ def get_mentorship_group(request):
         
         # Build mentee list
         mentees = []
-        all_meeting_ids = []
-        
         for mentorship in mentorships:
             mentees.append({
                 'mentorshipId': str(mentorship.id),
@@ -3741,25 +3735,35 @@ def get_mentorship_group(request):
                 'comments': mentorship.comments or []
             })
         
-        # Get all meetings for all mentorships in this group
-        mentorship_ids = [m.id for m in mentorships]
-        meetings = Meeting.objects.filter(
-            mentorship_id__in=mentorship_ids
-        ).select_related('mentorship', 'mentorship__student').order_by('-date', '-time')
+        # Get all GroupMeetings for this faculty/year/semester
+        group_meetings = GroupMeeting.objects.filter(
+            faculty=faculty,
+            year=year,
+            semester=semester
+        ).prefetch_related('student_reviews', 'student_reviews__student').order_by('-date', '-time')
         
         meetings_list = []
-        for meeting in meetings:
+        for gm in group_meetings:
+            # Get all student reviews for this meeting
+            student_reviews = []
+            for sr in gm.student_reviews.all():
+                student_reviews.append({
+                    'studentId': str(sr.student.id),
+                    'name': sr.student.name,
+                    'rollNumber': sr.student.rollNumber,
+                    'review': sr.review or '',
+                    'attended': sr.attended
+                })
+            
             meetings_list.append({
-                'id': str(meeting.id),
-                'mentorshipId': str(meeting.mentorship.id),
-                'studentName': meeting.mentorship.student.name,
-                'studentRollNumber': meeting.mentorship.student.rollNumber,
-                'date': meeting.date.isoformat(),
-                'time': meeting.time.strftime('%H:%M') if meeting.time else None,
-                'description': meeting.description,
-                'facultyReview': meeting.facultyReview,
-                'status': meeting.status,
-                'createdAt': meeting.createdAt.isoformat()
+                'id': str(gm.id),
+                'date': gm.date.isoformat(),
+                'time': gm.time.strftime('%H:%M') if gm.time else None,
+                'description': gm.description or '',
+                'status': gm.status,
+                'studentCount': len(student_reviews),
+                'students': student_reviews,
+                'createdAt': gm.createdAt.isoformat()
             })
         
         # Calculate meeting stats
@@ -3996,6 +4000,37 @@ def get_faculty_mentorship_group(request):
                 'meetings': mentee_meetings
             })
         
+        # Also get GroupMeetings for this faculty/year/semester
+        from .models import GroupMeeting, GroupMeetingStudent
+        group_meetings = GroupMeeting.objects.filter(
+            faculty=faculty,
+            year=year,
+            semester=semester
+        ).prefetch_related('student_reviews__student').order_by('-date', '-time')
+        
+        group_meetings_data = []
+        for gm in group_meetings:
+            students_data = []
+            for sr in gm.student_reviews.all():
+                students_data.append({
+                    'studentId': str(sr.student.id),
+                    'rollNumber': sr.student.rollNumber,
+                    'name': sr.student.name,
+                    'attended': sr.attended,
+                    'review': sr.review or ''
+                })
+            
+            group_meetings_data.append({
+                'id': str(gm.id),
+                'date': gm.date.isoformat(),
+                'time': gm.time.strftime('%H:%M') if gm.time else None,
+                'description': gm.description,
+                'status': gm.status,
+                'studentCount': len(students_data),
+                'students': students_data,
+                'createdAt': gm.createdAt.isoformat()
+            })
+        
         return JsonResponse({
             'faculty': {
                 'id': str(faculty.id),
@@ -4008,7 +4043,8 @@ def get_faculty_mentorship_group(request):
             'semester': semester,
             'isActive': is_active,
             'menteesCount': len(mentees),
-            'mentees': mentees
+            'mentees': mentees,
+            'groupMeetings': group_meetings_data
         }, status=200)
         
     except Exception as e:
@@ -4153,12 +4189,12 @@ def faculty_schedule_meetings(request):
 @require_role('FACULTY', 'HOD')
 def faculty_schedule_group_meetings(request):
     """
-    Faculty schedules meetings for ALL students in their mentorship group at once.
+    Faculty schedules GroupMeetings for ALL students in their mentorship group at once.
+    Creates a single GroupMeeting record per provided date/time with GroupMeetingStudent entries for each student.
     Required fields:
         - year: Academic year (1-4)
         - semester: Semester (1-2)
         - meetings: Array of {date: "YYYY-MM-DD", time: "HH:MM", description: "optional"}
-    Creates meetings for all students in the specified group.
     """
     try:
         data = json.loads(request.body)
@@ -4172,8 +4208,9 @@ def faculty_schedule_group_meetings(request):
         if not meetings_data or not isinstance(meetings_data, list) or len(meetings_data) == 0:
             return JsonResponse({'message': 'meetings must be a non-empty array'}, status=400)
         
-        from .models import Faculty, Mentorship, Meeting, MeetingStatus
+        from .models import Faculty, Mentorship, GroupMeeting, GroupMeetingStudent, MeetingStatus
         from django.utils import timezone
+        from datetime import datetime
         
         user_id = request.user_id
         today = timezone.now().date()
@@ -4230,50 +4267,47 @@ def faculty_schedule_group_meetings(request):
         if not parsed_meetings:
             return JsonResponse({'message': 'No valid meetings to schedule'}, status=400)
         
-        # Create meetings for all students
-        students_with_meetings = []
-        failed_students = []
+        # Create GroupMeeting(s) and attach all students once per meeting
+        students = [m.student for m in mentorships]
         total_meetings_created = 0
-        
-        for mentorship in mentorships:
-            try:
-                meetings_created = 0
-                for meeting_data in parsed_meetings:
-                    Meeting.objects.create(
-                        mentorship=mentorship,
-                        date=meeting_data['date'],
-                        time=meeting_data['time'],
-                        description=meeting_data['description'],
-                        status=meeting_data['status']
-                    )
-                    meetings_created += 1
-                    total_meetings_created += 1
-                
-                students_with_meetings.append({
-                    'studentId': str(mentorship.student.id),
-                    'studentName': mentorship.student.name,
-                    'meetingsCreated': meetings_created
-                })
-            except Exception as e:
-                failed_students.append({
-                    'studentName': mentorship.student.name,
-                    'reason': str(e)
-                })
-        
+
+        for meeting_data in parsed_meetings:
+            # Set status: future -> UPCOMING, else YET_TO_DONE
+            status = MeetingStatus.UPCOMING if meeting_data['date'] > today else MeetingStatus.YET_TO_DONE
+
+            gm = GroupMeeting.objects.create(
+                faculty=faculty,
+                department=faculty.department,
+                year=year,
+                semester=semester,
+                date=meeting_data['date'],
+                time=meeting_data['time'],
+                description=meeting_data['description'],
+                status=status
+            )
+
+            for student in students:
+                GroupMeetingStudent.objects.create(
+                    group_meeting=gm,
+                    student=student,
+                    review='',
+                    attended=True
+                )
+
+            total_meetings_created += 1
+
         return JsonResponse({
-            'message': f'Scheduled {total_meetings_created} meeting(s) for {len(students_with_meetings)} student(s)',
+            'message': f'Scheduled {total_meetings_created} group meeting(s) for {len(students)} student(s)',
             'group': {
                 'facultyId': str(faculty.id),
                 'facultyName': faculty.name,
                 'year': year,
                 'semester': semester,
-                'studentCount': len(students_with_meetings)
+                'studentCount': len(students)
             },
             'results': {
-                'totalStudents': len(students_with_meetings),
-                'totalMeetingsCreated': total_meetings_created,
-                'studentsWithMeetings': students_with_meetings,
-                'failed': failed_students
+                'totalStudents': len(students),
+                'totalMeetingsCreated': total_meetings_created
             }
         }, status=201)
         
@@ -4300,8 +4334,8 @@ def complete_meeting(request, meeting_id):
         from .models import Meeting, MeetingStatus, User, UserRole
         from datetime import datetime
         
-        # Get user from session
-        user_id = request.session.get('user_id')
+        # Get user from JWT middleware (falls back to session for safety)
+        user_id = getattr(request, 'user_id', None) or request.session.get('user_id')
         if not user_id:
             return JsonResponse({'message': 'Not authenticated'}, status=401)
         
@@ -4386,26 +4420,23 @@ def complete_meeting(request, meeting_id):
         return JsonResponse({'message': 'Server error'}, status=500)
 
 
+@csrf_exempt
 @require_http_methods(["POST"])
 def complete_group_meetings(request):
     """
-    Faculty/HOD marks all meetings for a specific date/time in a group as completed.
-    This is useful for group meetings where all students meet at the same time.
+    Faculty/HOD marks a GroupMeeting as completed with individual student reviews.
     
     POST body:
-        - date: string (required) - Meeting date in YYYY-MM-DD format
-        - time: string (required) - Meeting time in HH:MM format  
-        - review: string (required) - Faculty review for the meeting
+        - meetingId: string (required) - UUID of the GroupMeeting to complete
+        - studentReviews: array (required) - Array of {rollNumber, review} for each student
         - description: string (optional) - Updated description/agenda
-        - year: int (required) - Academic year
-        - semester: int (required) - Semester
     """
     try:
-        from .models import Meeting, MeetingStatus, User, UserRole, Mentorship
+        from .models import GroupMeeting, GroupMeetingStudent, MeetingStatus, User, UserRole
         from datetime import datetime
         
-        # Get user from session
-        user_id = request.session.get('user_id')
+        # Get user from JWT middleware (falls back to session for safety)
+        user_id = getattr(request, 'user_id', None) or request.session.get('user_id')
         if not user_id:
             return JsonResponse({'message': 'Not authenticated'}, status=401)
         
@@ -4420,35 +4451,20 @@ def complete_group_meetings(request):
         
         # Parse request body
         data = json.loads(request.body)
-        meeting_date = data.get('date')
-        meeting_time = data.get('time')
-        review = data.get('review', '').strip()
+        meeting_id = data.get('meetingId')
+        student_reviews = data.get('studentReviews', [])
         description = data.get('description')
-        year = data.get('year')
-        semester = data.get('semester')
         
-        if not all([meeting_date, meeting_time, review, year, semester]):
-            return JsonResponse({'message': 'date, time, review, year, and semester are required'}, status=400)
+        if not meeting_id:
+            return JsonResponse({'message': 'meetingId is required'}, status=400)
         
-        # Parse date and time
+        # Get the GroupMeeting
         try:
-            parsed_date = datetime.strptime(meeting_date, '%Y-%m-%d').date()
-            parsed_time = datetime.strptime(meeting_time, '%H:%M').time()
-        except ValueError:
-            return JsonResponse({'message': 'Invalid date/time format'}, status=400)
+            group_meeting = GroupMeeting.objects.get(id=meeting_id)
+        except GroupMeeting.DoesNotExist:
+            return JsonResponse({'message': 'Meeting not found'}, status=404)
         
-        # Check if meeting time has passed
-        now = datetime.now()
-        meeting_datetime = datetime.combine(parsed_date, parsed_time)
-        
-        if now < meeting_datetime:
-            return JsonResponse({
-                'message': 'Cannot complete a meeting before its scheduled time',
-                'meetingTime': meeting_datetime.isoformat(),
-                'currentTime': now.isoformat()
-            }, status=400)
-        
-        # Get faculty
+        # Get faculty and verify authorization
         if user.role == UserRole.FACULTY:
             if not hasattr(user, 'faculty'):
                 return JsonResponse({'message': 'Faculty profile not found'}, status=403)
@@ -4458,47 +4474,251 @@ def complete_group_meetings(request):
                 return JsonResponse({'message': 'HOD/Faculty profile not found'}, status=403)
             faculty = user.hod.faculty
         
-        # Get all mentorships for this faculty in the specified year/semester
-        mentorships = Mentorship.objects.filter(
-            faculty=faculty,
-            year=year,
-            semester=semester
-        )
+        # Verify this meeting belongs to the faculty
+        if group_meeting.faculty.id != faculty.id:
+            return JsonResponse({'message': 'You are not authorized to complete this meeting'}, status=403)
         
-        if not mentorships.exists():
-            return JsonResponse({'message': 'No mentorships found for this group'}, status=404)
+        # Check if meeting time has passed
+        now = datetime.now()
+        meeting_datetime = datetime.combine(group_meeting.date, group_meeting.time)
         
-        # Get all meetings for these mentorships with matching date/time
-        meetings = Meeting.objects.filter(
-            mentorship__in=mentorships,
-            date=parsed_date,
-            time=parsed_time
-        ).exclude(status=MeetingStatus.COMPLETED)
+        if now < meeting_datetime:
+            return JsonResponse({
+                'message': 'Cannot complete a meeting before its scheduled time',
+                'meetingTime': meeting_datetime.isoformat(),
+                'currentTime': now.isoformat()
+            }, status=400)
         
-        if not meetings.exists():
-            return JsonResponse({'message': 'No pending meetings found for this date/time'}, status=404)
+        # Check if already completed
+        if group_meeting.status == MeetingStatus.COMPLETED:
+            return JsonResponse({'message': 'Meeting is already completed'}, status=400)
         
-        # Update all meetings
-        updated_count = meetings.update(
-            status=MeetingStatus.COMPLETED,
-            facultyReview=review
-        )
+        # Create a mapping of roll numbers to reviews
+        review_map = {}
+        for sr in student_reviews:
+            roll_number = sr.get('rollNumber') or sr.get('studentId')
+            review_text = sr.get('review', '').strip()
+            if roll_number:
+                review_map[int(roll_number)] = review_text
         
-        # Update description if provided
+        # Update GroupMeeting status
+        group_meeting.status = MeetingStatus.COMPLETED
         if description is not None:
-            meetings.update(description=description)
+            group_meeting.description = description
+        group_meeting.save()
+        
+        # Update individual student reviews
+        reviews_updated = 0
+        for student_review in group_meeting.student_reviews.all():
+            roll_number = student_review.student.rollNumber
+            individual_review = review_map.get(roll_number, '')
+            student_review.review = individual_review
+            student_review.save()
+            reviews_updated += 1
         
         return JsonResponse({
-            'message': f'Marked {updated_count} meeting(s) as completed',
-            'completedCount': updated_count,
-            'date': meeting_date,
-            'time': meeting_time
+            'message': f'Meeting completed with {reviews_updated} student review(s)',
+            'completedCount': 1,
+            'reviewsUpdated': reviews_updated
         }, status=200)
         
     except json.JSONDecodeError:
         return JsonResponse({'message': 'Invalid JSON'}, status=400)
     except Exception as e:
         print(f"Complete group meetings error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT"])
+@require_role('FACULTY')
+def update_meeting_reviews(request):
+    """
+    Faculty updates reviews for a completed GroupMeeting.
+    Only the corresponding faculty can update their meeting reviews - HODs cannot edit.
+    
+    PUT body:
+        - meetingId: string (required) - UUID of the GroupMeeting
+        - studentReviews: array (required) - Array of {rollNumber, review} for each student
+        - description: string (optional) - Updated description/agenda
+    """
+    try:
+        from .models import GroupMeeting, GroupMeetingStudent, MeetingStatus, User, UserRole
+        from datetime import datetime
+        
+        # Get user from JWT middleware (require_role sets request.user_id)
+        user_id = getattr(request, 'user_id', None) or request.session.get('user_id')
+        if not user_id:
+            return JsonResponse({'message': 'Not authenticated'}, status=401)
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({'message': 'User not found'}, status=401)
+        
+        # Only Faculty can update meeting reviews (not HOD)
+        if user.role != UserRole.FACULTY:
+            return JsonResponse({'message': 'Only faculty can update meeting reviews'}, status=403)
+        
+        # Parse request body
+        data = json.loads(request.body)
+        meeting_id = data.get('meetingId')
+        student_reviews = data.get('studentReviews', [])
+        description = data.get('description')
+        
+        if not meeting_id:
+            return JsonResponse({'message': 'meetingId is required'}, status=400)
+        
+        # Get the GroupMeeting
+        try:
+            group_meeting = GroupMeeting.objects.get(id=meeting_id)
+        except GroupMeeting.DoesNotExist:
+            return JsonResponse({'message': 'Meeting not found'}, status=404)
+        
+        # Get faculty profile (only Faculty role allowed, not HOD)
+        if not hasattr(user, 'faculty'):
+            return JsonResponse({'message': 'Faculty profile not found'}, status=403)
+        faculty = user.faculty
+        
+        # Verify this meeting belongs to this faculty
+        if group_meeting.faculty.id != faculty.id:
+            return JsonResponse({'message': 'You are not authorized to update this meeting'}, status=403)
+        
+        # Create a mapping of roll numbers to reviews
+        review_map = {}
+        for sr in student_reviews:
+            roll_number = sr.get('rollNumber') or sr.get('studentId')
+            review_text = sr.get('review', '').strip()
+            if roll_number:
+                review_map[int(roll_number)] = review_text
+        
+        # Update description if provided
+        if description is not None:
+            group_meeting.description = description
+            group_meeting.save()
+        
+        # Update individual student reviews
+        reviews_updated = 0
+        for student_review in group_meeting.student_reviews.all():
+            roll_number = student_review.student.rollNumber
+            if roll_number in review_map:
+                student_review.review = review_map[roll_number]
+                student_review.save()
+                reviews_updated += 1
+        
+        return JsonResponse({
+            'message': f'Updated reviews for {reviews_updated} student(s)',
+            'reviewsUpdated': reviews_updated
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update meeting reviews error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT"])
+@require_role('FACULTY')
+def update_meeting(request):
+    """
+    Faculty updates a GroupMeeting (status, description, and reviews).
+    Only the corresponding faculty can update their meetings - HODs cannot edit.
+    
+    PUT body:
+        - meetingId: string (required) - UUID of the GroupMeeting
+        - status: string (optional) - New status (UPCOMING, COMPLETED, YET_TO_DONE)
+        - description: string (optional) - Updated description/agenda
+        - studentReviews: array (optional) - Array of {rollNumber, review} for each student
+    """
+    try:
+        from .models import GroupMeeting, GroupMeetingStudent, MeetingStatus, User, UserRole
+        
+        # Get user from JWT middleware (require_role sets request.user_id)
+        user_id = getattr(request, 'user_id', None) or request.session.get('user_id')
+        if not user_id:
+            return JsonResponse({'message': 'Not authenticated'}, status=401)
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({'message': 'User not found'}, status=401)
+        
+        # Only Faculty can update meetings (not HOD)
+        if user.role != UserRole.FACULTY:
+            return JsonResponse({'message': 'Only faculty can update meetings'}, status=403)
+        
+        # Parse request body
+        data = json.loads(request.body)
+        meeting_id = data.get('meetingId')
+        new_status = data.get('status')
+        description = data.get('description')
+        student_reviews = data.get('studentReviews', [])
+        
+        if not meeting_id:
+            return JsonResponse({'message': 'meetingId is required'}, status=400)
+        
+        # Get the GroupMeeting
+        try:
+            group_meeting = GroupMeeting.objects.get(id=meeting_id)
+        except GroupMeeting.DoesNotExist:
+            return JsonResponse({'message': 'Meeting not found'}, status=404)
+        
+        # Get faculty profile (only Faculty role allowed, not HOD)
+        if not hasattr(user, 'faculty'):
+            return JsonResponse({'message': 'Faculty profile not found'}, status=403)
+        faculty = user.faculty
+        
+        # Verify this meeting belongs to this faculty
+        if group_meeting.faculty.id != faculty.id:
+            return JsonResponse({'message': 'You are not authorized to update this meeting'}, status=403)
+        
+        # Update status if provided
+        if new_status:
+            valid_statuses = ['UPCOMING', 'YET_TO_DONE', 'COMPLETED', 'REQUESTED']
+            if new_status not in valid_statuses:
+                return JsonResponse({'message': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'}, status=400)
+            group_meeting.status = MeetingStatus[new_status]
+        
+        # Update description if provided
+        if description is not None:
+            group_meeting.description = description
+        
+        group_meeting.save()
+        
+        # Update individual student reviews if provided
+        reviews_updated = 0
+        if student_reviews:
+            # Create a mapping of roll numbers to reviews
+            review_map = {}
+            for sr in student_reviews:
+                roll_number = sr.get('rollNumber') or sr.get('studentId')
+                review_text = sr.get('review', '').strip()
+                if roll_number:
+                    review_map[int(roll_number)] = review_text
+            
+            # Update student reviews
+            for student_review in group_meeting.student_reviews.all():
+                roll_number = student_review.student.rollNumber
+                if roll_number in review_map:
+                    student_review.review = review_map[roll_number]
+                    student_review.save()
+                    reviews_updated += 1
+        
+        return JsonResponse({
+            'message': 'Meeting updated successfully',
+            'reviewsUpdated': reviews_updated
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update meeting error: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({'message': 'Server error'}, status=500)

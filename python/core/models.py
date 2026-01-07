@@ -236,6 +236,7 @@ class Mentorship(models.Model):
         ]
 
 
+# Legacy Meeting model (kept for backward compatibility - to be deprecated)
 class Meeting(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     mentorship = models.ForeignKey(Mentorship, on_delete=models.CASCADE, related_name='meetings', db_column='mentorshipId')
@@ -248,6 +249,57 @@ class Meeting(models.Model):
     updatedAt = models.DateTimeField(auto_now=True)
     class Meta:
         db_table = 'meetings'
+
+
+# New Group Meeting model - One meeting for all students in a faculty's group
+class GroupMeeting(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='group_meetings', db_column='facultyId')
+    department = models.CharField(max_length=20, choices=Department.choices, null=True, blank=True)
+    year = models.IntegerField()  # Academic year
+    semester = models.IntegerField()  # Semester (1-8)
+    date = models.DateField()
+    time = models.TimeField()
+    description = models.TextField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=MeetingStatus.choices, default=MeetingStatus.UPCOMING)
+    createdAt = models.DateTimeField(auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'group_meetings'
+        indexes = [
+            models.Index(fields=['faculty', 'year', 'semester']),
+            models.Index(fields=['date', 'status']),
+        ]
+
+
+# Individual student review for a group meeting
+class GroupMeetingStudent(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    group_meeting = models.ForeignKey(GroupMeeting, on_delete=models.CASCADE, related_name='student_reviews', db_column='groupMeetingId')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='group_meeting_reviews', db_column='studentId')
+    review = models.TextField(null=True, blank=True)
+    attended = models.BooleanField(default=True)  # Track attendance
+    createdAt = models.DateTimeField(auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'group_meeting_students'
+        unique_together = [['group_meeting', 'student']]
+
+
+class MeetingStudentReview(models.Model):
+    """Individual review for each student in a group meeting - Legacy model"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, related_name='student_reviews', db_column='meetingId')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='meeting_reviews', db_column='studentId')
+    review = models.TextField(null=True, blank=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'meeting_student_reviews'
+        unique_together = [['meeting', 'student']]
 
 
 class Internship(models.Model):

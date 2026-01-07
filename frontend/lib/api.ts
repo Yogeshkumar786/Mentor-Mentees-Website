@@ -838,20 +838,45 @@ export interface CompleteMeetingResponse {
   }
 }
 
-export interface CompleteGroupMeetingsRequest {
-  date: string
-  time: string
+export interface StudentReviewItem {
+  rollNumber: number
+  studentName?: string
   review: string
+}
+
+export interface CompleteGroupMeetingsRequest {
+  meetingId: string
+  studentReviews: StudentReviewItem[]
   description?: string
-  year: number
-  semester: number
 }
 
 export interface CompleteGroupMeetingsResponse {
   message: string
   completedCount: number
-  date: string
-  time: string
+  reviewsUpdated?: number
+}
+
+export interface UpdateMeetingReviewsRequest {
+  meetingId: string
+  studentReviews: StudentReviewItem[]
+  description?: string
+}
+
+export interface UpdateMeetingReviewsResponse {
+  message: string
+  reviewsUpdated: number
+}
+
+export interface UpdateMeetingRequest {
+  meetingId: string
+  status: 'UPCOMING' | 'COMPLETED' | 'YET_TO_DONE'
+  studentReviews: StudentReviewItem[]
+  description?: string
+}
+
+export interface UpdateMeetingResponse {
+  message: string
+  reviewsUpdated?: number
 }
 
 // Mentor types
@@ -1283,18 +1308,27 @@ export interface MentorshipGroupMentee {
   comments: string[]
 }
 
+export interface MentorshipGroupMeetingStudent {
+  studentId: string
+  name: string
+  rollNumber: number
+  review: string
+  attended: boolean
+}
+
 export interface MentorshipGroupMeeting {
   id: string
-  mentorshipId: string
-  studentName: string
-  studentRollNumber: number
   date: string
   time: string | null
   description: string
-  facultyReview: string
   status: 'UPCOMING' | 'COMPLETED' | 'YET_TO_DONE' | 'CANCELLED'
+  studentCount: number
+  students: MentorshipGroupMeetingStudent[]
   createdAt: string
 }
+
+// Alias for use in faculty-group page
+export type GroupMeeting = MentorshipGroupMeeting
 
 export interface MentorshipGroupResponse {
   faculty: {
@@ -1400,6 +1434,7 @@ export interface FacultyMentorshipGroupResponse {
   isActive: boolean
   menteesCount: number
   mentees: FacultyMentorshipGroupMentee[]
+  groupMeetings?: GroupMeeting[]  // New GroupMeeting model data
 }
 
 // Schedule Meetings API types
@@ -1753,6 +1788,20 @@ class ApiService {
   async completeGroupMeetings(data: CompleteGroupMeetingsRequest): Promise<CompleteGroupMeetingsResponse> {
     return this.request<CompleteGroupMeetingsResponse>('/api/meetings/complete-group', {
       method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateMeetingReviews(data: UpdateMeetingReviewsRequest): Promise<UpdateMeetingReviewsResponse> {
+    return this.request<UpdateMeetingReviewsResponse>('/api/meetings/update-reviews', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateMeeting(data: UpdateMeetingRequest): Promise<UpdateMeetingResponse> {
+    return this.request<UpdateMeetingResponse>('/api/meetings/update', {
+      method: 'PUT',
       body: JSON.stringify(data),
     })
   }

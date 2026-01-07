@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { api, MentorshipGroupResponse, MentorshipGroupMeeting, ScheduleMeetingItem, CompleteGroupMeetingsRequest } from "@/lib/api"
+import { api, MentorshipGroupResponse, MentorshipGroupMeeting, ScheduleMeetingItem, CompleteGroupMeetingsRequest, StudentReviewItem } from "@/lib/api"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -32,22 +32,24 @@ import {
   Trash2,
   CalendarPlus,
   FileText,
-  MessageSquare
+  MessageSquare,
+  Edit
 } from "lucide-react"
 
-// Interface for grouped meetings (deduplicated by date/time)
-interface GroupedMeeting {
+// Interface for meetings from API (now already grouped)
+interface GroupMeeting {
+  id: string
   date: string
   time: string | null
   description: string
-  facultyReview: string | null
   status: 'UPCOMING' | 'COMPLETED' | 'YET_TO_DONE' | 'CANCELLED'
   studentCount: number
   students: Array<{
-    id: string
+    studentId: string
     name: string
     rollNumber: number
-    mentorshipId: string
+    review: string
+    attended: boolean
   }>
   createdAt: string
 }
@@ -72,8 +74,13 @@ export default function MentorGroupClient() {
   // Complete meeting dialog state
   const [completeMeetingDialogOpen, setCompleteMeetingDialogOpen] = useState(false)
   const [completingMeeting, setCompletingMeeting] = useState(false)
-  const [meetingReview, setMeetingReview] = useState("")
+  const [studentReviews, setStudentReviews] = useState<StudentReviewItem[]>([])
   const [meetingDescription, setMeetingDescription] = useState("")
+  
+  // Edit meeting dialog state (for any meeting)
+  const [editMeetingDialogOpen, setEditMeetingDialogOpen] = useState(false)
+  const [savingMeeting, setSavingMeeting] = useState(false)
+  const [editMeetingStatus, setEditMeetingStatus] = useState<'UPCOMING' | 'COMPLETED' | 'YET_TO_DONE'>('UPCOMING')
   
   // Get query params
   const facultyId = searchParams.get('faculty')
@@ -160,57 +167,23 @@ export default function MentorGroupClient() {
     }
   }
 
-  // Helper function to deduplicate meetings by date/time/description
-  // Since meetings are scheduled for the whole group, they share the same date/time
-  const getGroupedMeetings = (): GroupedMeeting[] => {
+  // Meetings now come pre-grouped from API - just sort them
+  const getMeetings = (): GroupMeeting[] => {
     if (!data?.meetings) return []
     
-    const groupMap = new Map<string, GroupedMeeting>()
-    
-    for (const meeting of data.meetings) {
-      // Create a unique key based on date, time, and description
-      const key = `${meeting.date}_${meeting.time || 'null'}_${meeting.description || ''}`
-      
-      if (groupMap.has(key)) {
-        // Add student to existing group
-        const group = groupMap.get(key)!
-        group.students.push({
-          id: meeting.id,
-          name: meeting.studentName,
-          rollNumber: meeting.studentRollNumber,
-          mentorshipId: meeting.mentorshipId
-        })
-        group.studentCount = group.students.length
-      } else {
-        // Create new group
-        groupMap.set(key, {
-          date: meeting.date,
-          time: meeting.time,
-          description: meeting.description,
-          facultyReview: meeting.facultyReview,
-          status: meeting.status,
-          studentCount: 1,
-          students: [{
-            id: meeting.id,
-            name: meeting.studentName,
-            rollNumber: meeting.studentRollNumber,
-            mentorshipId: meeting.mentorshipId
-          }],
-          createdAt: meeting.createdAt
-        })
-      }
-    }
-    
-    // Convert to array and sort by status priority: COMPLETED > YET_TO_DONE > UPCOMING > CANCELLED
-    // Within each status, sort by date (newest first)
+    // Sort by status priority: YET_TO_DONE > COMPLETED > UPCOMING > CANCELLED
+    // Within each status, sort by date
     const statusPriority: Record<string, number> = {
-      'COMPLETED': 1,
-      'YET_TO_DONE': 2,
+      'YET_TO_DONE': 1,
+      'COMPLETED': 2,
       'UPCOMING': 3,
       'CANCELLED': 4
     }
     
-    return Array.from(groupMap.values()).sort((a, b) => {
+    // Cast meetings to GroupMeeting type (they already have the right structure from API)
+    const meetings = data.meetings as unknown as GroupMeeting[]
+    
+    return [...meetings].sort((a, b) => {
       // First sort by status priority
       const priorityDiff = statusPriority[a.status] - statusPriority[b.status]
       if (priorityDiff !== 0) return priorityDiff
@@ -225,16 +198,16 @@ export default function MentorGroupClient() {
   }
 
   // Check if a meeting time has passed
-  const isMeetingTimePassed = (meeting: GroupedMeeting): boolean => {
+  const isMeetingTimePassed = (meeting: GroupMeeting): boolean => {
     if (!meeting.time) return false
     const meetingDateTime = new Date(`${meeting.date}T${meeting.time}`)
     return new Date() >= meetingDateTime
   }
 
-  const [selectedGroupedMeeting, setSelectedGroupedMeeting] = useState<GroupedMeeting | null>(null)
+  const [selectedGroupMeeting, setSelectedGroupMeeting] = useState<GroupMeeting | null>(null)
 
-  const openMeetingDetails = (meeting: GroupedMeeting) => {
-    setSelectedGroupedMeeting(meeting)
+  const openMeetingDetails = (meeting: GroupMeeting) => {
+    setSelectedGroupMeeting(meeting)
     setMeetingDialogOpen(true)
   }
 
@@ -308,15 +281,26 @@ export default function MentorGroupClient() {
     }
   }
 
-  const openCompleteMeetingDialog = (meeting: GroupedMeeting) => {
-    setSelectedGroupedMeeting(meeting)
-    setMeetingReview("")
+  const openCompleteMeetingDialog = (meeting: GroupMeeting) => {
+    setSelectedGroupMeeting(meeting)
+    // Initialize student reviews for all students in the meeting
+    setStudentReviews(meeting.students.map(student => ({
+      rollNumber: student.rollNumber,
+      studentName: student.name,
+      review: ""
+    })))
     setMeetingDescription(meeting.description || "")
     setCompleteMeetingDialogOpen(true)
   }
 
+  const updateStudentReview = (rollNumber: number, review: string) => {
+    setStudentReviews(prev => prev.map(sr => 
+      sr.rollNumber === rollNumber ? { ...sr, review } : sr
+    ))
+  }
+
   const handleCompleteMeeting = async () => {
-    if (!selectedGroupedMeeting || !year || !semester) {
+    if (!selectedGroupMeeting) {
       toast({
         title: "Error",
         description: "Missing meeting information",
@@ -325,17 +309,19 @@ export default function MentorGroupClient() {
       return
     }
 
-    if (!meetingReview.trim()) {
+    // Check if at least one review is provided
+    const hasAnyReview = studentReviews.some(sr => sr.review.trim().length > 0)
+    if (!hasAnyReview) {
       toast({
         title: "Review required",
-        description: "Please provide a review for the meeting",
+        description: "Please provide a review for at least one student",
         variant: "destructive"
       })
       return
     }
 
     // Check if meeting time has passed
-    if (!isMeetingTimePassed(selectedGroupedMeeting)) {
+    if (!isMeetingTimePassed(selectedGroupMeeting)) {
       toast({
         title: "Cannot complete yet",
         description: "You can only mark a meeting as complete after its scheduled time has passed",
@@ -348,12 +334,12 @@ export default function MentorGroupClient() {
       setCompletingMeeting(true)
       
       const result = await api.completeGroupMeetings({
-        date: selectedGroupedMeeting.date,
-        time: selectedGroupedMeeting.time || "",
-        review: meetingReview.trim(),
-        description: meetingDescription.trim() || undefined,
-        year: parseInt(year),
-        semester: parseInt(semester)
+        meetingId: selectedGroupMeeting.id,
+        studentReviews: studentReviews.map(sr => ({
+          rollNumber: sr.rollNumber,
+          review: sr.review.trim()
+        })),
+        description: meetingDescription.trim() || undefined
       })
       
       toast({
@@ -363,7 +349,7 @@ export default function MentorGroupClient() {
       
       setCompleteMeetingDialogOpen(false)
       setMeetingDialogOpen(false)
-      setMeetingReview("")
+      setStudentReviews([])
       setMeetingDescription("")
       fetchData() // Refresh data
     } catch (err) {
@@ -374,6 +360,63 @@ export default function MentorGroupClient() {
       })
     } finally {
       setCompletingMeeting(false)
+    }
+  }
+
+  const openEditMeetingDialog = (meeting: GroupMeeting) => {
+    setSelectedGroupMeeting(meeting)
+    // Initialize student reviews with existing reviews
+    setStudentReviews(meeting.students.map(student => ({
+      rollNumber: student.rollNumber,
+      studentName: student.name,
+      review: student.review || ""
+    })))
+    setMeetingDescription(meeting.description || "")
+    setEditMeetingStatus(meeting.status as 'UPCOMING' | 'COMPLETED' | 'YET_TO_DONE')
+    setEditMeetingDialogOpen(true)
+  }
+
+  const handleSaveMeeting = async () => {
+    if (!selectedGroupMeeting) {
+      toast({
+        title: "Error",
+        description: "Missing meeting information",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      setSavingMeeting(true)
+      
+      const result = await api.updateMeeting({
+        meetingId: selectedGroupMeeting.id,
+        status: editMeetingStatus,
+        studentReviews: studentReviews.map(sr => ({
+          rollNumber: sr.rollNumber,
+          review: sr.review.trim()
+        })),
+        description: meetingDescription.trim() || undefined
+      })
+      
+      toast({
+        title: "Success",
+        description: result.message
+      })
+      
+      setEditMeetingDialogOpen(false)
+      setMeetingDialogOpen(false)
+      setStudentReviews([])
+      setMeetingDescription("")
+      fetchData() // Refresh data
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to save meeting',
+        variant: "destructive"
+      })
+    } finally {
+      setSavingMeeting(false)
     }
   }
 
@@ -504,7 +547,7 @@ export default function MentorGroupClient() {
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{getGroupedMeetings().filter(m => m.status === 'COMPLETED').length}</p>
+                  <p className="text-2xl font-bold">{getMeetings().filter(m => m.status === 'COMPLETED').length}</p>
                   <p className="text-xs text-muted-foreground">Completed Meetings</p>
                 </div>
               </div>
@@ -517,7 +560,7 @@ export default function MentorGroupClient() {
                   <Clock className="h-5 w-5 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{getGroupedMeetings().filter(m => m.status === 'UPCOMING').length}</p>
+                  <p className="text-2xl font-bold">{getMeetings().filter(m => m.status === 'UPCOMING').length}</p>
                   <p className="text-xs text-muted-foreground">Upcoming Meetings</p>
                 </div>
               </div>
@@ -530,7 +573,7 @@ export default function MentorGroupClient() {
                   <AlertTriangle className="h-5 w-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{getGroupedMeetings().filter(m => m.status === 'YET_TO_DONE').length}</p>
+                  <p className="text-2xl font-bold">{getMeetings().filter(m => m.status === 'YET_TO_DONE').length}</p>
                   <p className="text-xs text-muted-foreground">Yet to Complete</p>
                 </div>
               </div>
@@ -612,7 +655,7 @@ export default function MentorGroupClient() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-primary" />
-                Group Meetings ({getGroupedMeetings().length})
+                Group Meetings ({getMeetings().length})
               </CardTitle>
               <CardDescription>
                 Meetings scheduled for the entire group
@@ -620,7 +663,7 @@ export default function MentorGroupClient() {
             </div>
           </CardHeader>
           <CardContent>
-            {getGroupedMeetings().length === 0 ? (
+            {getMeetings().length === 0 ? (
               <div className="py-8 text-center">
                 <Calendar className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
                 <h3 className="text-md font-semibold">No Meetings Yet</h3>
@@ -630,7 +673,7 @@ export default function MentorGroupClient() {
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {getGroupedMeetings().map((meeting, index) => (
+                {getMeetings().map((meeting, index) => (
                   <Card 
                     key={`${meeting.date}_${meeting.time}_${index}`} 
                     className={`cursor-pointer hover:shadow-md hover:border-primary/50 transition-all ${
@@ -671,10 +714,10 @@ export default function MentorGroupClient() {
                         </div>
                       )}
                       {/* Show review indicator if completed */}
-                      {meeting.status === 'COMPLETED' && meeting.facultyReview && (
+                      {meeting.status === 'COMPLETED' && meeting.students.some(s => s.review) && (
                         <div className="mt-3 flex items-center gap-1 text-xs text-green-600">
                           <MessageSquare className="h-3 w-3" />
-                          Review added
+                          Reviews added
                         </div>
                       )}
                     </CardContent>
@@ -693,40 +736,40 @@ export default function MentorGroupClient() {
                 <Calendar className="h-5 w-5 text-primary" />
                 Group Meeting Details
               </DialogTitle>
-              {selectedGroupedMeeting && (
+              {selectedGroupMeeting && (
                 <DialogDescription>
-                  Meeting for {selectedGroupedMeeting.studentCount} student{selectedGroupedMeeting.studentCount > 1 ? 's' : ''}
+                  Meeting for {selectedGroupMeeting.studentCount} student{selectedGroupMeeting.studentCount > 1 ? 's' : ''}
                 </DialogDescription>
               )}
             </DialogHeader>
-            {selectedGroupedMeeting && (
+            {selectedGroupMeeting && (
               <div className="space-y-4 py-4">
                 {/* Status */}
                 <div className="flex items-center justify-between">
                   <Label className="text-muted-foreground">Status</Label>
-                  {getStatusBadge(selectedGroupedMeeting.status)}
+                  {getStatusBadge(selectedGroupMeeting.status)}
                 </div>
                 
                 {/* Date and Time */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-muted-foreground">Date</Label>
-                    <p className="font-medium">{formatDate(selectedGroupedMeeting.date)}</p>
+                    <p className="font-medium">{formatDate(selectedGroupMeeting.date)}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">Time</Label>
-                    <p className="font-medium">{formatTime(selectedGroupedMeeting.time)}</p>
+                    <p className="font-medium">{formatTime(selectedGroupMeeting.time)}</p>
                   </div>
                 </div>
                 
                 {/* Students in this meeting */}
                 <div>
-                  <Label className="text-muted-foreground">Students ({selectedGroupedMeeting.studentCount})</Label>
+                  <Label className="text-muted-foreground">Students ({selectedGroupMeeting.studentCount})</Label>
                   <div className="mt-2 max-h-40 overflow-y-auto border rounded-md">
-                    {selectedGroupedMeeting.students.map((student, idx) => (
+                    {selectedGroupMeeting.students.map((student, idx) => (
                       <div 
-                        key={student.id} 
-                        className={`flex items-center justify-between p-2 text-sm ${idx !== selectedGroupedMeeting.students.length - 1 ? 'border-b' : ''}`}
+                        key={student.studentId} 
+                        className={`flex items-center justify-between p-2 text-sm ${idx !== selectedGroupMeeting.students.length - 1 ? 'border-b' : ''}`}
                       >
                         <button 
                           onClick={() => {
@@ -748,30 +791,50 @@ export default function MentorGroupClient() {
                   <Label className="text-muted-foreground">Description / Agenda</Label>
                   <div className="mt-1 p-3 bg-muted rounded-md">
                     <p className="text-sm">
-                      {selectedGroupedMeeting.description || 'No description provided'}
+                      {selectedGroupMeeting.description || 'No description provided'}
                     </p>
                   </div>
                 </div>
 
-                {/* Faculty Review - Show if completed */}
-                {selectedGroupedMeeting.status === 'COMPLETED' && selectedGroupedMeeting.facultyReview && (
+                {/* Individual Student Reviews - Show if completed */}
+                {selectedGroupMeeting.status === 'COMPLETED' && (
                   <div>
-                    <Label className="text-muted-foreground flex items-center gap-1">
-                      <MessageSquare className="h-4 w-4" />
-                      Faculty Review
-                    </Label>
-                    <div className="mt-1 p-3 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800">
-                      <p className="text-sm">
-                        {selectedGroupedMeeting.facultyReview}
-                      </p>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-muted-foreground flex items-center gap-1">
+                        <MessageSquare className="h-4 w-4" />
+                        Student Reviews
+                      </Label>
                     </div>
+                    {selectedGroupMeeting.students.some(s => s.review) ? (
+                      <div className="space-y-2">
+                        {selectedGroupMeeting.students.map((student) => (
+                          <div 
+                            key={student.studentId} 
+                            className="p-3 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800"
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <User className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-sm font-medium">{student.name}</span>
+                              <Badge variant="outline" className="text-xs">{student.rollNumber}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {student.review || <span className="italic">No review provided</span>}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-muted/50 rounded-md text-center">
+                        <p className="text-sm text-muted-foreground">No reviews added yet. Click "Edit Reviews" to add reviews for students.</p>
+                      </div>
+                    )}
                   </div>
                 )}
                 
                 {/* Meeting Status Indicator */}
                 <div className="p-4 rounded-lg border">
                   <div className="flex items-center gap-3">
-                    {selectedGroupedMeeting.status === 'COMPLETED' ? (
+                    {selectedGroupMeeting.status === 'COMPLETED' ? (
                       <>
                         <div className="p-2 bg-green-100 dark:bg-green-900 rounded-full">
                           <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -783,7 +846,7 @@ export default function MentorGroupClient() {
                           </p>
                         </div>
                       </>
-                    ) : selectedGroupedMeeting.status === 'UPCOMING' ? (
+                    ) : selectedGroupMeeting.status === 'UPCOMING' ? (
                       <>
                         <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-full">
                           <Clock className="h-5 w-5 text-blue-600" />
@@ -795,7 +858,7 @@ export default function MentorGroupClient() {
                           </p>
                         </div>
                       </>
-                    ) : selectedGroupedMeeting.status === 'YET_TO_DONE' ? (
+                    ) : selectedGroupMeeting.status === 'YET_TO_DONE' ? (
                       <>
                         <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-full">
                           <AlertTriangle className="h-5 w-5 text-amber-600" />
@@ -828,10 +891,10 @@ export default function MentorGroupClient() {
               <Button variant="outline" onClick={() => setMeetingDialogOpen(false)}>
                 Close
               </Button>
-              {selectedGroupedMeeting && selectedGroupedMeeting.status === 'YET_TO_DONE' && isMeetingTimePassed(selectedGroupedMeeting) && (
-                <Button onClick={() => openCompleteMeetingDialog(selectedGroupedMeeting)}>
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Mark as Completed
+              {selectedGroupMeeting && (
+                <Button onClick={() => openEditMeetingDialog(selectedGroupMeeting)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Meeting
                 </Button>
               )}
             </DialogFooter>
@@ -840,31 +903,31 @@ export default function MentorGroupClient() {
 
         {/* Complete Meeting Dialog */}
         <Dialog open={completeMeetingDialogOpen} onOpenChange={setCompleteMeetingDialogOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
                 Complete Meeting
               </DialogTitle>
               <DialogDescription>
-                Add a review to mark this meeting as completed
+                Add individual reviews for each student to mark this meeting as completed
               </DialogDescription>
             </DialogHeader>
-            {selectedGroupedMeeting && (
+            {selectedGroupMeeting && (
               <div className="space-y-4 py-4">
                 {/* Meeting Info */}
                 <div className="p-3 bg-muted rounded-md">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Date:</span>
-                    <span className="font-medium">{formatDate(selectedGroupedMeeting.date)}</span>
+                    <span className="font-medium">{formatDate(selectedGroupMeeting.date)}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm mt-1">
                     <span className="text-muted-foreground">Time:</span>
-                    <span className="font-medium">{formatTime(selectedGroupedMeeting.time)}</span>
+                    <span className="font-medium">{formatTime(selectedGroupMeeting.time)}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm mt-1">
                     <span className="text-muted-foreground">Students:</span>
-                    <span className="font-medium">{selectedGroupedMeeting.studentCount}</span>
+                    <span className="font-medium">{selectedGroupMeeting.studentCount}</span>
                   </div>
                 </div>
 
@@ -880,20 +943,30 @@ export default function MentorGroupClient() {
                   />
                 </div>
 
-                {/* Review */}
-                <div className="space-y-2">
-                  <Label htmlFor="meetingReview">Review <span className="text-destructive">*</span></Label>
-                  <Textarea
-                    id="meetingReview"
-                    placeholder="Provide your review for this meeting..."
-                    value={meetingReview}
-                    onChange={(e) => setMeetingReview(e.target.value)}
-                    rows={4}
-                    required
-                  />
+                {/* Individual Student Reviews */}
+                <div className="space-y-3">
+                  <Label className="text-base font-medium">Student Reviews <span className="text-destructive">*</span></Label>
                   <p className="text-xs text-muted-foreground">
-                    Add notes about what was discussed, outcomes, action items, etc.
+                    Provide individual feedback for each student. At least one review is required.
                   </p>
+                  <div className="space-y-3">
+                    {studentReviews.map((sr) => (
+                      <div key={sr.rollNumber} className="border rounded-lg p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium text-sm">{sr.studentName}</span>
+                          <Badge variant="outline" className="text-xs">{sr.rollNumber}</Badge>
+                        </div>
+                        <Textarea
+                          placeholder={`Review for ${sr.studentName}...`}
+                          value={sr.review}
+                          onChange={(e) => updateStudentReview(sr.rollNumber, e.target.value)}
+                          rows={2}
+                          className="text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -903,10 +976,110 @@ export default function MentorGroupClient() {
               </Button>
               <Button 
                 onClick={handleCompleteMeeting} 
-                disabled={completingMeeting || !meetingReview.trim()}
+                disabled={completingMeeting || !studentReviews.some(sr => sr.review.trim())}
               >
                 {completingMeeting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Complete Meeting
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Meeting Dialog */}
+        <Dialog open={editMeetingDialogOpen} onOpenChange={setEditMeetingDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Edit className="h-5 w-5 text-blue-600" />
+                Edit Meeting
+              </DialogTitle>
+              <DialogDescription>
+                Update the meeting status, description, and individual student reviews
+              </DialogDescription>
+            </DialogHeader>
+            {selectedGroupMeeting && (
+              <div className="space-y-4 py-4">
+                {/* Meeting Info */}
+                <div className="p-3 bg-muted rounded-md">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Date:</span>
+                    <span className="font-medium">{formatDate(selectedGroupMeeting.date)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-1">
+                    <span className="text-muted-foreground">Time:</span>
+                    <span className="font-medium">{formatTime(selectedGroupMeeting.time)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-1">
+                    <span className="text-muted-foreground">Students:</span>
+                    <span className="font-medium">{selectedGroupMeeting.studentCount}</span>
+                  </div>
+                </div>
+
+                {/* Meeting Status */}
+                <div className="space-y-2">
+                  <Label htmlFor="meetingStatus">Meeting Status</Label>
+                  <select 
+                    id="meetingStatus"
+                    title="Select meeting status"
+                    className="w-full p-2 border rounded-md bg-background"
+                    value={editMeetingStatus}
+                    onChange={(e) => setEditMeetingStatus(e.target.value as 'UPCOMING' | 'COMPLETED' | 'YET_TO_DONE')}
+                  >
+                    <option value="UPCOMING">Upcoming</option>
+                    <option value="YET_TO_DONE">Yet to Complete</option>
+                    <option value="COMPLETED">Completed</option>
+                  </select>
+                </div>
+
+                {/* Description */}
+                <div className="space-y-2">
+                  <Label htmlFor="editMeetingDescription">Description / Agenda (Optional)</Label>
+                  <Textarea
+                    id="editMeetingDescription"
+                    placeholder="Update the meeting description or agenda..."
+                    value={meetingDescription}
+                    onChange={(e) => setMeetingDescription(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+
+                {/* Individual Student Reviews */}
+                <div className="space-y-3">
+                  <Label className="text-base font-medium">Student Reviews</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Add or update feedback for each student.
+                  </p>
+                  <div className="space-y-3">
+                    {studentReviews.map((sr) => (
+                      <div key={sr.rollNumber} className="border rounded-lg p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium text-sm">{sr.studentName}</span>
+                          <Badge variant="outline" className="text-xs">{sr.rollNumber}</Badge>
+                        </div>
+                        <Textarea
+                          placeholder={`Review for ${sr.studentName}...`}
+                          value={sr.review}
+                          onChange={(e) => updateStudentReview(sr.rollNumber, e.target.value)}
+                          rows={2}
+                          className="text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditMeetingDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSaveMeeting} 
+                disabled={savingMeeting}
+              >
+                {savingMeeting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Save Changes
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -65,6 +65,8 @@ urlpatterns = [
     # Meeting completion APIs
     path('api/meeting/<uuid:meeting_id>/complete', views.complete_meeting, name='complete_meeting'),
     path('api/meetings/complete-group', views.complete_group_meetings, name='complete_group_meetings'),
+    path('api/meetings/update-reviews', views.update_meeting_reviews, name='update_meeting_reviews'),
+    path('api/meetings/update', views.update_meeting, name='update_meeting'),
     # Request APIs - Student
     path('api/student/requests', views.get_student_requests, name='get_student_requests'),
     path('api/student/internships/request', views.create_internship_request, name='create_internship_request'),

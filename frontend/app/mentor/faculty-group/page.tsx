@@ -2,13 +2,14 @@
 
 import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { api, FacultyMentorshipGroupResponse, FacultyMentorshipGroupMentee, ScheduleMeetingItem } from "@/lib/api"
+import { api, FacultyMentorshipGroupResponse, FacultyMentorshipGroupMentee, ScheduleMeetingItem, GroupMeeting } from "@/lib/api"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
@@ -26,7 +27,10 @@ import {
   PlusCircle,
   Trash2,
   Eye,
-  CalendarPlus
+  CalendarPlus,
+  Edit,
+  User,
+  MessageSquare
 } from "lucide-react"
 
 interface MeetingDetails {
@@ -39,7 +43,7 @@ interface MeetingDetails {
   createdAt: string
 }
 
-// Interface for grouped meetings (deduplicated by date/time)
+// Interface for grouped meetings (deduplicated by date/time) - legacy
 interface GroupedMeeting {
   date: string
   time: string | null
@@ -77,6 +81,14 @@ function FacultyGroupContent() {
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
   const [meetingDates, setMeetingDates] = useState<ScheduleMeetingItem[]>([{ date: "", time: "", description: "" }])
   const [scheduling, setScheduling] = useState(false)
+
+  // Edit meeting dialog state
+  const [editMeetingDialogOpen, setEditMeetingDialogOpen] = useState(false)
+  const [savingMeeting, setSavingMeeting] = useState(false)
+  const [editMeetingStatus, setEditMeetingStatus] = useState<'UPCOMING' | 'COMPLETED' | 'YET_TO_DONE'>('UPCOMING')
+  const [meetingDescription, setMeetingDescription] = useState("")
+  const [studentReviews, setStudentReviews] = useState<Array<{rollNumber: number, studentName: string, review: string}>>([])
+  const [selectedGroupMeetingForEdit, setSelectedGroupMeetingForEdit] = useState<GroupMeeting | null>(null)
 
   const fetchData = async () => {
     try {
@@ -184,13 +196,79 @@ function FacultyGroupContent() {
     )
   }
 
-  // State for group meeting dialog
+  // State for group meeting dialog (legacy grouped view)
   const [groupMeetingDialogOpen, setGroupMeetingDialogOpen] = useState(false)
   const [selectedGroupMeeting, setSelectedGroupMeeting] = useState<GroupedMeeting | null>(null)
+
+  // State for new GroupMeeting dialog
+  const [newGroupMeetingDialogOpen, setNewGroupMeetingDialogOpen] = useState(false)
+  const [selectedNewGroupMeeting, setSelectedNewGroupMeeting] = useState<GroupMeeting | null>(null)
 
   const openGroupMeetingDialog = (meeting: GroupedMeeting) => {
     setSelectedGroupMeeting(meeting)
     setGroupMeetingDialogOpen(true)
+  }
+
+  const openNewGroupMeetingDialog = (meeting: GroupMeeting) => {
+    setSelectedNewGroupMeeting(meeting)
+    setNewGroupMeetingDialogOpen(true)
+  }
+
+  const openEditMeetingDialog = (meeting: GroupMeeting) => {
+    setSelectedGroupMeetingForEdit(meeting)
+    // Initialize student reviews with existing reviews
+    setStudentReviews(meeting.students.map(student => ({
+      rollNumber: student.rollNumber,
+      studentName: student.name,
+      review: student.review || ""
+    })))
+    setMeetingDescription(meeting.description || "")
+    setEditMeetingStatus(meeting.status as 'UPCOMING' | 'COMPLETED' | 'YET_TO_DONE')
+    setEditMeetingDialogOpen(true)
+  }
+
+  const handleSaveMeeting = async () => {
+    if (!selectedGroupMeetingForEdit) {
+      toast({
+        title: "Error",
+        description: "Missing meeting information",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      setSavingMeeting(true)
+      
+      const result = await api.updateMeeting({
+        meetingId: selectedGroupMeetingForEdit.id,
+        status: editMeetingStatus,
+        studentReviews: studentReviews.map(sr => ({
+          rollNumber: sr.rollNumber,
+          review: sr.review.trim()
+        })),
+        description: meetingDescription.trim() || undefined
+      })
+      
+      toast({
+        title: "Success",
+        description: result.message
+      })
+      
+      setEditMeetingDialogOpen(false)
+      setNewGroupMeetingDialogOpen(false)
+      setStudentReviews([])
+      setMeetingDescription("")
+      fetchData() // Refresh data
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to save meeting',
+        variant: "destructive"
+      })
+    } finally {
+      setSavingMeeting(false)
+    }
   }
 
   const openMeetingDialog = (studentName: string, meetings: FacultyMentorshipGroupMentee['meetings']) => {
@@ -280,10 +358,9 @@ function FacultyGroupContent() {
 
   const mentees = data.mentees || []
   
-  // Get grouped meetings for stats
-  const groupedMeetings = getGroupedMeetings()
-  const totalGroupMeetings = groupedMeetings.length
-  const completedGroupMeetings = groupedMeetings.filter(m => m.status.toLowerCase() === 'completed').length
+  // Use new GroupMeeting data for stats
+  const totalGroupMeetings = data.groupMeetings?.length || 0
+  const completedGroupMeetings = data.groupMeetings?.filter(m => m.status === 'COMPLETED').length || 0
 
   return (
     <div className="container py-6 space-y-6">
@@ -460,19 +537,19 @@ function FacultyGroupContent() {
         </CardContent>
       </Card>
 
-      {/* Group Meetings Card */}
+      {/* Group Meetings Card - Uses new GroupMeeting model */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
-            Group Meetings ({getGroupedMeetings().length})
+            Group Meetings ({data?.groupMeetings?.length || 0})
           </CardTitle>
           <CardDescription>
             Meetings scheduled for the entire group
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {getGroupedMeetings().length === 0 ? (
+          {(!data?.groupMeetings || data.groupMeetings.length === 0) ? (
             <div className="py-8 text-center">
               <Calendar className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
               <h3 className="text-md font-semibold">No Meetings Yet</h3>
@@ -482,11 +559,11 @@ function FacultyGroupContent() {
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {getGroupedMeetings().map((meeting, index) => (
+              {data.groupMeetings.map((meeting) => (
                 <Card 
-                  key={`${meeting.date}_${meeting.time}_${index}`} 
+                  key={meeting.id} 
                   className="cursor-pointer hover:shadow-md hover:border-primary/50 transition-all"
-                  onClick={() => openGroupMeetingDialog(meeting)}
+                  onClick={() => openNewGroupMeetingDialog(meeting)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
@@ -523,7 +600,200 @@ function FacultyGroupContent() {
         </CardContent>
       </Card>
 
-      {/* Group Meeting Details Dialog */}
+      {/* New GroupMeeting Details Dialog with Edit Button */}
+      <Dialog open={newGroupMeetingDialogOpen} onOpenChange={setNewGroupMeetingDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Group Meeting Details
+            </DialogTitle>
+            <DialogDescription>
+              Meeting scheduled for {formatDate(selectedNewGroupMeeting?.date || '')}
+              {selectedNewGroupMeeting?.time && ` at ${formatTime(selectedNewGroupMeeting.time)}`}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedNewGroupMeeting && (
+            <div className="space-y-4 py-4">
+              {/* Status */}
+              <div className="flex items-center justify-between">
+                <Label className="text-muted-foreground">Status</Label>
+                {getStatusBadge(selectedNewGroupMeeting.status)}
+              </div>
+              
+              {/* Students in this meeting */}
+              <div>
+                <Label className="text-muted-foreground">Students ({selectedNewGroupMeeting.studentCount})</Label>
+                <div className="mt-2 max-h-40 overflow-y-auto border rounded-md">
+                  {selectedNewGroupMeeting.students.map((student, idx) => (
+                    <div 
+                      key={student.studentId} 
+                      className={`flex items-center justify-between p-2 text-sm ${idx !== selectedNewGroupMeeting.students.length - 1 ? 'border-b' : ''}`}
+                    >
+                      <button
+                        onClick={() => {
+                          setNewGroupMeetingDialogOpen(false)
+                          router.push(`/students/${student.rollNumber}`)
+                        }}
+                        className="font-medium text-left hover:text-primary hover:underline transition-colors"
+                      >
+                        {student.name}
+                      </button>
+                      <span className="text-muted-foreground">Roll No: {student.rollNumber}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Description */}
+              <div>
+                <Label className="text-muted-foreground">Description / Agenda</Label>
+                <div className="mt-1 p-3 bg-muted rounded-md">
+                  <p className="text-sm">
+                    {selectedNewGroupMeeting.description || 'No description provided'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Student Reviews (if completed) */}
+              {selectedNewGroupMeeting.status === 'COMPLETED' && (
+                <div>
+                  <Label className="text-muted-foreground flex items-center gap-1 mb-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Student Reviews
+                  </Label>
+                  {selectedNewGroupMeeting.students.some(s => s.review) ? (
+                    <div className="space-y-2">
+                      {selectedNewGroupMeeting.students.map((student) => (
+                        <div 
+                          key={student.studentId} 
+                          className="p-3 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <User className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-sm font-medium">{student.name}</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground pl-5">
+                            {student.review || 'No review provided'}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No reviews added yet</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setNewGroupMeetingDialogOpen(false)}>
+              Close
+            </Button>
+            {selectedNewGroupMeeting && (
+              <Button onClick={() => openEditMeetingDialog(selectedNewGroupMeeting)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Meeting
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Meeting Dialog */}
+      <Dialog open={editMeetingDialogOpen} onOpenChange={setEditMeetingDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5 text-primary" />
+              Edit Meeting
+            </DialogTitle>
+            <DialogDescription>
+              Update meeting status, description, and add reviews for each student
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedGroupMeetingForEdit && (
+            <div className="space-y-6 py-4">
+              {/* Meeting Status */}
+              <div className="space-y-2">
+                <Label htmlFor="meetingStatus">Meeting Status</Label>
+                <select 
+                  id="meetingStatus"
+                  title="Select meeting status"
+                  className="w-full p-2 border rounded-md bg-background"
+                  value={editMeetingStatus}
+                  onChange={(e) => setEditMeetingStatus(e.target.value as 'UPCOMING' | 'COMPLETED' | 'YET_TO_DONE')}
+                >
+                  <option value="UPCOMING">Upcoming</option>
+                  <option value="YET_TO_DONE">Yet to Complete</option>
+                  <option value="COMPLETED">Completed</option>
+                </select>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="editMeetingDescription">Description / Agenda (Optional)</Label>
+                <Textarea
+                  id="editMeetingDescription"
+                  placeholder="Update the meeting description or agenda..."
+                  value={meetingDescription}
+                  onChange={(e) => setMeetingDescription(e.target.value)}
+                  rows={2}
+                />
+              </div>
+
+              {/* Individual Student Reviews */}
+              <div className="space-y-3">
+                <Label>Individual Student Reviews</Label>
+                <div className="space-y-3 max-h-60 overflow-y-auto">
+                  {studentReviews.map((sr, index) => (
+                    <div key={sr.rollNumber} className="p-3 border rounded-md bg-muted/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium text-sm">{sr.studentName}</span>
+                        <span className="text-xs text-muted-foreground">(Roll: {sr.rollNumber})</span>
+                      </div>
+                      <Textarea
+                        placeholder={`Add review for ${sr.studentName}...`}
+                        value={sr.review}
+                        onChange={(e) => {
+                          const updated = [...studentReviews]
+                          updated[index] = { ...updated[index], review: e.target.value }
+                          setStudentReviews(updated)
+                        }}
+                        rows={2}
+                        className="text-sm"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditMeetingDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveMeeting} 
+              disabled={savingMeeting}
+            >
+              {savingMeeting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Legacy Group Meeting Details Dialog (for old data) */}
       <Dialog open={groupMeetingDialogOpen} onOpenChange={setGroupMeetingDialogOpen}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
