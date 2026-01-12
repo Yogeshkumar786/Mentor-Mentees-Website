@@ -127,7 +127,7 @@ def login(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
-@require_role('ADMIN')
+@require_role(['ADMIN', 'HOD'])
 def export_students_csv(request):
     """
     Admin-only endpoint that streams student data as CSV.

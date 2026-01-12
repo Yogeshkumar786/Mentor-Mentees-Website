@@ -13,8 +13,7 @@ import {
   GraduationCap,
   Briefcase,
   ArrowRight,
-  Loader2,
-  Download
+  Loader2
 } from "lucide-react"
 import Link from "next/link"
 import { api, type ApiUser, type HodDashboardStats } from "@/lib/api"
@@ -61,7 +60,6 @@ export function HODDashboard({ user }: HODDashboardProps) {
   const department = user.hod?.department || user.faculty?.department || 'Not Assigned'
   const [stats, setStats] = useState<HodDashboardStats['stats'] | null>(null)
   const [loading, setLoading] = useState(true)
-  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -77,17 +75,6 @@ export function HODDashboard({ user }: HODDashboardProps) {
     fetchData()
   }, [])
 
-  const handleExport = async () => {
-    try {
-      setExporting(true)
-      await api.exportStudentsCSV()
-    } catch (err) {
-      console.error('Failed to export:', err)
-    } finally {
-      setExporting(false)
-    }
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -99,10 +86,6 @@ export function HODDashboard({ user }: HODDashboardProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>
-            {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-            Export Students
-          </Button>
           <Badge variant="secondary" className="flex items-center gap-1">
             <Building2 className="h-3 w-3" />
             {department}

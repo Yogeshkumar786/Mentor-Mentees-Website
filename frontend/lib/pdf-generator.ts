@@ -486,3 +486,204 @@ export function generateHODFacultyMentorPDF(data: HODFacultyMentorPDFData): void
   // Download
   doc.save(`Faculty_Mentorship_${data.facultyName.replace(/\s+/g, '_')}_${data.department}.pdf`)
 }
+
+// Interface for student academic grades PDF
+interface StudentAcademicPDFData {
+  studentName: string
+  studentId: string
+  program: string
+  branch: string
+  currentYear: number
+  latestCGPA: number | null
+  currentSemester: number // The current/latest semester
+  semesters: Array<{
+    semester: number
+    sgpa: number
+    cgpa: number
+    subjects: Array<{
+      subjectCode: string
+      subjectName: string
+      credits: number
+      grade: string
+    }>
+    totalCredits: number
+  }>
+  preAdmission: {
+    xMarks: number
+    xiiMarks: number
+    jeeMains: number
+    jeeAdvanced: number | null
+  }
+}
+
+// Generate student academic grades PDF
+export function generateStudentAcademicPDF(data: StudentAcademicPDFData): void {
+  const doc = new jsPDF()
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const margin = 14
+
+  // Header
+  doc.setFillColor(0, 86, 145) // NIT blue
+  doc.rect(0, 0, pageWidth, 35, 'F')
+  
+  doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(16)
+  doc.text('NATIONAL INSTITUTE OF TECHNOLOGY ANDHRA PRADESH', pageWidth / 2, 15, { align: 'center' })
+  
+  doc.setFontSize(12)
+  doc.text('Academic Record', pageWidth / 2, 28, { align: 'center' })
+
+  // Student Info
+  doc.setTextColor(0, 0, 0)
+  let yPos = 50
+  
+  doc.setFillColor(240, 240, 240)
+  doc.rect(margin, yPos, pageWidth - 2 * margin, 30, 'F')
+  
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(14)
+  doc.text(data.studentName, margin + 5, yPos + 12)
+  
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  doc.text(`Roll No: ${data.studentId}`, margin + 5, yPos + 22)
+  doc.text(`${data.program} - ${data.branch}`, pageWidth / 2, yPos + 12)
+  doc.text(`Year: ${data.currentYear}`, pageWidth / 2, yPos + 22)
+  doc.text(`Current CGPA: ${data.latestCGPA?.toFixed(2) || 'N/A'}`, pageWidth - margin - 40, yPos + 17)
+
+  yPos += 40
+
+  // Sort semesters in descending order (latest first)
+  const sortedSemesters = [...data.semesters].sort((a, b) => b.semester - a.semester)
+
+  // Current semester with full details
+  if (sortedSemesters.length > 0) {
+    const currentSem = sortedSemesters[0] // Latest semester
+    
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(12)
+    doc.setTextColor(0, 86, 145)
+    doc.text(`Current Semester (Semester ${currentSem.semester})`, margin, yPos)
+    doc.setTextColor(0, 0, 0)
+    yPos += 8
+
+    // Subject-wise table for current semester
+    const subjectData = currentSem.subjects.map(sub => [
+      sub.subjectCode,
+      sub.subjectName,
+      sub.credits.toString(),
+      sub.grade
+    ])
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Code', 'Subject Name', 'Credits', 'Grade']],
+      body: subjectData,
+      theme: 'grid',
+      headStyles: { fillColor: [0, 86, 145], textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: 90 },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 20, halign: 'center' }
+      }
+    })
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    yPos = (doc as any).lastAutoTable.finalY + 5
+
+    // SGPA and CGPA for current semester
+    doc.setFillColor(230, 240, 250)
+    doc.rect(margin, yPos, pageWidth - 2 * margin, 15, 'F')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text(`Total Credits: ${currentSem.totalCredits}`, margin + 10, yPos + 10)
+    doc.text(`SGPA: ${currentSem.sgpa.toFixed(2)}`, pageWidth / 2 - 20, yPos + 10)
+    doc.text(`CGPA: ${currentSem.cgpa.toFixed(2)}`, pageWidth - margin - 40, yPos + 10)
+    
+    yPos += 25
+  }
+
+  // Previous semesters summary (only SGPA and CGPA)
+  const previousSemesters = sortedSemesters.slice(1)
+  
+  if (previousSemesters.length > 0) {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(12)
+    doc.setTextColor(0, 86, 145)
+    doc.text('Previous Semesters Summary', margin, yPos)
+    doc.setTextColor(0, 0, 0)
+    yPos += 8
+
+    const prevSemData = previousSemesters.map(sem => [
+      `Semester ${sem.semester}`,
+      sem.totalCredits.toString(),
+      sem.sgpa.toFixed(2),
+      sem.cgpa.toFixed(2)
+    ])
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Semester', 'Credits', 'SGPA', 'CGPA']],
+      body: prevSemData,
+      theme: 'grid',
+      headStyles: { fillColor: [52, 73, 94], textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 10, cellPadding: 4 },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 30, halign: 'center' },
+        2: { cellWidth: 30, halign: 'center' },
+        3: { cellWidth: 30, halign: 'center' }
+      }
+    })
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    yPos = (doc as any).lastAutoTable.finalY + 15
+  }
+
+  // Pre-admission academics
+  if (yPos > 240) {
+    doc.addPage()
+    yPos = 20
+  }
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.setTextColor(0, 86, 145)
+  doc.text('Pre-Admission Academics', margin, yPos)
+  doc.setTextColor(0, 0, 0)
+  yPos += 8
+
+  autoTable(doc, {
+    startY: yPos,
+    head: [['Class X', 'Class XII', 'JEE Mains Rank', 'JEE Advanced Rank']],
+    body: [[
+      `${data.preAdmission.xMarks}%`,
+      `${data.preAdmission.xiiMarks}%`,
+      data.preAdmission.jeeMains.toString(),
+      data.preAdmission.jeeAdvanced?.toString() || 'N/A'
+    ]],
+    theme: 'grid',
+    headStyles: { fillColor: [52, 73, 94], textColor: 255, fontStyle: 'bold' },
+    styles: { fontSize: 10, cellPadding: 4, halign: 'center' }
+  })
+
+  // Footer
+  const pageCount = doc.getNumberOfPages()
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i)
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.text(
+      `Page ${i} of ${pageCount}`,
+      pageWidth / 2,
+      doc.internal.pageSize.getHeight() - 10,
+      { align: 'center' }
+    )
+  }
+
+  // Download
+  doc.save(`Academic_Record_${data.studentName.replace(/\s+/g, '_')}.pdf`)
+}

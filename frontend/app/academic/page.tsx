@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { api, StudentAcademic } from "@/lib/api"
+import { generateStudentAcademicPDF } from "@/lib/pdf-generator"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -14,7 +15,8 @@ import {
   Loader2,
   AlertCircle,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Download
 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Button } from "@/components/ui/button"
@@ -71,6 +73,27 @@ export default function AcademicPage() {
     return (cgpa / 10) * 100
   }
 
+  const handleDownloadGrades = () => {
+    if (!academicData) return
+    
+    // Calculate current semester (latest semester in the data)
+    const currentSemester = academicData.semesters.length > 0 
+      ? Math.max(...academicData.semesters.map(s => s.semester))
+      : 0
+
+    generateStudentAcademicPDF({
+      studentName: academicData.studentName,
+      studentId: academicData.studentId,
+      program: academicData.program,
+      branch: academicData.branch,
+      currentYear: academicData.currentYear,
+      latestCGPA: academicData.latestCGPA,
+      currentSemester,
+      semesters: academicData.semesters,
+      preAdmission: academicData.preAdmission
+    })
+  }
+
   if (loading) {
     return (
       <DashboardLayout requiredRoles={['STUDENT']}>
@@ -106,11 +129,17 @@ export default function AcademicPage() {
     <DashboardLayout requiredRoles={['STUDENT']}>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Academic Record</h1>
-          <p className="text-muted-foreground">
-            {academicData.studentName} • {academicData.program} - {academicData.branch}
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Academic Record</h1>
+            <p className="text-muted-foreground">
+              {academicData.studentName} • {academicData.program} - {academicData.branch}
+            </p>
+          </div>
+          <Button onClick={handleDownloadGrades} className="flex items-center gap-2">
+            <Download className="h-4 w-4" />
+            Download Grades
+          </Button>
         </div>
 
         {/* Overview Cards */}

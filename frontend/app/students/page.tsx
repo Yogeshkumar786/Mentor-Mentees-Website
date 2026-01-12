@@ -105,11 +105,14 @@ export default function StudentsPage() {
     }
   }
 
+  // Fetch students only on initial load (when department is set from user)
+  // Manual fetch triggered by Apply Filters button
   useEffect(() => {
-    if (department) {
+    if (department && department !== 'all') {
       fetchStudents()
     }
-  }, [department, year, programme])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run once on mount
 
   // Filter students by search query
   const filteredStudents = students.filter(student => {
@@ -145,8 +148,8 @@ export default function StudentsPage() {
           <h1 className="text-3xl font-bold">Students</h1>
           <p className="text-muted-foreground">View and manage department students</p>
         </div>
-        {/* Admin export button — visible to ADMIN users */}
-        {user?.role === 'ADMIN' && (
+        {/* Export button — visible to ADMIN and HOD users */}
+        {(user?.role === 'ADMIN' || user?.role === 'HOD') && (
           <div className="flex justify-end">
             <Button
               size="sm"
@@ -254,6 +257,27 @@ export default function StudentsPage() {
                   className="pl-10"
                 />
               </div>
+            </div>
+
+            {/* Apply Filters Button */}
+            <div className="space-y-2 flex items-end">
+              <Button 
+                onClick={fetchStudents}
+                disabled={loading || !department || department === 'all'}
+                className="w-full"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-4 w-4 mr-2" />
+                    Apply Filters
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </CardContent>

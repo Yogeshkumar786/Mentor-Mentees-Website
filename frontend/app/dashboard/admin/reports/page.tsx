@@ -3,18 +3,9 @@
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, Calendar, FileCheck, Settings, LayoutDashboard, FileText, Download } from "lucide-react"
+import { Download } from "lucide-react"
 import { useEffect, useState } from "react"
 import { storage } from "@/lib/storage"
-
-const navigation = [
-  { label: "Overview", href: "/dashboard/admin", icon: <LayoutDashboard className="w-4 h-4" /> },
-  { label: "Users", href: "/dashboard/admin/users", icon: <Users className="w-4 h-4" /> },
-  { label: "Requests", href: "/dashboard/admin/requests", icon: <FileCheck className="w-4 h-4" /> },
-  { label: "Meetings", href: "/dashboard/admin/meetings", icon: <Calendar className="w-4 h-4" /> },
-  { label: "Reports", href: "/dashboard/admin/reports", icon: <FileText className="w-4 h-4" /> },
-  { label: "Settings", href: "/dashboard/admin/settings", icon: <Settings className="w-4 h-4" /> },
-]
 
 export default function AdminReportsPage() {
   const [stats, setStats] = useState({
@@ -37,8 +28,8 @@ export default function AdminReportsPage() {
 
     setStats({
       totalUsers: users.length,
-      totalMentors: users.filter((u) => u.role === "mentor").length,
-      totalMentees: users.filter((u) => u.role === "mentee").length,
+      totalMentors: users.filter((u) => u.role === "faculty").length,
+      totalMentees: users.filter((u) => u.role === "student").length,
       activeRelationships: relationships.filter((r) => r.status === "active").length,
       totalMeetings: meetings.length,
       completedMeetings: meetings.filter((m) => m.status === "completed").length,
@@ -66,7 +57,7 @@ export default function AdminReportsPage() {
   }
 
   return (
-    <DashboardLayout navigation={navigation} requiredRole="admin">
+    <DashboardLayout requiredRoles={['ADMIN']}>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -161,9 +152,9 @@ export default function AdminReportsPage() {
                   {stats.totalMentees > 0 ? Math.round((stats.activeRelationships / stats.totalMentees) * 100) : 0}%
                 </span>
               </div>
-              <div className="w-full bg-secondary rounded-full h-2">
+              <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-primary rounded-full h-2"
+                  className="bg-primary rounded-full h-2 transition-all"
                   style={{
                     width: `${stats.totalMentees > 0 ? (stats.activeRelationships / stats.totalMentees) * 100 : 0}%`,
                   }}
