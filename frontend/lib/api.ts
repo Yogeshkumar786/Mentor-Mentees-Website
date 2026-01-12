@@ -379,6 +379,24 @@ export interface UpdateStudentRequest {
   motherNumber?: string
 }
 
+// Create Student (Admin)
+export interface CreateStudentRequest {
+  name: string
+  email: string
+  rollNumber: number
+  registrationNumber?: number
+  program?: string
+  branch?: string
+  year?: number
+  phoneNumber?: string
+  status?: string
+}
+
+export interface CreateStudentResponse {
+  message: string
+  student: StudentDetails | { id: string; name: string; rollNumber: number }
+}
+
 // Student Data by Roll Number (for Faculty/HOD/Admin viewing)
 export interface StudentProjectsByRollno {
   studentId: string
@@ -2087,6 +2105,14 @@ class ApiService {
   async updateStudentByRollNumber(rollno: number, data: UpdateStudentRequest): Promise<{ message: string; updatedFields: string[]; student: { id: string; name: string; rollNumber: number; status: string; accountStatus: string } }> {
     return this.request<{ message: string; updatedFields: string[]; student: { id: string; name: string; rollNumber: number; status: string; accountStatus: string } }>(`/api/admin/student/${rollno}`, {
       method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  // Create Student (Admin)
+  async createStudent(data: CreateStudentRequest): Promise<CreateStudentResponse> {
+    return this.request<CreateStudentResponse>('/api/admin/student', {
+      method: 'POST',
       body: JSON.stringify(data),
     })
   }

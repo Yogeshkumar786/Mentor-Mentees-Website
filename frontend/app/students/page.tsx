@@ -12,7 +12,16 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Search, Users, Mail, Phone, Eye, Download } from "lucide-react"
+import { Loader2, Search, Users, Mail, Phone, Eye, Download, Plus } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { useToast } from '@/hooks/use-toast'
 
 const DEPARTMENTS = [
@@ -57,6 +66,20 @@ export default function StudentsPage() {
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [exporting, setExporting] = useState(false)
   const { toast } = useToast()
+  // Create student dialog
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [studentForm, setStudentForm] = useState({
+    name: "",
+    email: "",
+    rollNumber: "",
+    registrationNumber: "",
+    program: "",
+    branch: "",
+    year: "",
+    phoneNumber: "",
+    status: "ACTIVE",
+  })
   
   // Check authorization
   useEffect(() => {
@@ -108,11 +131,16 @@ export default function StudentsPage() {
   // Fetch students only on initial load (when department is set from user)
   // Manual fetch triggered by Apply Filters button
   useEffect(() => {
-    if (department && department !== 'all') {
+    // For ADMIN: fetch all students by default
+    // For HOD/FACULTY: fetch when their department is set (not 'all')
+    if (!user) return
+    if (user.role === 'ADMIN') {
+      fetchStudents()
+    } else if (department && department !== 'all') {
       fetchStudents()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Only run once on mount
+  }, [user, department])
 
   // Filter students by search query
   const filteredStudents = students.filter(student => {
@@ -148,9 +176,9 @@ export default function StudentsPage() {
           <h1 className="text-3xl font-bold">Students</h1>
           <p className="text-muted-foreground">View and manage department students</p>
         </div>
-        {/* Export button — visible to ADMIN and HOD users */}
+        {/* Actions (Export, Add Student) — visible to ADMIN and HOD users */}
         {(user?.role === 'ADMIN' || user?.role === 'HOD') && (
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
             <Button
               size="sm"
               onClick={async () => {
@@ -175,6 +203,104 @@ export default function StudentsPage() {
               <Download className="h-4 w-4 mr-2" />
               {exporting ? 'Exporting...' : 'Export Students (CSV)'}
             </Button>
+
+            {/* Add Student (ADMIN only) */}
+            {user?.role === 'ADMIN' && (
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Student
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Add Student</DialogTitle>
+                    <DialogDescription>Add a new student to the system</DialogDescription>
+                  </DialogHeader>
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault()
+                      setCreating(true)
+                      try {
+                        const payload = {
+                          name: studentForm.name,
+                          email: studentForm.email,
+                          rollNumber: Number(studentForm.rollNumber),
+                          registrationNumber: studentForm.registrationNumber ? Number(studentForm.registrationNumber) : undefined,
+                          program: studentForm.program || undefined,
+                          branch: studentForm.branch || undefined,
+                          year: studentForm.year ? Number(studentForm.year) : undefined,
+                          phoneNumber: studentForm.phoneNumber || undefined,
+                          status: studentForm.status || undefined,
+                        }
+                        await api.createStudent(payload)
+                        toast({ title: 'Student created', description: `${studentForm.name} has been added.` })
+                        setIsCreateDialogOpen(false)
+                        setStudentForm({ name: '', email: '', rollNumber: '', registrationNumber: '', program: '', branch: '', year: '', phoneNumber: '', status: 'ACTIVE' })
+                        fetchStudents()
+                      } catch (err: any) {
+                        console.error('Create student failed', err)
+                        toast({ title: 'Create failed', description: err?.message || 'Server error' })
+                      } finally {
+                        setCreating(false)
+                      }
+                    }}
+                    className="space-y-4"
+                  >
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="student-name">Full name</Label>
+                        <Input id="student-name" value={studentForm.name} onChange={(e) => setStudentForm({ ...studentForm, name: e.target.value })} required />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="student-email">Email</Label>
+                        <Input id="student-email" type="email" value={studentForm.email} onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })} required />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="student-roll">Roll Number</Label>
+                          <Input id="student-roll" value={studentForm.rollNumber} onChange={(e) => setStudentForm({ ...studentForm, rollNumber: e.target.value })} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="student-reg">Registration No.</Label>
+                          <Input id="student-reg" value={studentForm.registrationNumber} onChange={(e) => setStudentForm({ ...studentForm, registrationNumber: e.target.value })} />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="student-program">Programme</Label>
+                          <Input id="student-program" value={studentForm.program} onChange={(e) => setStudentForm({ ...studentForm, program: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="student-branch">Branch</Label>
+                          <Input id="student-branch" value={studentForm.branch} onChange={(e) => setStudentForm({ ...studentForm, branch: e.target.value })} />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="student-year">Year</Label>
+                          <Input id="student-year" value={studentForm.year} onChange={(e) => setStudentForm({ ...studentForm, year: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="student-phone">Phone</Label>
+                          <Input id="student-phone" value={studentForm.phoneNumber} onChange={(e) => setStudentForm({ ...studentForm, phoneNumber: e.target.value })} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => { setIsCreateDialogOpen(false); setStudentForm({ name: '', email: '', rollNumber: '', registrationNumber: '', program: '', branch: '', year: '', phoneNumber: '', status: 'ACTIVE' }) }}>Cancel</Button>
+                      <Button type="submit" disabled={creating}>{creating ? 'Creating...' : 'Create Student'}</Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         )}
 
@@ -263,7 +389,8 @@ export default function StudentsPage() {
             <div className="space-y-2 flex items-end">
               <Button 
                 onClick={fetchStudents}
-                disabled={loading || !department || department === 'all'}
+                // Allow ADMIN to fetch when department === 'all'; other roles must pick a department
+                disabled={loading || (user?.role !== 'ADMIN' && (!department || department === 'all'))}
                 className="w-full"
               >
                 {loading ? (
