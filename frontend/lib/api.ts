@@ -1044,6 +1044,89 @@ export interface FacultyByIdResponse {
   }[]
 }
 
+// Student's view of their mentor's profile (limited info)
+export interface StudentMentorProfileResponse {
+  id: string
+  employeeId: string
+  name: string
+  email: string | null
+  collegeEmail: string | null
+  phone1: string | null
+  phone2: string | null
+  department: string
+  isActive: boolean
+  office: string | null
+  officeHours: string | null
+  btech: boolean
+  mtech: boolean
+  phd: boolean
+  mentorshipHistory: {
+    mentorshipId: string
+    year: number
+    semester: number
+    startDate: string | null
+    endDate: string | null
+    isActive: boolean
+  }[]
+  isCurrentMentor: boolean
+}
+
+// Transfer mentorship request/response
+export interface TransferMentorshipRequest {
+  fromFacultyId: string
+  toFacultyEmployeeId: string
+  year: number
+  semester: number
+}
+
+export interface TransferMentorshipResponse {
+  message: string
+  fromFaculty: {
+    id: string
+    name: string
+    employeeId: string
+  }
+  toFaculty: {
+    id: string
+    name: string
+    employeeId: string
+  }
+  year: number
+  semester: number
+  transferred: {
+    student: {
+      name: string
+      rollNumber: number
+    }
+    oldMentorshipId: string
+    newMentorshipId: string
+  }[]
+  failed: {
+    student: string
+    reason: string
+  }[]
+  transferCount: number
+  failedCount: number
+}
+
+// End mentorship group response (make students unassigned)
+export interface EndMentorshipGroupResponse {
+  message: string
+  faculty: {
+    id: string
+    name: string
+    employeeId: string
+  }
+  year: number
+  semester: number
+  endedCount: number
+  students: {
+    name: string
+    rollNumber: number
+    mentorshipId: string
+  }[]
+}
+
 export interface FacultyMentorDetailsResponse {
   faculty: {
     id: string
@@ -1708,6 +1791,10 @@ class ApiService {
     return this.request<StudentMentorsResponse>('/api/student/mentors')
   }
 
+  async getStudentMentorProfile(facultyId: string): Promise<StudentMentorProfileResponse> {
+    return this.request<StudentMentorProfileResponse>(`/api/student/mentor/${facultyId}/profile`)
+  }
+
   async getMentorshipMeetings(mentorshipId: string): Promise<MentorshipMeetingsResponse> {
     return this.request<MentorshipMeetingsResponse>(`/api/student/mentorship/${mentorshipId}/meetings`)
   }
@@ -1824,6 +1911,24 @@ class ApiService {
   async endMentorship(mentorshipId: string): Promise<EndMentorshipResponse> {
     return this.request<EndMentorshipResponse>(`/api/hod/mentorship/${mentorshipId}/end`, {
       method: 'PUT',
+    })
+  }
+
+  async transferMentorshipGroup(data: TransferMentorshipRequest): Promise<TransferMentorshipResponse> {
+    return this.request<TransferMentorshipResponse>('/api/hod/mentorship/transfer', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async endMentorshipGroup(facultyId: string, year: number, semester: number): Promise<EndMentorshipGroupResponse> {
+    const params = new URLSearchParams({
+      faculty: facultyId,
+      year: year.toString(),
+      semester: semester.toString()
+    })
+    return this.request<EndMentorshipGroupResponse>(`/api/hod/mentorship/group/end?${params.toString()}`, {
+      method: 'DELETE',
     })
   }
 

@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
 import { 
   Users, 
@@ -30,7 +31,11 @@ import {
   ChevronUp,
   ChevronRight,
   Filter,
-  X
+  X,
+  MoreVertical,
+  RefreshCw,
+  Trash2,
+  AlertTriangle
 } from "lucide-react"
 import type { ApiUser } from "@/lib/api"
 
@@ -78,6 +83,21 @@ export function HODMentorView({ user }: HODMentorViewProps) {
   const [meetingTime, setMeetingTime] = useState("")
   const [meetingDescription, setMeetingDescription] = useState("")
   const [creatingMeeting, setCreatingMeeting] = useState(false)
+
+  // Change mentor dialog state
+  const [changeMentorDialogOpen, setChangeMentorDialogOpen] = useState(false)
+  const [selectedGroupForAction, setSelectedGroupForAction] = useState<{
+    facultyId: string
+    facultyName: string
+    year: number
+    semester: number
+  } | null>(null)
+  const [selectedNewFacultyId, setSelectedNewFacultyId] = useState<string>('')
+  const [transferring, setTransferring] = useState(false)
+  
+  // Remove group dialog state
+  const [removeGroupDialogOpen, setRemoveGroupDialogOpen] = useState(false)
+  const [removingGroup, setRemovingGroup] = useState(false)
 
   const department = user.hod?.department || user.faculty?.department || 'Not Assigned'
 
@@ -213,6 +233,94 @@ export function HODMentorView({ user }: HODMentorViewProps) {
 
   const navigateToGroup = (facultyId: string, year: number, semester: number, isActive: boolean) => {
     router.push(`/mentor/group?faculty=${facultyId}&year=${year}&semester=${semester}&active=${isActive}`)
+  }
+
+  // Open change mentor dialog for a specific group
+  const openChangeMentorDialog = (facultyId: string, facultyName: string, year: number, semester: number) => {
+    setSelectedGroupForAction({ facultyId, facultyName, year, semester })
+    setSelectedNewFacultyId('')
+    setChangeMentorDialogOpen(true)
+  }
+
+  // Open remove group dialog for a specific group
+  const openRemoveGroupDialog = (facultyId: string, facultyName: string, year: number, semester: number) => {
+    setSelectedGroupForAction({ facultyId, facultyName, year, semester })
+    setRemoveGroupDialogOpen(true)
+  }
+
+  // Handle transfer mentorship group
+  const handleTransferMentorship = async () => {
+    if (!selectedNewFacultyId || !selectedGroupForAction) {
+      toast({
+        title: "Error",
+        description: "Please select a faculty member",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const targetFaculty = facultyList.find(f => f.id === selectedNewFacultyId)
+    if (!targetFaculty) return
+
+    setTransferring(true)
+    try {
+      const result = await api.transferMentorshipGroup({
+        fromFacultyId: selectedGroupForAction.facultyId,
+        toFacultyEmployeeId: targetFaculty.employeeId,
+        year: selectedGroupForAction.year,
+        semester: selectedGroupForAction.semester
+      })
+
+      toast({
+        title: "Success",
+        description: `Transferred ${result.transferCount} student(s) to ${result.toFaculty.name}`,
+      })
+
+      setChangeMentorDialogOpen(false)
+      setSelectedGroupForAction(null)
+      // Refresh data to show updated assignments
+      fetchData()
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to transfer mentorship",
+        variant: "destructive"
+      })
+    } finally {
+      setTransferring(false)
+    }
+  }
+
+  // Handle remove/end mentorship group
+  const handleRemoveGroup = async () => {
+    if (!selectedGroupForAction) return
+
+    setRemovingGroup(true)
+    try {
+      const result = await api.endMentorshipGroup(
+        selectedGroupForAction.facultyId,
+        selectedGroupForAction.year,
+        selectedGroupForAction.semester
+      )
+
+      toast({
+        title: "Success",
+        description: `${result.endedCount} student(s) are now unassigned and can be assigned to new mentors.`,
+      })
+
+      setRemoveGroupDialogOpen(false)
+      setSelectedGroupForAction(null)
+      // Refresh data to show updated state
+      fetchData()
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to remove mentorship group",
+        variant: "destructive"
+      })
+    } finally {
+      setRemovingGroup(false)
+    }
   }
 
   // Group mentees by year/semester for a faculty
@@ -514,7 +622,34 @@ export function HODMentorView({ user }: HODMentorViewProps) {
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <Badge variant="default" className="bg-green-600">Active</Badge>
-                                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                            <MoreVertical className="h-4 w-4" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                          <DropdownMenuItem 
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              openChangeMentorDialog(faculty.facultyId, faculty.facultyName, group.year, group.semester)
+                                            }}
+                                          >
+                                            <RefreshCw className="h-4 w-4 mr-2" />
+                                            Change Mentor
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem 
+                                            className="text-destructive focus:text-destructive"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              openRemoveGroupDialog(faculty.facultyId, faculty.facultyName, group.year, group.semester)
+                                            }}
+                                          >
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Remove Group
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
                                     </div>
                                   </div>
                                 </CardContent>
@@ -852,6 +987,80 @@ export function HODMentorView({ user }: HODMentorViewProps) {
             <Button onClick={handleCreateMeeting} disabled={creatingMeeting}>
               {creatingMeeting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Schedule Meeting
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Mentor Dialog */}
+      <Dialog open={changeMentorDialogOpen} onOpenChange={setChangeMentorDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Mentor</DialogTitle>
+            <DialogDescription>
+              {selectedGroupForAction && (
+                <>Transfer all students from Year {selectedGroupForAction.year}, Semester {selectedGroupForAction.semester} 
+                  currently mentored by <strong>{selectedGroupForAction.facultyName}</strong> to a different faculty member.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Select New Mentor</Label>
+              <Select value={selectedNewFacultyId} onValueChange={setSelectedNewFacultyId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a faculty member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {facultyList
+                    .filter(f => f.id !== selectedGroupForAction?.facultyId)
+                    .map((faculty) => (
+                      <SelectItem key={faculty.id} value={faculty.id}>
+                        {faculty.name} ({faculty.employeeId})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChangeMentorDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleTransferMentorship} disabled={transferring || !selectedNewFacultyId}>
+              {transferring && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Transfer Students
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Group Dialog */}
+      <Dialog open={removeGroupDialogOpen} onOpenChange={setRemoveGroupDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Remove Mentorship Group
+            </DialogTitle>
+            <DialogDescription>
+              {selectedGroupForAction && (
+                <>
+                  Are you sure you want to remove the mentorship group for Year {selectedGroupForAction.year}, 
+                  Semester {selectedGroupForAction.semester} mentored by <strong>{selectedGroupForAction.facultyName}</strong>?
+                  <br /><br />
+                  All students in this group will become <strong>unassigned</strong> and can be assigned to new mentors.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveGroupDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleRemoveGroup} disabled={removingGroup}>
+              {removingGroup && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Remove Group
             </Button>
           </DialogFooter>
         </DialogContent>

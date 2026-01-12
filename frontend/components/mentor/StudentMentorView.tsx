@@ -30,7 +30,8 @@ import {
   AlertCircle,
   Users,
   History,
-  CalendarPlus
+  CalendarPlus,
+  User
 } from "lucide-react"
 
 export function StudentMentorView() {
@@ -172,6 +173,18 @@ export function StudentMentorView() {
                 Request Meeting
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1"
+              onClick={(e) => {
+                e.stopPropagation()
+                router.push(`/faculty/${mentor.facultyId}`)
+              }}
+            >
+              <User className="h-4 w-4" />
+              Profile
+            </Button>
             {isCurrent ? (
               <Badge className="bg-green-600">Current Mentor</Badge>
             ) : (

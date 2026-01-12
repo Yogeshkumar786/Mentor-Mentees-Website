@@ -28,6 +28,8 @@ urlpatterns = [
     path('api/hod/mentorship/group', views.get_mentorship_group, name='get_mentorship_group'),
     path('api/hod/mentorship/<uuid:mentorship_id>', views.get_mentorship_details, name='get_mentorship_details'),
     path('api/hod/mentorship/<uuid:mentorship_id>/end', views.end_mentorship, name='end_mentorship'),
+    path('api/hod/mentorship/transfer', views.transfer_mentorship_group, name='transfer_mentorship_group'),
+    path('api/hod/mentorship/group/end', views.end_mentorship_group, name='end_mentorship_group'),
     path('api/hod/meeting/create', views.create_mentorship_meeting, name='create_mentorship_meeting'),
     path('api/department/students', views.get_department_students, name='get_department_students'),
     path('api/department/student/<int:rollno>', views.get_student_by_rollno, name='get_student_by_rollno'),
@@ -79,6 +81,7 @@ urlpatterns = [
     path('api/requests/<uuid:request_id>/reject', views.reject_request, name='reject_request'),
     # Mentor APIs - Student
     path('api/student/mentors', views.get_student_mentors, name='get_student_mentors'),
+    path('api/student/mentor/<uuid:faculty_id>/profile', views.get_student_mentor_profile, name='get_student_mentor_profile'),
     path('api/student/mentorship/<uuid:mentorship_id>/meetings', views.get_mentorship_meetings, name='get_mentorship_meetings'),
     # Student Update APIs
     path('api/student/personal-problems/update', views.update_personal_problems, name='update_personal_problems'),

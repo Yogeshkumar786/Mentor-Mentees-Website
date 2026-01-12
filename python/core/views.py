@@ -3227,6 +3227,88 @@ def get_student_mentors(request):
 @require_http_methods(["GET"])
 @require_auth
 @require_role('STUDENT')
+def get_student_mentor_profile(request, faculty_id):
+    """
+    Get mentor profile details for a student's current or past mentor.
+    Student can only view profile of faculty who is/was their mentor.
+    """
+    try:
+        from .models import Student, Faculty, Mentorship
+        
+        user_data = request.user_data
+        student_id = user_data.get('entityId')
+        
+        student = Student.objects.filter(id=student_id).first()
+        if not student:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        # Verify this faculty is/was a mentor of this student
+        mentorship = Mentorship.objects.filter(
+            student=student,
+            faculty_id=faculty_id
+        ).first()
+        
+        if not mentorship:
+            return JsonResponse(
+                {'message': 'This faculty is not your mentor'},
+                status=403
+            )
+        
+        # Get faculty details
+        try:
+            faculty = Faculty.objects.select_related('user').get(id=faculty_id)
+        except Faculty.DoesNotExist:
+            return JsonResponse({'message': 'Faculty not found'}, status=404)
+        
+        # Get mentorship summary (only for this student's mentorships)
+        student_mentorships = Mentorship.objects.filter(
+            student=student,
+            faculty=faculty
+        ).order_by('-year', '-semester')
+        
+        mentorship_history = []
+        for m in student_mentorships:
+            mentorship_history.append({
+                'mentorshipId': str(m.id),
+                'year': m.year,
+                'semester': m.semester,
+                'startDate': m.start_date.isoformat() if m.start_date else None,
+                'endDate': m.end_date.isoformat() if m.end_date else None,
+                'isActive': m.is_active
+            })
+        
+        result = {
+            'id': str(faculty.id),
+            'employeeId': faculty.employeeId,
+            'name': faculty.name,
+            'email': faculty.user.email if faculty.user else None,
+            'collegeEmail': faculty.collegeEmail,
+            'phone1': faculty.phone1,
+            'phone2': faculty.phone2,
+            'department': faculty.department,
+            'isActive': faculty.isActive,
+            'office': faculty.office,
+            'officeHours': faculty.officeHours,
+            'btech': faculty.btech,
+            'mtech': faculty.mtech,
+            'phd': faculty.phd,
+            'mentorshipHistory': mentorship_history,
+            'isCurrentMentor': any(m.is_active for m in student_mentorships)
+        }
+        
+        return JsonResponse(result, status=200)
+        
+    except Exception as e:
+        print(f"Get student mentor profile error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_auth
+@require_role('STUDENT')
 def get_mentorship_meetings(request, mentorship_id):
     """
     Get all meetings for a specific mentorship
@@ -3913,6 +3995,249 @@ def end_mentorship(request, mentorship_id):
         
     except Exception as e:
         print(f"End mentorship error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role('HOD')
+def transfer_mentorship_group(request):
+    """
+    Transfer all students from one faculty's mentorship group to another faculty.
+    This creates new mentorship records and marks the old ones as inactive.
+    
+    Required fields:
+        - fromFacultyId: Current faculty UUID
+        - toFacultyEmployeeId: New faculty employee ID
+        - year: Academic year
+        - semester: Semester
+    """
+    try:
+        from .models import Mentorship, Faculty, HOD
+        
+        data = json.loads(request.body)
+        from_faculty_id = data.get('fromFacultyId')
+        to_faculty_employee_id = data.get('toFacultyEmployeeId')
+        year = data.get('year')
+        semester = data.get('semester')
+        
+        # Validate required fields
+        if not all([from_faculty_id, to_faculty_employee_id, year, semester]):
+            return JsonResponse(
+                {'message': 'Missing required fields: fromFacultyId, toFacultyEmployeeId, year, semester'},
+                status=400
+            )
+        
+        hod_user_id = request.user_id
+        
+        # Get the source faculty
+        try:
+            from_faculty = Faculty.objects.get(id=from_faculty_id)
+        except Faculty.DoesNotExist:
+            return JsonResponse({'message': 'Source faculty not found'}, status=404)
+        
+        # Verify HOD is authorized for this department
+        try:
+            hod = HOD.objects.get(
+                user_id=hod_user_id,
+                department=from_faculty.department,
+                endDate__isnull=True
+            )
+        except HOD.DoesNotExist:
+            return JsonResponse(
+                {'message': f'You are not authorized to manage mentorships in {from_faculty.department} department'},
+                status=403
+            )
+        
+        # Get the destination faculty
+        try:
+            to_faculty = Faculty.objects.get(employeeId=to_faculty_employee_id)
+        except Faculty.DoesNotExist:
+            return JsonResponse({'message': 'Destination faculty not found'}, status=404)
+        
+        # Check both faculties are in the same department
+        if from_faculty.department != to_faculty.department:
+            return JsonResponse(
+                {'message': f'Cannot transfer mentorship between different departments'},
+                status=400
+            )
+        
+        # Cannot transfer to self
+        if from_faculty.id == to_faculty.id:
+            return JsonResponse({'message': 'Cannot transfer to the same faculty'}, status=400)
+        
+        # Get all active mentorships for the source faculty in this year/semester
+        active_mentorships = Mentorship.objects.filter(
+            faculty=from_faculty,
+            year=int(year),
+            semester=int(semester),
+            is_active=True
+        ).select_related('student')
+        
+        if not active_mentorships.exists():
+            return JsonResponse(
+                {'message': 'No active mentorships found for this faculty/year/semester'},
+                status=404
+            )
+        
+        transferred = []
+        failed = []
+        
+        for mentorship in active_mentorships:
+            try:
+                # Mark old mentorship as inactive
+                mentorship.is_active = False
+                mentorship.end_date = datetime.now()
+                mentorship.save()
+                
+                # Create new mentorship with the new faculty
+                new_mentorship = Mentorship.objects.create(
+                    faculty=to_faculty,
+                    student=mentorship.student,
+                    department=to_faculty.department,
+                    year=int(year),
+                    semester=int(semester),
+                    start_date=datetime.now(),
+                    is_active=True,
+                    comments=[]
+                )
+                
+                transferred.append({
+                    'student': {
+                        'name': mentorship.student.name,
+                        'rollNumber': mentorship.student.rollNumber
+                    },
+                    'oldMentorshipId': str(mentorship.id),
+                    'newMentorshipId': str(new_mentorship.id)
+                })
+            except Exception as e:
+                failed.append({
+                    'student': mentorship.student.name,
+                    'reason': str(e)
+                })
+        
+        return JsonResponse({
+            'message': f'Transferred {len(transferred)} student(s) from {from_faculty.name} to {to_faculty.name}',
+            'fromFaculty': {
+                'id': str(from_faculty.id),
+                'name': from_faculty.name,
+                'employeeId': from_faculty.employeeId
+            },
+            'toFaculty': {
+                'id': str(to_faculty.id),
+                'name': to_faculty.name,
+                'employeeId': to_faculty.employeeId
+            },
+            'year': int(year),
+            'semester': int(semester),
+            'transferred': transferred,
+            'failed': failed,
+            'transferCount': len(transferred),
+            'failedCount': len(failed)
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON in request body'}, status=400)
+    except Exception as e:
+        print(f"Transfer mentorship error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+@require_role('HOD')
+def end_mentorship_group(request):
+    """
+    End/Delete an entire mentorship group - marks all mentorships as inactive.
+    Students become unassigned and can be assigned to new mentors.
+    
+    Query params:
+        - faculty: Faculty ID (UUID)
+        - year: Academic year
+        - semester: Semester
+    """
+    try:
+        from .models import Mentorship, Faculty, HOD
+        
+        faculty_id = request.GET.get('faculty')
+        year = request.GET.get('year')
+        semester = request.GET.get('semester')
+        
+        # Validate required params
+        if not all([faculty_id, year, semester]):
+            return JsonResponse(
+                {'message': 'Missing required parameters: faculty, year, semester'},
+                status=400
+            )
+        
+        hod_user_id = request.user_id
+        
+        # Get the faculty
+        try:
+            faculty = Faculty.objects.get(id=faculty_id)
+        except Faculty.DoesNotExist:
+            return JsonResponse({'message': 'Faculty not found'}, status=404)
+        
+        # Verify HOD is authorized for this department
+        try:
+            hod = HOD.objects.get(
+                user_id=hod_user_id,
+                department=faculty.department,
+                endDate__isnull=True
+            )
+        except HOD.DoesNotExist:
+            return JsonResponse(
+                {'message': f'You are not authorized to manage mentorships in {faculty.department} department'},
+                status=403
+            )
+        
+        # Get all active mentorships for this faculty/year/semester
+        active_mentorships = Mentorship.objects.filter(
+            faculty=faculty,
+            year=int(year),
+            semester=int(semester),
+            is_active=True
+        ).select_related('student')
+        
+        if not active_mentorships.exists():
+            return JsonResponse(
+                {'message': 'No active mentorships found for this faculty/year/semester'},
+                status=404
+            )
+        
+        ended_count = 0
+        ended_students = []
+        
+        for mentorship in active_mentorships:
+            mentorship.is_active = False
+            mentorship.end_date = datetime.now()
+            mentorship.save()
+            ended_count += 1
+            ended_students.append({
+                'name': mentorship.student.name,
+                'rollNumber': mentorship.student.rollNumber,
+                'mentorshipId': str(mentorship.id)
+            })
+        
+        return JsonResponse({
+            'message': f'Ended {ended_count} mentorship(s). Students are now unassigned.',
+            'faculty': {
+                'id': str(faculty.id),
+                'name': faculty.name,
+                'employeeId': faculty.employeeId
+            },
+            'year': int(year),
+            'semester': int(semester),
+            'endedCount': ended_count,
+            'students': ended_students
+        }, status=200)
+        
+    except Exception as e:
+        print(f"End mentorship group error: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({'message': 'Server error'}, status=500)

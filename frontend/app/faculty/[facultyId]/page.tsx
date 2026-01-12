@@ -3,38 +3,54 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
-import { api, type FacultyByIdResponse } from "@/lib/api"
+import { api, type FacultyByIdResponse, type StudentMentorProfileResponse } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, User, Phone, Mail, Building, Clock, GraduationCap, Users } from "lucide-react"
+import { Loader2, User, Phone, Mail, Building, Clock, GraduationCap, Users, ArrowLeft } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 export default function FacultyProfilePage() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const params = useParams()
   const router = useRouter()
   const facultyId = params.facultyId as string
 
   const [faculty, setFaculty] = useState<FacultyByIdResponse | null>(null)
+  const [studentMentorProfile, setStudentMentorProfile] = useState<StudentMentorProfileResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const isStudent = user?.role === 'STUDENT'
+
   useEffect(() => {
     const fetchFaculty = async () => {
+      if (!user) return
+      
       try {
-        const data = await api.getFacultyById(facultyId)
-        setFaculty(data)
+        if (isStudent) {
+          // Students use the mentor profile API
+          const data = await api.getStudentMentorProfile(facultyId)
+          setStudentMentorProfile(data)
+        } else {
+          // HOD/Admin use the regular faculty API
+          const data = await api.getFacultyById(facultyId)
+          setFaculty(data)
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to fetch faculty")
       } finally {
         setLoading(false)
       }
     }
-    fetchFaculty()
-  }, [facultyId])
+    
+    if (!authLoading && user) {
+      fetchFaculty()
+    }
+  }, [facultyId, user, authLoading, isStudent])
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-[30vh]">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -42,8 +58,169 @@ export default function FacultyProfilePage() {
     )
   }
 
-  if (error || !faculty) {
-    return <div className="text-center text-red-500 py-8">{error || "Faculty not found"}</div>
+  if (error) {
+    return <div className="text-center text-red-500 py-8">{error}</div>
+  }
+
+  // Student view of mentor profile
+  if (isStudent && studentMentorProfile) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex items-center gap-4 mb-6">
+          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <h1 className="text-2xl font-bold">Mentor Profile</h1>
+          {studentMentorProfile.isCurrentMentor && (
+            <Badge className="bg-green-600">Current Mentor</Badge>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Personal Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" /> Personal Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Name</Label>
+                  <p className="font-medium">{studentMentorProfile.name}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Employee ID</Label>
+                  <p className="font-medium">{studentMentorProfile.employeeId}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Department</Label>
+                  <p className="font-medium">{studentMentorProfile.department}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Status</Label>
+                  <Badge variant={studentMentorProfile.isActive ? "default" : "secondary"}>
+                    {studentMentorProfile.isActive ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Contact Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" /> Contact Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <Label className="text-muted-foreground">Email</Label>
+                  <p className="font-medium">{studentMentorProfile.collegeEmail || studentMentorProfile.email || "N/A"}</p>
+                </div>
+              </div>
+              <Separator />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <Label className="text-muted-foreground">Phone 1</Label>
+                    <p className="font-medium">{studentMentorProfile.phone1 || "N/A"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <Label className="text-muted-foreground">Phone 2</Label>
+                    <p className="font-medium">{studentMentorProfile.phone2 || "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Office Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="h-5 w-5" /> Office Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Building className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <Label className="text-muted-foreground">Office</Label>
+                  <p className="font-medium">{studentMentorProfile.office || "N/A"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <Label className="text-muted-foreground">Office Hours</Label>
+                  <p className="font-medium">{studentMentorProfile.officeHours || "N/A"}</p>
+                </div>
+              </div>
+              <Separator />
+              <div>
+                <Label className="text-muted-foreground">Programs</Label>
+                <div className="flex gap-2 mt-2">
+                  {studentMentorProfile.btech && <Badge variant="outline">B.Tech</Badge>}
+                  {studentMentorProfile.mtech && <Badge variant="outline">M.Tech</Badge>}
+                  {studentMentorProfile.phd && <Badge variant="outline">Ph.D</Badge>}
+                  {!studentMentorProfile.btech && !studentMentorProfile.mtech && !studentMentorProfile.phd && (
+                    <span className="text-muted-foreground">No programs assigned</span>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Mentorship History with this mentor */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5" /> Your Mentorship History
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {studentMentorProfile.mentorshipHistory.length > 0 ? (
+                <div className="space-y-3">
+                  {studentMentorProfile.mentorshipHistory.map((m) => (
+                    <div key={m.mentorshipId} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <div>
+                        <p className="font-medium">Year {m.year}, Semester {m.semester}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {m.startDate ? new Date(m.startDate).toLocaleDateString() : 'N/A'} - 
+                          {m.endDate ? new Date(m.endDate).toLocaleDateString() : 'Present'}
+                        </p>
+                      </div>
+                      <Badge variant={m.isActive ? "default" : "secondary"}>
+                        {m.isActive ? "Active" : "Past"}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No mentorship history found</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  // HOD/Admin view (original view)
+  if (!faculty) {
+    return <div className="text-center text-red-500 py-8">Faculty not found</div>
   }
 
   return (

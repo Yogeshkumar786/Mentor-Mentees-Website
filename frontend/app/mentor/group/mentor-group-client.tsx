@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { api, MentorshipGroupResponse, MentorshipGroupMeeting, ScheduleMeetingItem, CompleteGroupMeetingsRequest, StudentReviewItem } from "@/lib/api"
+import { api, MentorshipGroupResponse, MentorshipGroupMeeting, ScheduleMeetingItem, CompleteGroupMeetingsRequest, StudentReviewItem, FacultyListResponse } from "@/lib/api"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -35,8 +35,10 @@ import {
   FileText,
   MessageSquare,
   Edit,
-  Download
+  Download,
+  RefreshCw
 } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 // Interface for meetings from API (now already grouped)
 interface GroupMeeting {
@@ -84,6 +86,17 @@ export default function MentorGroupClient() {
   const [savingMeeting, setSavingMeeting] = useState(false)
   const [editMeetingStatus, setEditMeetingStatus] = useState<'UPCOMING' | 'COMPLETED' | 'YET_TO_DONE'>('UPCOMING')
   
+  // Change mentor dialog state
+  const [changeMentorDialogOpen, setChangeMentorDialogOpen] = useState(false)
+  const [facultyList, setFacultyList] = useState<FacultyListResponse['faculty']>([])
+  const [loadingFaculty, setLoadingFaculty] = useState(false)
+  const [selectedFacultyId, setSelectedFacultyId] = useState<string>('')
+  const [transferring, setTransferring] = useState(false)
+  
+  // Remove group dialog state
+  const [removeGroupDialogOpen, setRemoveGroupDialogOpen] = useState(false)
+  const [removingGroup, setRemovingGroup] = useState(false)
+  
   // Get query params
   const facultyId = searchParams.get('faculty')
   const year = searchParams.get('year')
@@ -116,6 +129,105 @@ export default function MentorGroupClient() {
   useEffect(() => {
     fetchData()
   }, [facultyId, year, semester, isActive])
+
+  // Fetch faculty list when change mentor dialog opens
+  const openChangeMentorDialog = async () => {
+    setChangeMentorDialogOpen(true)
+    setSelectedFacultyId('')
+    
+    if (facultyList.length === 0) {
+      setLoadingFaculty(true)
+      try {
+        const response = await api.getFacultyList()
+        // Filter out current faculty
+        const filteredFaculty = response.faculty.filter(f => f.id !== facultyId)
+        setFacultyList(filteredFaculty)
+      } catch (err) {
+        toast({
+          title: "Error",
+          description: "Failed to load faculty list",
+          variant: "destructive"
+        })
+      } finally {
+        setLoadingFaculty(false)
+      }
+    }
+  }
+
+  // Handle transfer mentorship group
+  const handleTransferMentorship = async () => {
+    if (!selectedFacultyId || !facultyId || !year || !semester) {
+      toast({
+        title: "Error",
+        description: "Please select a faculty member",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const selectedFaculty = facultyList.find(f => f.id === selectedFacultyId)
+    if (!selectedFaculty) return
+
+    setTransferring(true)
+    try {
+      const result = await api.transferMentorshipGroup({
+        fromFacultyId: facultyId,
+        toFacultyEmployeeId: selectedFaculty.employeeId,
+        year: parseInt(year),
+        semester: parseInt(semester)
+      })
+
+      toast({
+        title: "Success",
+        description: `Transferred ${result.transferCount} student(s) to ${result.toFaculty.name}`,
+      })
+
+      setChangeMentorDialogOpen(false)
+      
+      // Navigate to the new mentor's group
+      router.push(`/mentor/group?faculty=${result.toFaculty.id}&year=${year}&semester=${semester}&active=true`)
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to transfer mentorship",
+        variant: "destructive"
+      })
+    } finally {
+      setTransferring(false)
+    }
+  }
+
+  // Handle remove/end mentorship group (students become unassigned)
+  const handleRemoveGroup = async () => {
+    if (!facultyId || !year || !semester) return
+
+    setRemovingGroup(true)
+    try {
+      const result = await api.endMentorshipGroup(
+        facultyId,
+        parseInt(year),
+        parseInt(semester)
+      )
+
+      toast({
+        title: "Success",
+        description: `${result.endedCount} student(s) are now unassigned and can be assigned to new mentors.`,
+      })
+
+      setRemoveGroupDialogOpen(false)
+      
+      // Navigate back to mentor list
+      router.push('/mentor')
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to remove mentorship group",
+        variant: "destructive"
+      })
+    } finally {
+      setRemovingGroup(false)
+    }
+  }
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-IN', {
@@ -510,6 +622,22 @@ export default function MentorGroupClient() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {data.isActive && (
+              <>
+                <Button variant="outline" onClick={openChangeMentorDialog} className="gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Change Mentor
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setRemoveGroupDialogOpen(true)} 
+                  className="gap-2 text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Remove Group
+                </Button>
+              </>
+            )}
             <Button variant="outline" onClick={handleDownloadPDF} className="gap-2">
               <Download className="h-4 w-4" />
               Export Report
@@ -1210,6 +1338,125 @@ export default function MentorGroupClient() {
               <Button onClick={handleCreateMeeting} disabled={creatingMeeting}>
                 {creatingMeeting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Schedule for All Students
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Change Mentor Dialog */}
+        <Dialog open={changeMentorDialogOpen} onOpenChange={setChangeMentorDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Change Mentor</DialogTitle>
+              <DialogDescription>
+                Transfer all {data?.menteesCount || 0} students in this group to a different faculty member. 
+                This will mark the current mentorships as inactive and create new ones with the selected faculty.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Current Mentor</Label>
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="font-medium">{data?.faculty.name}</p>
+                  <p className="text-sm text-muted-foreground">ID: {data?.faculty.employeeId}</p>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Select New Mentor</Label>
+                {loadingFaculty ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : (
+                  <Select value={selectedFacultyId} onValueChange={setSelectedFacultyId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a faculty member" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {facultyList.map((faculty) => (
+                        <SelectItem key={faculty.id} value={faculty.id}>
+                          <div className="flex flex-col">
+                            <span>{faculty.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {faculty.employeeId} • {faculty.department}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {selectedFacultyId && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    <AlertTriangle className="h-4 w-4 inline mr-2" />
+                    This action will transfer all students to the new mentor. The current mentorship will be marked as past/inactive.
+                  </p>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setChangeMentorDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleTransferMentorship} 
+                disabled={!selectedFacultyId || transferring}
+              >
+                {transferring && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Transfer Students
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Remove Group Dialog */}
+        <Dialog open={removeGroupDialogOpen} onOpenChange={setRemoveGroupDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-destructive">Remove Mentorship Group</DialogTitle>
+              <DialogDescription>
+                This will end all {data?.menteesCount || 0} active mentorships in this group. 
+                Students will become unassigned and can be assigned to new mentors.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Mentor:</span>
+                  <span className="font-medium">{data?.faculty.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Year/Semester:</span>
+                  <span className="font-medium">Year {data?.year}, Semester {data?.semester}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Students:</span>
+                  <span className="font-medium">{data?.menteesCount || 0}</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <p className="text-sm text-destructive">
+                  <AlertTriangle className="h-4 w-4 inline mr-2" />
+                  This action cannot be undone. All mentorship records will be marked as inactive/past.
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setRemoveGroupDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={handleRemoveGroup} 
+                disabled={removingGroup}
+              >
+                {removingGroup && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Remove Group
               </Button>
             </DialogFooter>
           </DialogContent>
