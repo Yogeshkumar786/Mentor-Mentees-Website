@@ -1958,11 +1958,20 @@ class ApiService {
       method: 'GET',
       credentials: 'include',
     })
-    
+
     if (!response.ok) {
-      throw new Error('Failed to export students')
+      // Try to parse JSON error message from backend
+      let errMsg = `Export failed (${response.status})`
+      try {
+        const payload = await response.json()
+        if (payload && payload.message) errMsg = payload.message
+      } catch (_) {
+        // not JSON, fall back to statusText
+        if (response.statusText) errMsg = response.statusText
+      }
+      throw new Error(errMsg)
     }
-    
+
     // Get the blob and trigger download
     const blob = await response.blob()
     const downloadUrl = window.URL.createObjectURL(blob)

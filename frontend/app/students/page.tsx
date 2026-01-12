@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Search, Users, Mail, Phone, Eye } from "lucide-react"
+import { Loader2, Search, Users, Mail, Phone, Eye, Download } from "lucide-react"
+import { useToast } from '@/hooks/use-toast'
 
 const DEPARTMENTS = [
   { value: "all", label: "All Departments" },
@@ -54,6 +55,8 @@ export default function StudentsPage() {
   const [year, setYear] = useState<string>("0")
   const [programme, setProgramme] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState<string>("")
+  const [exporting, setExporting] = useState(false)
+  const { toast } = useToast()
   
   // Check authorization
   useEffect(() => {
@@ -142,6 +145,35 @@ export default function StudentsPage() {
           <h1 className="text-3xl font-bold">Students</h1>
           <p className="text-muted-foreground">View and manage department students</p>
         </div>
+        {/* Admin export button — visible to ADMIN users */}
+        {user?.role === 'ADMIN' && (
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              onClick={async () => {
+                setExporting(true)
+                try {
+                  // Use current filters when exporting
+                  await api.exportStudentsCSV(
+                    department !== 'all' && department !== '' ? department : undefined,
+                    year !== '0' ? parseInt(year) : undefined,
+                    programme !== 'all' ? programme : undefined
+                  )
+                  toast({ title: 'Export started', description: 'CSV download should begin shortly.' })
+                } catch (err: any) {
+                  console.error('Export failed', err)
+                  toast({ title: 'Export failed', description: err?.message || 'Server error' })
+                } finally {
+                  setExporting(false)
+                }
+              }}
+              disabled={exporting}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {exporting ? 'Exporting...' : 'Export Students (CSV)'}
+            </Button>
+          </div>
+        )}
 
       {/* Filters */}
       <Card className="mb-6">

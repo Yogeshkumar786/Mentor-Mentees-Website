@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
@@ -9,6 +9,9 @@ from .models import User
 from django.conf import settings
 import os
 from .middleware import require_auth, require_role
+import csv
+import io
+from django.utils import timezone
 
 
 # Get JWT secret from environment or settings
@@ -120,6 +123,100 @@ def login(request):
             {'message': 'Server error'},
             status=500
         )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role('ADMIN')
+def export_students_csv(request):
+    """
+    Admin-only endpoint that streams student data as CSV.
+    Optional query params:
+      - department: filter by branch
+      - year: filter by year (int)
+      - programme: filter by program
+    """
+    try:
+        from .models import Student
+
+        department = request.GET.get('department')
+        year = request.GET.get('year')
+        programme = request.GET.get('programme')
+
+        qs = Student.objects.select_related('user').all().order_by('rollNumber')
+
+        if department:
+            qs = qs.filter(branch=department)
+
+        if year:
+            try:
+                y = int(year)
+                qs = qs.filter(year=y)
+            except ValueError:
+                # ignore invalid year filter
+                pass
+
+        if programme:
+            qs = qs.filter(program=programme)
+
+        # Fields to export
+        fieldnames = [
+            'rollNumber', 'name', 'registrationNumber', 'email', 'collegeEmail',
+            'program', 'branch', 'year', 'phoneNumber', 'gender', 'status'
+        ]
+
+        def row_generator(queryset, fields):
+            buffer = io.StringIO()
+            writer = csv.writer(buffer)
+            # header
+            writer.writerow(fields)
+            yield buffer.getvalue()
+            buffer.seek(0); buffer.truncate(0)
+
+            for s in queryset.iterator():
+                try:
+                    # prepare row values, handle relation to user for email
+                    email = ''
+                    try:
+                        email = s.user.email if hasattr(s, 'user') and s.user else ''
+                    except Exception:
+                        email = ''
+
+                    row = [
+                        s.rollNumber,
+                        s.name,
+                        s.registrationNumber,
+                        email,
+                        s.collegeEmail,
+                        s.program,
+                        s.branch,
+                        s.year,
+                        s.phoneNumber,
+                        s.gender,
+                        s.status,
+                    ]
+
+                    # convert to strings and write
+                    writer.writerow([str(v) if v is not None else '' for v in row])
+                    yield buffer.getvalue()
+                    buffer.seek(0); buffer.truncate(0)
+                except Exception as row_err:
+                    # Log per-row errors and continue with next row
+                    print(f"Error exporting student row (roll: {getattr(s, 'rollNumber', 'unknown')}): {str(row_err)}")
+                    import traceback
+                    traceback.print_exc()
+                    continue
+
+        filename = f"students_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        response = StreamingHttpResponse(row_generator(qs, fieldnames), content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    except Exception as e:
+        print(f"Export students CSV error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
 
 
 @csrf_exempt
@@ -6259,90 +6356,4 @@ def get_admin_dashboard_stats(request):
         return JsonResponse({'message': 'Server error'}, status=500)
 
 
-@csrf_exempt
-@require_http_methods(["GET"])
-@require_role('HOD', 'ADMIN')
-def export_students_csv(request):
-    """
-    Export students data as CSV
-    """
-    try:
-        import csv
-        from django.http import HttpResponse
-        from .models import Student, HOD, Mentorship
-        
-        user_id = request.user_id
-        user_role = request.user_role
-        
-        # Determine department filter
-        department = request.GET.get('department')
-        year = request.GET.get('year')
-        programme = request.GET.get('programme')
-        
-        if user_role == 'HOD':
-            try:
-                hod = HOD.objects.get(user__id=user_id)
-                department = hod.department  # Force HOD's department
-            except HOD.DoesNotExist:
-                return JsonResponse({'message': 'HOD profile not found'}, status=404)
-        
-        # Build query
-        students = Student.objects.all()
-        if department:
-            students = students.filter(branch=department)
-        if year:
-            students = students.filter(year=int(year))
-        if programme:
-            students = students.filter(programme=programme)
-        
-        students = students.select_related('user').order_by('rollNumber')
-        
-        # Create CSV response
-        from datetime import date
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = f'attachment; filename="students_export_{department or "all"}_{date.today().isoformat()}.csv"'
-        
-        writer = csv.writer(response)
-        
-        # Header row
-        writer.writerow([
-            'Roll Number', 'Registration Number', 'Name', 'Email', 'Phone',
-            'Department', 'Programme', 'Year', 'Section', 'Gender',
-            'Date of Birth', 'Community', 'Father Name', 'Mother Name',
-            'Address', 'Mentor Name', 'Mentor Employee ID'
-        ])
-        
-        # Data rows
-        for student in students:
-            # Get mentor info
-            active_mentorship = Mentorship.objects.filter(student=student, is_active=True).first()
-            mentor_name = active_mentorship.faculty.name if active_mentorship else ''
-            mentor_emp_id = active_mentorship.faculty.employeeId if active_mentorship else ''
-            
-            writer.writerow([
-                student.rollNumber,
-                student.registrationNumber,
-                student.name,
-                student.user.email if student.user else '',
-                student.phoneNumber or '',
-                student.branch,
-                student.programme,
-                student.year,
-                student.section or '',
-                student.gender or '',
-                student.dateOfBirth.isoformat() if student.dateOfBirth else '',
-                student.community or '',
-                student.fatherName or '',
-                student.motherName or '',
-                student.presentAddress or '',
-                mentor_name,
-                mentor_emp_id
-            ])
-        
-        return response
-        
-    except Exception as e:
-        print(f"Export students CSV error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return JsonResponse({'message': 'Server error'}, status=500)
+
