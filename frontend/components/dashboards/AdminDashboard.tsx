@@ -17,10 +17,12 @@ import {
   GraduationCap,
   Briefcase,
   UserCheck,
-  ArrowRight
+  ArrowRight,
+  Download
 } from "lucide-react"
 import Link from "next/link"
 import { api, type ApiUser, type AdminDashboardStats } from "@/lib/api"
+import { useToast } from '@/hooks/use-toast'
 
 interface AdminDashboardProps {
   user: ApiUser
@@ -62,6 +64,8 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
   const adminName = user.admin?.name || user.email
   const [stats, setStats] = useState<AdminDashboardStats['stats'] | null>(null)
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
     const fetchData = async () => {
@@ -249,6 +253,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
                 </Button>
               </Link>
             </div>
+            {/* Export button moved to Students page for Admin users */}
           </CardContent>
         </Card>
       </div>
