@@ -991,6 +991,90 @@ export interface FacultyListResponse {
   faculty: FacultyMember[]
 }
 
+// Faculty Details Types (for /faculty/[facultyId] page)
+export interface FacultyByIdResponse {
+  id: string
+  employeeId: string
+  name: string
+  email: string
+  collegeEmail: string | null
+  personalEmail: string | null
+  phone1: string | null
+  phone2: string | null
+  department: string
+  isActive: boolean
+  startDate: string | null
+  endDate: string | null
+  office: string | null
+  officeHours: string | null
+  btech: boolean
+  mtech: boolean
+  phd: boolean
+  currentMenteeCount: number
+  totalMentorships: number
+  mentorshipGroups: {
+    year: number
+    semester: number
+    count: number
+    students: {
+      id: string
+      name: string
+      rollNumber: number
+      program: string
+      branch: string
+    }[]
+  }[]
+}
+
+export interface FacultyMentorDetailsResponse {
+  faculty: {
+    id: string
+    name: string
+    employeeId: string
+    department: string
+    email: string
+  }
+  mentorshipGroups: {
+    year: number
+    semester: number
+    isActive: boolean
+    students: {
+      mentorshipId: string
+      studentId: string
+      name: string
+      rollNumber: number
+      program: string
+      branch: string
+      startDate: string | null
+      endDate: string | null
+    }[]
+  }[]
+  meetings: {
+    id: string
+    year: number
+    semester: number
+    date: string
+    time: string | null
+    description: string | null
+    status: string
+    studentCount: number
+    students: {
+      studentId: string
+      rollNumber: number
+      name: string
+      attended: boolean
+      review: string
+    }[]
+    createdAt: string
+  }[]
+  stats: {
+    totalMentorships: number
+    activeMentorships: number
+    totalMeetings: number
+    completedMeetings: number
+  }
+}
+
 // HOD Management Types
 export interface HODMember {
   id: string
@@ -1634,6 +1718,16 @@ class ApiService {
     if (active !== undefined) params.append('active', active.toString())
     const query = params.toString()
     return this.request<FacultyListResponse>(`/api/faculty${query ? `?${query}` : ''}`)
+  }
+
+  // Get faculty by ID (for HOD, ADMIN)
+  async getFacultyById(facultyId: string): Promise<FacultyByIdResponse> {
+    return this.request<FacultyByIdResponse>(`/api/faculty/${facultyId}`)
+  }
+
+  // Get faculty mentor details (for HOD only)
+  async getFacultyMentorDetails(facultyId: string): Promise<FacultyMentorDetailsResponse> {
+    return this.request<FacultyMentorDetailsResponse>(`/api/faculty/${facultyId}/mentor`)
   }
 
   // HOD Management endpoints (ADMIN only)

@@ -41,6 +41,8 @@ urlpatterns = [
     path('api/department/student/<int:rollno>/cocurricular', views.get_student_cocurricular_by_rollno, name='get_student_cocurricular_by_rollno'),
     path('api/admin/student/<int:rollno>', views.update_student_by_rollno, name='update_student_by_rollno'),
     path('api/faculty', views.get_faculty, name='get_faculty'),
+    path('api/faculty/<uuid:faculty_id>', views.get_faculty_by_id, name='get_faculty_by_id'),
+    path('api/faculty/<uuid:faculty_id>/mentor', views.get_faculty_mentor_details, name='get_faculty_mentor_details'),
     # Faculty Mentorship APIs
     path('api/faculty/mentees', views.get_faculty_mentees, name='get_faculty_mentees'),
     path('api/faculty/mentorship/group', views.get_faculty_mentorship_group, name='get_faculty_mentorship_group'),

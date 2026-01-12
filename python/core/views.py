@@ -1489,6 +1489,179 @@ def get_faculty(request):
         )
 
 
+@require_http_methods(["GET"])
+@require_role(['HOD', 'ADMIN'])
+def get_faculty_by_id(request, faculty_id):
+    """
+    Get faculty details by ID
+    Accessible by: HOD, ADMIN only
+    """
+    try:
+        from .models import Faculty, Mentorship
+        
+        # Get faculty
+        try:
+            faculty = Faculty.objects.select_related('user').get(id=faculty_id)
+        except Faculty.DoesNotExist:
+            return JsonResponse({'message': 'Faculty not found'}, status=404)
+        
+        # Get mentorship stats
+        total_mentees = faculty.mentorships.filter(is_active=True).count()
+        total_mentorships = faculty.mentorships.count()
+        
+        # Get active mentorships grouped by year/semester
+        active_mentorships = faculty.mentorships.filter(is_active=True).select_related('student')
+        mentorship_groups = {}
+        for m in active_mentorships:
+            key = f"{m.year}-{m.semester}"
+            if key not in mentorship_groups:
+                mentorship_groups[key] = {
+                    'year': m.year,
+                    'semester': m.semester,
+                    'count': 0,
+                    'students': []
+                }
+            mentorship_groups[key]['count'] += 1
+            mentorship_groups[key]['students'].append({
+                'id': str(m.student.id),
+                'name': m.student.name,
+                'rollNumber': m.student.rollNumber,
+                'program': m.student.program,
+                'branch': m.student.branch
+            })
+        
+        result = {
+            'id': str(faculty.id),
+            'employeeId': faculty.employeeId,
+            'name': faculty.name,
+            'email': faculty.user.email,
+            'collegeEmail': faculty.collegeEmail,
+            'personalEmail': faculty.personalEmail,
+            'phone1': faculty.phone1,
+            'phone2': faculty.phone2,
+            'department': faculty.department,
+            'isActive': faculty.isActive,
+            'startDate': faculty.startDate.isoformat() if faculty.startDate else None,
+            'endDate': faculty.endDate.isoformat() if faculty.endDate else None,
+            'office': faculty.office,
+            'officeHours': faculty.officeHours,
+            'btech': faculty.btech,
+            'mtech': faculty.mtech,
+            'phd': faculty.phd,
+            'currentMenteeCount': total_mentees,
+            'totalMentorships': total_mentorships,
+            'mentorshipGroups': list(mentorship_groups.values())
+        }
+        
+        return JsonResponse(result, status=200)
+        
+    except Exception as e:
+        print(f"Get faculty by ID error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@require_http_methods(["GET"])
+@require_role('HOD')
+def get_faculty_mentor_details(request, faculty_id):
+    """
+    Get detailed mentorship info for a faculty (meetings, reviews, etc.)
+    Accessible by: HOD only
+    """
+    try:
+        from .models import Faculty, Mentorship, GroupMeeting, GroupMeetingStudent
+        
+        # Get faculty
+        try:
+            faculty = Faculty.objects.select_related('user').get(id=faculty_id)
+        except Faculty.DoesNotExist:
+            return JsonResponse({'message': 'Faculty not found'}, status=404)
+        
+        # Get all mentorships
+        mentorships = faculty.mentorships.select_related('student').order_by('-year', '-semester', 'student__rollNumber')
+        
+        # Group by year/semester
+        mentorship_data = {}
+        for m in mentorships:
+            key = f"{m.year}-{m.semester}"
+            if key not in mentorship_data:
+                mentorship_data[key] = {
+                    'year': m.year,
+                    'semester': m.semester,
+                    'isActive': m.is_active,
+                    'students': []
+                }
+            mentorship_data[key]['students'].append({
+                'mentorshipId': str(m.id),
+                'studentId': str(m.student.id),
+                'name': m.student.name,
+                'rollNumber': m.student.rollNumber,
+                'program': m.student.program,
+                'branch': m.student.branch,
+                'startDate': m.start_date.isoformat() if m.start_date else None,
+                'endDate': m.end_date.isoformat() if m.end_date else None
+            })
+        
+        # Get group meetings
+        group_meetings = GroupMeeting.objects.filter(faculty=faculty).prefetch_related('student_reviews__student').order_by('-date', '-time')
+        
+        meetings_data = []
+        for gm in group_meetings:
+            students_data = []
+            for sr in gm.student_reviews.all():
+                students_data.append({
+                    'studentId': str(sr.student.id),
+                    'rollNumber': sr.student.rollNumber,
+                    'name': sr.student.name,
+                    'attended': sr.attended,
+                    'review': sr.review or ''
+                })
+            
+            meetings_data.append({
+                'id': str(gm.id),
+                'year': gm.year,
+                'semester': gm.semester,
+                'date': gm.date.isoformat(),
+                'time': gm.time.strftime('%H:%M') if gm.time else None,
+                'description': gm.description,
+                'status': gm.status,
+                'studentCount': len(students_data),
+                'students': students_data,
+                'createdAt': gm.createdAt.isoformat()
+            })
+        
+        # Calculate stats
+        total_meetings = len(meetings_data)
+        completed_meetings = sum(1 for m in meetings_data if m['status'] == 'COMPLETED')
+        
+        result = {
+            'faculty': {
+                'id': str(faculty.id),
+                'name': faculty.name,
+                'employeeId': faculty.employeeId,
+                'department': faculty.department,
+                'email': faculty.user.email
+            },
+            'mentorshipGroups': list(mentorship_data.values()),
+            'meetings': meetings_data,
+            'stats': {
+                'totalMentorships': mentorships.count(),
+                'activeMentorships': mentorships.filter(is_active=True).count(),
+                'totalMeetings': total_meetings,
+                'completedMeetings': completed_meetings
+            }
+        }
+        
+        return JsonResponse(result, status=200)
+        
+    except Exception as e:
+        print(f"Get faculty mentor details error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
 @csrf_exempt
 @require_http_methods(["POST"])
 @require_role('HOD')

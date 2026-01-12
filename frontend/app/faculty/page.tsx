@@ -80,9 +80,9 @@ export default function FacultyPage() {
     }
   }, [user, authLoading, router])
 
-  // Set default department for HOD
+  // Set default department for HOD (but allow changing)
   useEffect(() => {
-    if (user?.role === "HOD" && user.hod?.department) {
+    if (user?.role === "HOD" && user.hod?.department && department === "all") {
       setDepartment(user.hod.department)
     }
   }, [user])
@@ -387,7 +387,6 @@ export default function FacultyPage() {
               <Select 
                 value={department} 
                 onValueChange={setDepartment}
-                disabled={user.role === "HOD"}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select department" />
@@ -477,7 +476,14 @@ export default function FacultyPage() {
                 <TableBody>
                   {filteredFaculty.map((member) => (
                     <TableRow key={member.id}>
-                      <TableCell className="font-medium">{member.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <button
+                          onClick={() => router.push(`/faculty/${member.id}`)}
+                          className="text-left hover:text-primary hover:underline transition-colors"
+                        >
+                          {member.name}
+                        </button>
+                      </TableCell>
                       <TableCell>{member.employeeId}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
