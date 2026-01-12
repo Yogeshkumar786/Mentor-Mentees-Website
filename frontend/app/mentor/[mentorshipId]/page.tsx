@@ -4,7 +4,9 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { useAuth } from "@/components/auth-provider"
 import { api, MentorshipMeetingsResponse, MeetingData } from "@/lib/api"
+import { generateStudentMentorPDF } from "@/lib/pdf-generator"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,12 +23,14 @@ import {
   XCircle,
   MessageSquare,
   CalendarDays,
-  FileText
+  FileText,
+  Download
 } from "lucide-react"
 
 export default function MentorshipMeetingsPage() {
   const params = useParams()
   const router = useRouter()
+  const { user } = useAuth()
   const mentorshipId = params.mentorshipId as string
   
   const [meetingsData, setMeetingsData] = useState<MentorshipMeetingsResponse | null>(null)
@@ -109,22 +113,48 @@ export default function MentorshipMeetingsPage() {
     )
   }
 
+  const handleDownloadPDF = () => {
+    if (!meetingsData || !user?.student) return
+
+    generateStudentMentorPDF({
+      studentName: user.student.name,
+      studentRollNumber: parseInt(user.student.rollNumber || '0'),
+      mentorName: meetingsData.mentor.name,
+      department: meetingsData.mentor.department,
+      year: meetingsData.year,
+      semester: meetingsData.semester,
+      meetings: meetingsData.meetings.map(m => ({
+        date: m.date,
+        time: m.time,
+        description: m.description,
+        status: m.status,
+        facultyReview: m.facultyReview
+      }))
+    })
+  }
+
   return (
     <DashboardLayout requiredRoles={['STUDENT']}>
       <div className="space-y-6">
         {/* Back Button & Header */}
-        <div className="flex items-center gap-4">
-          <Link href="/mentor">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Meetings & Reviews</h1>
-            <p className="text-muted-foreground">
-              View all meetings with {meetingsData?.mentor.name}
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/mentor">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Meetings & Reviews</h1>
+              <p className="text-muted-foreground">
+                View all meetings with {meetingsData?.mentor.name}
+              </p>
+            </div>
           </div>
+          <Button variant="outline" onClick={handleDownloadPDF} className="gap-2">
+            <Download className="h-4 w-4" />
+            Download PDF
+          </Button>
         </div>
 
         {/* Mentor Info Card */}

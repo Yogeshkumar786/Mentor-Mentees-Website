@@ -4,12 +4,14 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
 import { api, type FacultyMentorDetailsResponse } from "@/lib/api"
+import { generateHODFacultyMentorPDF } from "@/lib/pdf-generator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Loader2, Users, Calendar, CheckCircle, Clock, AlertCircle, User } from "lucide-react"
+import { Loader2, Users, Calendar, CheckCircle, Clock, AlertCircle, User, Download } from "lucide-react"
 
 export default function FacultyMentorPage() {
   const { user, loading: authLoading } = useAuth()
@@ -74,8 +76,50 @@ export default function FacultyMentorPage() {
     }
   }
 
+  const handleDownloadPDF = () => {
+    if (!data) return
+
+    generateHODFacultyMentorPDF({
+      facultyName: data.faculty.name,
+      facultyEmployeeId: data.faculty.employeeId,
+      department: data.faculty.department,
+      mentorshipGroups: data.mentorshipGroups.map(g => ({
+        year: g.year,
+        semester: g.semester,
+        isActive: g.isActive,
+        students: g.students.map(s => ({
+          name: s.name,
+          rollNumber: s.rollNumber,
+          program: s.program,
+          branch: s.branch
+        }))
+      })),
+      meetings: data.meetings.map(m => ({
+        date: m.date,
+        time: m.time,
+        description: m.description,
+        status: m.status,
+        year: m.year,
+        semester: m.semester,
+        studentReviews: m.students.map(s => ({
+          studentName: s.name,
+          rollNumber: s.rollNumber,
+          review: s.review || ''
+        }))
+      }))
+    })
+  }
+
   return (
     <div className="space-y-6">
+      {/* Download Button */}
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={handleDownloadPDF} className="gap-2">
+          <Download className="h-4 w-4" />
+          Download PDF
+        </Button>
+      </div>
+
       {/* Stats Overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>

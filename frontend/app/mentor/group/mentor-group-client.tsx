@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
+import { generateHODFacultyMentorPDF } from "@/lib/pdf-generator"
 import { 
   ArrowLeft,
   Users,
@@ -33,7 +34,8 @@ import {
   CalendarPlus,
   FileText,
   MessageSquare,
-  Edit
+  Edit,
+  Download
 } from "lucide-react"
 
 // Interface for meetings from API (now already grouped)
@@ -420,6 +422,47 @@ export default function MentorGroupClient() {
     }
   }
 
+  const handleDownloadPDF = () => {
+    if (!data) return
+
+    const meetings = (data.meetings as unknown as GroupMeeting[] || []).map(meeting => ({
+      date: meeting.date,
+      time: meeting.time,
+      description: meeting.description,
+      status: meeting.status,
+      year: data.year,
+      semester: data.semester,
+      studentReviews: meeting.students.map(s => ({
+        studentName: s.name,
+        rollNumber: s.rollNumber,
+        review: s.review || ''
+      }))
+    }))
+
+    generateHODFacultyMentorPDF({
+      facultyName: data.faculty.name,
+      facultyEmployeeId: data.faculty.employeeId,
+      department: data.faculty.department,
+      mentorshipGroups: [{
+        year: data.year,
+        semester: data.semester,
+        isActive: data.isActive,
+        students: data.mentees.map(m => ({
+          name: m.name,
+          rollNumber: m.rollNumber,
+          program: m.program,
+          branch: m.branch
+        }))
+      }],
+      meetings
+    })
+
+    toast({
+      title: "Success",
+      description: "Mentorship report downloaded successfully"
+    })
+  }
+
   if (loading) {
     return (
       <DashboardLayout requiredRoles={['HOD']}>
@@ -466,9 +509,15 @@ export default function MentorGroupClient() {
               </p>
             </div>
           </div>
-          <Badge variant={data.isActive ? "default" : "secondary"} className="text-sm">
-            {data.isActive ? "Active" : "Past"}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={handleDownloadPDF} className="gap-2">
+              <Download className="h-4 w-4" />
+              Export Report
+            </Button>
+            <Badge variant={data.isActive ? "default" : "secondary"} className="text-sm">
+              {data.isActive ? "Active" : "Past"}
+            </Badge>
+          </div>
         </div>
 
         {/* Faculty Info Card */}

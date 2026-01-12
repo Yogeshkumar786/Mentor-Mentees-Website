@@ -4,6 +4,8 @@ import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { api, FacultyMentorshipGroupResponse, FacultyMentorshipGroupMentee, ScheduleMeetingItem, GroupMeeting } from "@/lib/api"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { useAuth } from "@/components/auth-provider"
+import { generateFacultyGroupPDF } from "@/lib/pdf-generator"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -30,7 +32,8 @@ import {
   CalendarPlus,
   Edit,
   User,
-  MessageSquare
+  MessageSquare,
+  Download
 } from "lucide-react"
 
 interface MeetingDetails {
@@ -63,6 +66,7 @@ function FacultyGroupContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
+  const { user } = useAuth()
 
   const year = Number(searchParams.get('year'))
   const semester = Number(searchParams.get('semester'))
@@ -362,26 +366,65 @@ function FacultyGroupContent() {
   const totalGroupMeetings = data.groupMeetings?.length || 0
   const completedGroupMeetings = data.groupMeetings?.filter(m => m.status === 'COMPLETED').length || 0
 
+  // Handle PDF Download
+  const handleDownloadPDF = () => {
+    if (!data) return
+    
+    // Get user name - for faculty use faculty.name, for HOD use email
+    const userName = user?.faculty?.name || user?.email || 'Faculty'
+    const userDept = user?.faculty?.department || user?.hod?.department || 'N/A'
+
+    generateFacultyGroupPDF({
+      facultyName: userName,
+      department: userDept,
+      year,
+      semester,
+      students: mentees.map(m => ({
+        name: m.name,
+        rollNumber: m.rollNumber,
+        program: m.program,
+        branch: m.branch
+      })),
+      meetings: (data.groupMeetings || []).map(gm => ({
+        date: gm.date,
+        time: gm.time,
+        description: gm.description,
+        status: gm.status,
+        studentReviews: gm.students.map(s => ({
+          studentName: s.name,
+          rollNumber: s.rollNumber,
+          review: s.review || ''
+        }))
+      }))
+    })
+  }
+
   return (
     <div className="container py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight">
-              Year {year}, Semester {semester}
-            </h1>
-            <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-green-600" : ""}>
-              {isActive ? 'Active' : 'Past'}
-            </Badge>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight">
+                Year {year}, Semester {semester}
+              </h1>
+              <Badge variant={isActive ? "default" : "secondary"} className={isActive ? "bg-green-600" : ""}>
+                {isActive ? 'Active' : 'Past'}
+              </Badge>
+            </div>
+            <p className="text-muted-foreground">
+              My mentees in this group
+            </p>
           </div>
-          <p className="text-muted-foreground">
-            My mentees in this group
-          </p>
         </div>
+        <Button variant="outline" onClick={handleDownloadPDF} className="gap-2">
+          <Download className="h-4 w-4" />
+          Export Group Report
+        </Button>
       </div>
 
       {/* Stats */}

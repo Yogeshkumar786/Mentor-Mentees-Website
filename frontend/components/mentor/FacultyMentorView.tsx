@@ -20,9 +20,11 @@ import {
   ChevronRight,
   CheckCircle2,
   PlusCircle,
-  Trash2
+  Trash2,
+  Download
 } from "lucide-react"
 import type { ApiUser } from "@/lib/api"
+import { generateFacultyGroupPDF } from "@/lib/pdf-generator"
 
 interface FacultyMentorViewProps {
   user: ApiUser
@@ -145,6 +147,59 @@ export function FacultyMentorView({ user }: FacultyMentorViewProps) {
     }
   }
 
+  const handleDownloadAllGroups = async () => {
+    if (!data || activeGroups.length === 0) {
+      toast({
+        title: "No data to export",
+        description: "You don't have any active mentee groups to export",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      // For each active group, fetch detailed data and generate PDF
+      for (const group of activeGroups) {
+        const groupData = await api.getFacultyMentorshipGroup(group.year, group.semester, true)
+        
+        generateFacultyGroupPDF({
+          facultyName: user.faculty?.name || user.email || 'Faculty',
+          department: user.faculty?.department || 'N/A',
+          year: group.year,
+          semester: group.semester,
+          students: groupData.mentees.map(m => ({
+            name: m.name,
+            rollNumber: m.rollNumber,
+            program: m.program,
+            branch: m.branch
+          })),
+          meetings: (groupData.groupMeetings || []).map(gm => ({
+            date: gm.date,
+            time: gm.time,
+            description: gm.description,
+            status: gm.status,
+            studentReviews: gm.students.map(s => ({
+              studentName: s.name,
+              rollNumber: s.rollNumber,
+              review: s.review || ''
+            }))
+          }))
+        })
+      }
+
+      toast({
+        title: "Success",
+        description: `Downloaded ${activeGroups.length} group report(s)`
+      })
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to generate reports',
+        variant: "destructive"
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
@@ -181,9 +236,20 @@ export function FacultyMentorView({ user }: FacultyMentorViewProps) {
             Manage and view your assigned students, {facultyName}
           </p>
         </div>
-        <Badge variant="secondary" className="flex items-center gap-1">
-          {department}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="outline" 
+            onClick={handleDownloadAllGroups}
+            disabled={activeGroups.length === 0}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export All Groups
+          </Button>
+          <Badge variant="secondary" className="flex items-center gap-1">
+            {department}
+          </Badge>
+        </div>
       </div>
 
       {/* Stats Cards */}
