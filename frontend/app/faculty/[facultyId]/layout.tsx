@@ -8,7 +8,7 @@ import { api, type FacultyByIdResponse } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2, ArrowLeft, User, GraduationCap } from "lucide-react"
+import { Loader2, ArrowLeft, User, GraduationCap, BookOpen } from "lucide-react"
 
 interface NavItem {
   value: string
@@ -20,6 +20,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { value: "profile", label: "Profile", icon: User, path: "", roles: ["HOD", "ADMIN"] },
+  { value: "academic", label: "Academics", icon: BookOpen, path: "/academic", roles: ["HOD", "ADMIN"] },
   { value: "mentor", label: "Mentorship", icon: GraduationCap, path: "/mentor", roles: ["HOD"] },
 ]
 

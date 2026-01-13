@@ -77,6 +77,54 @@ class Programme(models.TextChoices):
     PHD = 'PhD', 'Doctor of Philosophy'
 
 
+# New Enums for Subject and Grade System
+class SubjectType(models.TextChoices):
+    BSC = 'BSC', 'Basic Science Core'
+    ESC = 'ESC', 'Engineering Science Core'
+    HSC = 'HSC', 'Humanities and Social Science Core'
+    PCC = 'PCC', 'Program Core Courses'
+    DEC = 'DEC', 'Departmental Elective Courses'
+    OPC = 'OPC', 'Open Elective Courses'
+    MSC = 'MSC', 'EAA: Games and Sports'
+    MOE = 'MOE', 'MOOCs'
+    PRC = 'PRC', 'Program Major Project/Skill Development/Foreign Languages'
+
+
+class SemesterType(models.TextChoices):
+    ODD = 'ODD', 'Odd Semester (1, 3, 5, 7)'
+    EVEN = 'EVEN', 'Even Semester (2, 4, 6, 8)'
+
+
+class AttemptType(models.TextChoices):
+    REGULAR = 'REGULAR', 'Regular Exam'
+    BACKLOG = 'BACKLOG', 'Backlog Exam'
+    MAKEUP = 'MAKEUP', 'Makeup Exam'
+
+
+class GradePoint(models.TextChoices):
+    EX = 'EX', 'Excellent (10)'
+    A = 'A', 'A Grade (9)'
+    B = 'B', 'B Grade (8)'
+    C = 'C', 'C Grade (7)'
+    D = 'D', 'D Grade (6)'
+    P = 'P', 'Pass (5)'
+    F = 'F', 'Fail (0)'
+    X = 'X', 'Absent (0)'
+
+
+# Grade Point Mapping
+GRADE_POINTS = {
+    'EX': 10,
+    'A': 9,
+    'B': 8,
+    'C': 7,
+    'D': 6,
+    'P': 5,
+    'F': 0,
+    'X': 0,
+}
+
+
 # --- Models ---
 class User(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -344,19 +392,88 @@ class Subject(models.Model):
     subjectName = models.CharField(max_length=255)
     subjectCode = models.CharField(max_length=50, unique=True)
     credits = models.IntegerField(default=3)
+    subject_type = models.CharField(max_length=10, choices=SubjectType.choices, null=True, blank=True)
+    department = models.CharField(max_length=20, choices=Department.choices, null=True, blank=True)
+    # For which semester this subject is typically offered (1-8)
+    typical_semester = models.IntegerField(null=True, blank=True)
+    # Faculty currently teaching this subject (one faculty per subject at a time)
+    current_faculty = models.ForeignKey(
+        'Faculty', 
+        on_delete=models.SET_NULL,
+        related_name='current_subjects',
+        null=True,
+        blank=True
+    )
+    # Faculty who taught this subject in the past
+    past_faculty = models.ManyToManyField(
+        'Faculty',
+        related_name='past_subjects',
+        blank=True
+    )
+    createdAt = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updatedAt = models.DateTimeField(auto_now=True, null=True, blank=True)
+    
     class Meta:
         db_table = 'subjects'
+    
+    def __str__(self):
+        return f"{self.subjectCode} - {self.subjectName}"
 
 
 class Semester(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='semesters')
     semester = models.IntegerField()
-    sgpa = models.FloatField()
-    cgpa = models.FloatField()
+    semester_type = models.CharField(max_length=10, choices=SemesterType.choices, null=True, blank=True)
+    academic_year = models.IntegerField(null=True, blank=True)  # e.g., 2024 for 2024-25
+    sgpa = models.FloatField(default=0.0)
+    cgpa = models.FloatField(default=0.0)
+    total_credits = models.IntegerField(default=0)
+    createdAt = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updatedAt = models.DateTimeField(auto_now=True, null=True, blank=True)
+    
     class Meta:
         db_table = 'semesters'
         unique_together = [['student', 'semester']]
+    
+    def calculate_sgpa(self):
+        """Calculate SGPA for this semester: Σ(grade_point * credits) / Σ(total_credits)
+        Note: SGPA uses total credits, not just passed credits (even F/X grades count)"""
+        subject_grades = self.subject_grades.all()
+        total_points = 0
+        total_credits = 0
+        
+        for sg in subject_grades:
+            grade_point = GRADE_POINTS.get(sg.grade.upper(), 0)
+            credits = sg.subject.credits
+            total_points += grade_point * credits
+            total_credits += credits
+        
+        self.total_credits = total_credits
+        self.sgpa = round(total_points / total_credits, 2) if total_credits > 0 else 0.0
+        self.save()
+        return self.sgpa
+    
+    @staticmethod
+    def calculate_cgpa_for_student(student):
+        """Calculate CGPA: average of all SGPAs weighted by credits"""
+        semesters = Semester.objects.filter(student=student).order_by('semester')
+        total_weighted_sgpa = 0
+        total_credits = 0
+        
+        for sem in semesters:
+            if sem.sgpa > 0 and sem.total_credits > 0:
+                total_weighted_sgpa += sem.sgpa * sem.total_credits
+                total_credits += sem.total_credits
+        
+        cgpa = round(total_weighted_sgpa / total_credits, 2) if total_credits > 0 else 0.0
+        
+        # Update CGPA for all semesters
+        for sem in semesters:
+            sem.cgpa = cgpa
+            sem.save(update_fields=['cgpa'])
+        
+        return cgpa
 
 
 class StudentSubject(models.Model):
@@ -364,13 +481,136 @@ class StudentSubject(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='subject_grades')
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='student_grades')
     semester = models.ForeignKey(Semester, on_delete=models.CASCADE, related_name='subject_grades')
-    grade = models.CharField(max_length=5)
+    grade = models.CharField(max_length=5, choices=GradePoint.choices)
+    grade_point = models.IntegerField(default=0)  # Calculated from grade
+    attempt_type = models.CharField(max_length=10, choices=AttemptType.choices, default=AttemptType.REGULAR)
+    exam_year = models.IntegerField(null=True, blank=True)  # Year when exam was held
+    exam_month = models.CharField(max_length=20, null=True, blank=True)  # Month when exam was held
+    passing_year = models.IntegerField(null=True, blank=True)  # Year when passed (null if failed)
+    is_passed = models.BooleanField(default=False)  # Whether student passed this subject
+    createdAt = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updatedAt = models.DateTimeField(auto_now=True, null=True, blank=True)
+    
     class Meta:
         db_table = 'student_subjects'
-        unique_together = [['student', 'subject', 'semester']]
         indexes = [
             models.Index(fields=['student', 'semester']),
+            models.Index(fields=['student', 'subject']),
+            models.Index(fields=['attempt_type']),
         ]
+    
+    def save(self, *args, **kwargs):
+        # Auto-calculate grade point
+        self.grade_point = GRADE_POINTS.get(self.grade.upper(), 0)
+        # Check if passed (grade P or above = 5 or more points)
+        self.is_passed = self.grade_point >= 5
+        if self.is_passed and not self.passing_year:
+            self.passing_year = self.exam_year
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.student.name} - {self.subject.subjectCode} - {self.grade}"
+
+
+class BacklogHistory(models.Model):
+    """Track backlog attempt history for a student's subject"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='backlog_history')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='backlog_attempts')
+    original_semester = models.IntegerField()  # Semester when subject was originally taken
+    attempt_number = models.IntegerField(default=1)  # 1st backlog, 2nd backlog, etc.
+    attempt_type = models.CharField(max_length=10, choices=AttemptType.choices)
+    semester_type = models.CharField(max_length=10, choices=SemesterType.choices)
+    exam_year = models.IntegerField()
+    exam_month = models.CharField(max_length=20)
+    grade = models.CharField(max_length=5, choices=GradePoint.choices)
+    grade_point = models.IntegerField(default=0)
+    is_cleared = models.BooleanField(default=False)  # Whether backlog was cleared in this attempt
+    createdAt = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updatedAt = models.DateTimeField(auto_now=True, null=True, blank=True)
+    
+    class Meta:
+        db_table = 'backlog_history'
+        ordering = ['attempt_number']
+        indexes = [
+            models.Index(fields=['student', 'subject']),
+            models.Index(fields=['is_cleared']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        self.grade_point = GRADE_POINTS.get(self.grade.upper(), 0)
+        self.is_cleared = self.grade_point >= 5
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.student.name} - {self.subject.subjectCode} - Attempt {self.attempt_number}"
+
+
+class YearTopper(models.Model):
+    """Store top 3 students by CGPA for each year in each department"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    department = models.CharField(max_length=20, choices=Department.choices)
+    academic_year = models.IntegerField()  # e.g., 1, 2, 3, 4 for year of study
+    rank = models.IntegerField()  # 1, 2, or 3
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='topper_ranks')
+    cgpa = models.FloatField()
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'year_toppers'
+        unique_together = [['department', 'academic_year', 'rank']]
+        ordering = ['department', 'academic_year', 'rank']
+    
+    @staticmethod
+    def update_toppers(department):
+        """Update top 3 students for each year in the department"""
+        from django.db.models import Max
+        
+        for year in range(1, 5):  # Years 1-4
+            # Get students in this year with their latest CGPA
+            students = Student.objects.filter(
+                branch=department,
+                year=year,
+                status=StudentStatus.PURSUING
+            ).annotate(
+                latest_cgpa=Max('semesters__cgpa')
+            ).filter(
+                latest_cgpa__isnull=False,
+                latest_cgpa__gt=0
+            ).order_by('-latest_cgpa')[:3]
+            
+            # Clear existing toppers for this year
+            YearTopper.objects.filter(department=department, academic_year=year).delete()
+            
+            # Create new topper entries
+            for rank, student in enumerate(students, 1):
+                YearTopper.objects.create(
+                    department=department,
+                    academic_year=year,
+                    rank=rank,
+                    student=student,
+                    cgpa=student.latest_cgpa
+                )
+
+
+class FacultySubjectHistory(models.Model):
+    """Track when faculty taught which subject"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    faculty = models.ForeignKey('Faculty', on_delete=models.CASCADE, related_name='subject_history')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='faculty_history')
+    academic_year = models.IntegerField()  # e.g., 2024 for 2024-25
+    semester_type = models.CharField(max_length=10, choices=SemesterType.choices)
+    is_current = models.BooleanField(default=True)
+    createdAt = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updatedAt = models.DateTimeField(auto_now=True, null=True, blank=True)
+    
+    class Meta:
+        db_table = 'faculty_subject_history'
+        unique_together = [['faculty', 'subject', 'academic_year', 'semester_type']]
+        ordering = ['-academic_year', '-semester_type']
+    
+    def __str__(self):
+        return f"{self.faculty.name} - {self.subject.subjectCode} ({self.academic_year})"
 
 
 class CareerDetails(models.Model):

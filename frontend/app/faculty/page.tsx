@@ -106,11 +106,23 @@ export default function FacultyPage() {
     }
   }
 
+  // Initial load: HOD fetches their department only, ADMIN waits for Apply Filters
+  const [initialFetchDone, setInitialFetchDone] = useState(false)
+  
   useEffect(() => {
-    if (!authLoading && user && ["ADMIN", "HOD"].includes(user.role)) {
+    if (!user || authLoading || initialFetchDone) return
+    
+    // HOD: auto-fetch their department on initial load
+    if (user.role === 'HOD' && department && department !== 'all') {
       fetchFaculty()
+      setInitialFetchDone(true)
     }
-  }, [department, activeStatus, authLoading, user])
+    // ADMIN: don't auto-fetch, wait for apply filters button
+    else if (user.role === 'ADMIN' && department) {
+      setInitialFetchDone(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, department, authLoading])
 
   // Filter faculty by search query
   const filteredFaculty = faculty.filter(member => {
@@ -431,6 +443,27 @@ export default function FacultyPage() {
                 />
               </div>
             </div>
+          </div>
+          
+          {/* Apply Filters Button */}
+          <div className="mt-4 pt-4 border-t">
+            <Button 
+              onClick={fetchFaculty}
+              disabled={loading}
+              className="w-full md:w-auto"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <Search className="h-4 w-4 mr-2" />
+                  Apply Filters
+                </>
+              )}
+            </Button>
           </div>
         </CardContent>
       </Card>

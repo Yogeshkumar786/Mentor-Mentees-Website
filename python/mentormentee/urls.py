@@ -108,4 +108,21 @@ urlpatterns = [
     path('api/admin/dashboard/stats', views.get_admin_dashboard_stats, name='get_admin_dashboard_stats'),
     # Export APIs
     path('api/export/students', views.export_students_csv, name='export_students_csv'),
+    # Faculty Subjects APIs
+    path('api/faculty/subjects', views.get_faculty_subjects, name='get_faculty_subjects'),
+    path('api/faculty/<uuid:faculty_id>/subjects', views.get_faculty_subjects, name='get_faculty_subjects_by_id'),
+    path('api/student/mentor/subjects', views.get_mentor_subjects, name='get_mentor_subjects'),
+    path('api/subjects/assign-faculty', views.assign_faculty_to_subject, name='assign_faculty_to_subject'),
+    # Student Grades APIs
+    path('api/student/grades', views.get_student_grades, name='get_student_grades'),
+    path('api/student/<uuid:student_id>/grades', views.get_student_grades, name='get_student_grades_by_id'),
+    path('api/grades/update', views.update_student_grade, name='update_student_grade'),
+    # Year Toppers APIs
+    path('api/toppers', views.get_year_toppers, name='get_year_toppers'),
+    path('api/toppers/refresh', views.refresh_year_toppers, name='refresh_year_toppers'),
+    # Students List with Filters API
+    path('api/students/list', views.get_students_list, name='get_students_list'),
+    # Subjects APIs
+    path('api/subjects', views.get_subjects_list, name='get_subjects_list'),
+    path('api/subjects/create', views.create_subject, name='create_subject'),
 ]

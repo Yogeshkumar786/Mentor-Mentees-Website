@@ -25,15 +25,17 @@ export function DashboardLayout({ children, requiredRoles }: DashboardLayoutProp
   const navigation = user ? getNavigationForRole(user.role) : []
   const displayName = user ? getUserDisplayName(user) : ''
 
-  // Check if current page is a student detail page
+  // Check if current page is a student detail page or faculty detail page
   const isStudentDetailPage = /^\/students\/\d+/.test(pathname)
+  const isFacultyDetailPage = /^\/faculty\/[a-zA-Z0-9-]+/.test(pathname) && pathname !== '/faculty'
+  const isDetailPage = isStudentDetailPage || isFacultyDetailPage
 
-  // Auto-close sidebar when navigating to student detail pages
+  // Auto-close sidebar when navigating to detail pages
   useEffect(() => {
-    if (isStudentDetailPage) {
+    if (isDetailPage) {
       setSidebarOpen(false)
     }
-  }, [isStudentDetailPage, pathname])
+  }, [isDetailPage, pathname])
 
   useEffect(() => {
     if (!loading) {
@@ -129,8 +131,8 @@ export function DashboardLayout({ children, requiredRoles }: DashboardLayoutProp
               </SheetContent>
             </Sheet>
 
-            {/* Desktop hamburger for student detail pages only */}
-            {isStudentDetailPage && (
+            {/* Desktop hamburger for detail pages (student/faculty) */}
+            {isDetailPage && (
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -175,11 +177,11 @@ export function DashboardLayout({ children, requiredRoles }: DashboardLayoutProp
 
       <div className="flex h-[calc(100vh-4rem)]">
         {/* Sidebar - Desktop */}
-        {/* On student detail pages: hidden by default, toggle with hamburger */}
+        {/* On detail pages (student/faculty): hidden by default, toggle with hamburger */}
         {/* On other pages: always visible */}
         <aside 
           className={`
-            ${isStudentDetailPage 
+            ${isDetailPage 
               ? (sidebarOpen ? 'lg:block' : 'lg:hidden') 
               : 'lg:block'
             } 

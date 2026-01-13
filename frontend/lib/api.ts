@@ -1127,6 +1127,189 @@ export interface EndMentorshipGroupResponse {
   }[]
 }
 
+// Subject Types Enum
+export type SubjectType = 'BSC' | 'ESC' | 'HSC' | 'PCC' | 'DEC' | 'OPC' | 'MSC' | 'MOE' | 'PRC'
+export type AttemptType = 'REGULAR' | 'BACKLOG' | 'MAKEUP'
+export type SemesterType = 'ODD' | 'EVEN'
+export type GradeType = 'EX' | 'A' | 'B' | 'C' | 'D' | 'P' | 'F' | 'X'
+
+// Grade Point Mapping
+export const GRADE_POINTS: Record<GradeType, number> = {
+  EX: 10,
+  A: 9,
+  B: 8,
+  C: 7,
+  D: 6,
+  P: 5,
+  F: 0,
+  X: 0,
+}
+
+// Subject Interface
+export interface Subject {
+  id: string
+  code?: string  // Alias for subjectCode
+  name?: string  // Alias for subjectName
+  subjectCode: string
+  subjectName: string
+  credits: number
+  subjectType?: SubjectType
+  department?: string
+  typicalSemester?: number
+  currentFaculty?: { id: string; name: string; employeeId: string } | null
+}
+
+// Faculty Subject Response
+export interface FacultySubjectsResponse {
+  faculty: {
+    id: string
+    name: string
+    employeeId: string
+    department: string
+  }
+  currentSubjects: Subject[]
+  pastSubjects: Subject[]
+  subjectHistory: {
+    id: string
+    subject: Subject
+    academicYear: number
+    semesterType: SemesterType
+    isCurrent: boolean
+  }[]
+}
+
+// Student Grade Response
+export interface StudentGradeSubject {
+  id: string
+  subject: Subject
+  grade: GradeType
+  gradePoint: number
+  attemptType: AttemptType
+  examYear?: number
+  examMonth?: string
+  isPassed: boolean
+}
+
+export interface StudentSemesterGrades {
+  semester: number
+  semesterType?: SemesterType
+  academicYear?: number
+  sgpa: number
+  cgpa: number
+  totalCredits: number
+  earnedCredits: number
+  subjects: StudentGradeSubject[]
+}
+
+export interface BacklogHistoryItem {
+  id: string
+  subject: { id: string; subjectCode: string; subjectName: string }
+  originalSemester: number
+  attemptNumber: number
+  attemptType: AttemptType
+  semesterType: SemesterType
+  examYear: number
+  examMonth: string
+  grade: GradeType
+  gradePoint: number
+  isCleared: boolean
+}
+
+export interface StudentGradesResponse {
+  student: {
+    id: string
+    name: string
+    rollNumber: number
+    registrationNumber: number
+    program: string
+    branch: string
+    year: number
+  }
+  currentCGPA: number
+  semesters: StudentSemesterGrades[]
+  backlogHistory: BacklogHistoryItem[]
+  gradePointMapping: Record<string, number>
+}
+
+// Year Toppers Response
+export interface YearToppersResponse {
+  department: string
+  toppers: {
+    [key: string]: {  // Keys like "year_1", "year_2", etc. OR numeric indices
+      rank: number
+      studentId?: string
+      studentName?: string
+      rollNumber?: number
+      student?: {
+        id: string
+        name: string
+        rollNumber: number
+        registrationNumber: number
+      }
+      cgpa: number
+      updatedAt?: string
+    }[]
+  }
+}
+
+// Students List with Filters Response
+export interface StudentsListResponse {
+  students: {
+    id: string
+    name: string
+    rollNumber: number
+    registrationNumber: number
+    collegeEmail: string
+    program: string
+    branch: string
+    year: number
+    status: string
+    cgpa: number
+  }[]
+  pagination: {
+    page: number
+    limit: number
+    totalCount: number
+    totalPages: number
+  }
+}
+
+// Subjects List Response
+export interface SubjectsListResponse {
+  subjects: Subject[]
+  count: number
+}
+
+// Update Grade Request
+export interface UpdateGradeRequest {
+  studentId: string
+  subjectId: string
+  semester: number
+  grade: GradeType
+  attemptType?: AttemptType
+  examYear?: number
+  examMonth?: string
+}
+
+// Assign Faculty to Subject Request
+export interface AssignFacultyToSubjectRequest {
+  facultyId: string
+  subjectId: string
+  academicYear: number
+  semesterType: SemesterType
+  isCurrent?: boolean
+}
+
+// Create Subject Request
+export interface CreateSubjectRequest {
+  subjectCode: string
+  subjectName: string
+  credits?: number
+  subjectType?: SubjectType
+  department?: string
+  typicalSemester?: number
+}
+
 export interface FacultyMentorDetailsResponse {
   faculty: {
     id: string
@@ -2249,6 +2432,101 @@ class ApiService {
 
   async getStudentCoCurricularByRollNumber(rollno: number): Promise<StudentCoCurricularByRollno> {
     return this.request<StudentCoCurricularByRollno>(`/api/department/student/${rollno}/cocurricular`)
+  }
+
+  // Faculty Subjects APIs
+  async getFacultySubjects(facultyId?: string): Promise<FacultySubjectsResponse> {
+    const url = facultyId ? `/api/faculty/${facultyId}/subjects` : '/api/faculty/subjects'
+    return this.request<FacultySubjectsResponse>(url)
+  }
+
+  async getMentorSubjects(): Promise<FacultySubjectsResponse> {
+    return this.request<FacultySubjectsResponse>('/api/student/mentor/subjects')
+  }
+
+  async assignFacultyToSubject(data: AssignFacultyToSubjectRequest): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/api/subjects/assign-faculty', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  // Student Grades APIs
+  async getStudentGrades(studentId?: string): Promise<StudentGradesResponse> {
+    const url = studentId ? `/api/student/${studentId}/grades` : '/api/student/grades'
+    return this.request<StudentGradesResponse>(url)
+  }
+
+  async updateStudentGrade(data: UpdateGradeRequest): Promise<{ message: string; sgpa: number; cgpa: number }> {
+    return this.request<{ message: string; sgpa: number; cgpa: number }>('/api/grades/update', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  // Year Toppers APIs
+  async getYearToppers(department?: string, year?: number): Promise<YearToppersResponse> {
+    const params = new URLSearchParams()
+    if (department) params.append('department', department)
+    if (year) params.append('year', year.toString())
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return this.request<YearToppersResponse>(`/api/toppers${query}`)
+  }
+
+  async refreshYearToppers(department?: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/api/toppers/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ department }),
+    })
+  }
+
+  // Students List with Filters API
+  async getStudentsList(filters?: {
+    department?: string
+    year?: number
+    program?: string
+    sortBy?: 'rollNumber' | 'cgpa' | 'name'
+    sortOrder?: 'asc' | 'desc'
+    page?: number
+    limit?: number
+    search?: string
+  }): Promise<StudentsListResponse> {
+    const params = new URLSearchParams()
+    if (filters) {
+      if (filters.department) params.append('department', filters.department)
+      if (filters.year) params.append('year', filters.year.toString())
+      if (filters.program) params.append('program', filters.program)
+      if (filters.sortBy) params.append('sortBy', filters.sortBy)
+      if (filters.sortOrder) params.append('sortOrder', filters.sortOrder)
+      if (filters.page) params.append('page', filters.page.toString())
+      if (filters.limit) params.append('limit', filters.limit.toString())
+      if (filters.search) params.append('search', filters.search)
+    }
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return this.request<StudentsListResponse>(`/api/students/list${query}`)
+  }
+
+  // Subjects APIs
+  async getSubjectsList(filters?: {
+    department?: string
+    type?: SubjectType
+    semester?: number
+  }): Promise<SubjectsListResponse> {
+    const params = new URLSearchParams()
+    if (filters) {
+      if (filters.department) params.append('department', filters.department)
+      if (filters.type) params.append('type', filters.type)
+      if (filters.semester) params.append('semester', filters.semester.toString())
+    }
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return this.request<SubjectsListResponse>(`/api/subjects${query}`)
+  }
+
+  async createSubject(data: CreateSubjectRequest): Promise<{ message: string; subject: Subject }> {
+    return this.request<{ message: string; subject: Subject }>('/api/subjects/create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
   }
 }
 

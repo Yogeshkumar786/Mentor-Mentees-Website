@@ -3,19 +3,24 @@
 import { StatsCard } from "@/components/stats-card"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, UserCheck, FileCheck, ClipboardList, UserPlus, GraduationCap, Download, Loader2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Users, UserCheck, FileCheck, ClipboardList, UserPlus, GraduationCap, Download, Loader2, Trophy, Medal, Award, BookOpen } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useEffect, useState } from "react"
-import { api, HodDashboardStats } from "@/lib/api"
+import { api, HodDashboardStats, YearToppersResponse } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 export function HodDashboard() {
   const { user } = useAuth()
   const { toast } = useToast()
+  const router = useRouter()
   const [stats, setStats] = useState<HodDashboardStats['stats'] | null>(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [toppers, setToppers] = useState<YearToppersResponse['toppers'] | null>(null)
+  const [toppersLoading, setToppersLoading] = useState(true)
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -29,6 +34,20 @@ export function HodDashboard() {
       }
     }
     fetchStats()
+  }, [])
+
+  useEffect(() => {
+    const fetchToppers = async () => {
+      try {
+        const data = await api.getYearToppers()
+        setToppers(data.toppers)
+      } catch (err) {
+        console.error('Failed to fetch year toppers:', err)
+      } finally {
+        setToppersLoading(false)
+      }
+    }
+    fetchToppers()
   }, [])
 
   const handleExport = async () => {
@@ -47,6 +66,32 @@ export function HodDashboard() {
       })
     } finally {
       setExporting(false)
+    }
+  }
+
+  const getRankIcon = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return <Trophy className="h-5 w-5 text-yellow-500" />
+      case 2:
+        return <Medal className="h-5 w-5 text-gray-400" />
+      case 3:
+        return <Award className="h-5 w-5 text-amber-700" />
+      default:
+        return null
+    }
+  }
+
+  const getRankBadgeColor = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+      case 2:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+      case 3:
+        return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+      default:
+        return ""
     }
   }
 
@@ -147,6 +192,99 @@ export function HodDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Year Toppers Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-yellow-500" />
+            Year Toppers
+          </CardTitle>
+          <CardDescription>Top 3 students by CGPA in each year</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {toppersLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : toppers && Object.keys(toppers).length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {[1, 2, 3, 4].map((year) => {
+                const yearKey = `year_${year}`
+                const yearToppers = toppers[yearKey] || []
+                return (
+                  <div key={year} className="space-y-3">
+                    <h3 className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
+                      <GraduationCap className="h-4 w-4" />
+                      Year {year}
+                    </h3>
+                    {yearToppers.length > 0 ? (
+                      <div className="space-y-2">
+                        {yearToppers.map((topper) => {
+                          const studentId = topper.studentId || topper.student?.id
+                          const studentName = topper.studentName || topper.student?.name
+                          const rollNumber = topper.rollNumber || topper.student?.rollNumber
+                          return (
+                            <div
+                              key={studentId}
+                              className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted cursor-pointer transition-colors"
+                              onClick={() => router.push(`/students/${rollNumber}`)}
+                            >
+                              <div className="flex items-center gap-3">
+                                {getRankIcon(topper.rank)}
+                                <div>
+                                  <p className="font-medium text-sm">{studentName}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Roll: {rollNumber}
+                                  </p>
+                                </div>
+                              </div>
+                              <Badge className={getRankBadgeColor(topper.rank)}>
+                                {topper.cgpa.toFixed(2)}
+                              </Badge>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No toppers data
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Trophy className="h-12 w-12 mx-auto text-muted-foreground/50" />
+              <p className="text-muted-foreground mt-4">No toppers data available yet</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Toppers will be calculated once grades are recorded
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Faculty Academics Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5" />
+            My Academics
+          </CardTitle>
+          <CardDescription>View your teaching assignments</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            View your current and past teaching subjects, course load, and academic history.
+          </p>
+          <Button variant="outline" className="w-full bg-transparent" asChild>
+            <Link href="/faculty/academics">View Academics</Link>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }

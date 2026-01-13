@@ -6854,4 +6854,808 @@ def get_admin_dashboard_stats(request):
         return JsonResponse({'message': 'Server error'}, status=500)
 
 
+# ==================== Faculty Subjects API ====================
 
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role(['FACULTY', 'HOD', 'ADMIN'])
+def get_faculty_subjects(request, faculty_id=None):
+    """
+    Get subjects taught by a faculty - current and past.
+    Faculty can view their own, HOD can view their department, Admin can view all.
+    """
+    try:
+        user_id = request.user_id
+        role = request.user_role
+        
+        from .models import Faculty, Subject, FacultySubjectHistory, HOD
+        
+        # If faculty_id not provided, get current user's faculty
+        if not faculty_id:
+            if role == 'FACULTY':
+                try:
+                    faculty = Faculty.objects.get(user__id=user_id)
+                except Faculty.DoesNotExist:
+                    return JsonResponse({'message': 'Faculty profile not found'}, status=404)
+            elif role == 'HOD':
+                try:
+                    hod = HOD.objects.get(user__id=user_id)
+                    faculty = hod.faculty
+                except HOD.DoesNotExist:
+                    return JsonResponse({'message': 'HOD profile not found'}, status=404)
+            else:
+                return JsonResponse({'message': 'Faculty ID required for admin'}, status=400)
+        else:
+            try:
+                faculty = Faculty.objects.get(id=faculty_id)
+            except Faculty.DoesNotExist:
+                return JsonResponse({'message': 'Faculty not found'}, status=404)
+            
+            # Check permission
+            if role == 'HOD':
+                try:
+                    hod = HOD.objects.get(user__id=user_id)
+                    if faculty.department != hod.department:
+                        return JsonResponse({'message': 'You can only view faculty in your department'}, status=403)
+                except HOD.DoesNotExist:
+                    return JsonResponse({'message': 'HOD profile not found'}, status=404)
+        
+        # Get current subjects
+        current_subjects = []
+        for subject in faculty.current_subjects.all():
+            current_subjects.append({
+                'id': str(subject.id),
+                'subjectCode': subject.subjectCode,
+                'subjectName': subject.subjectName,
+                'credits': subject.credits,
+                'subjectType': subject.subject_type,
+                'department': subject.department
+            })
+        
+        # Get past subjects
+        past_subjects = []
+        for subject in faculty.past_subjects.all():
+            past_subjects.append({
+                'id': str(subject.id),
+                'subjectCode': subject.subjectCode,
+                'subjectName': subject.subjectName,
+                'credits': subject.credits,
+                'subjectType': subject.subject_type,
+                'department': subject.department
+            })
+        
+        # Get subject history with academic year details
+        subject_history = []
+        for history in FacultySubjectHistory.objects.filter(faculty=faculty).select_related('subject'):
+            subject_history.append({
+                'id': str(history.id),
+                'subject': {
+                    'id': str(history.subject.id),
+                    'subjectCode': history.subject.subjectCode,
+                    'subjectName': history.subject.subjectName,
+                    'credits': history.subject.credits,
+                    'subjectType': history.subject.subject_type
+                },
+                'academicYear': history.academic_year,
+                'semesterType': history.semester_type,
+                'isCurrent': history.is_current
+            })
+        
+        return JsonResponse({
+            'faculty': {
+                'id': str(faculty.id),
+                'name': faculty.name,
+                'employeeId': faculty.employeeId,
+                'department': faculty.department
+            },
+            'currentSubjects': current_subjects,
+            'pastSubjects': past_subjects,
+            'subjectHistory': subject_history
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get faculty subjects error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role('STUDENT')
+def get_mentor_subjects(request):
+    """
+    Student can view their mentor's subjects
+    """
+    try:
+        user_id = request.user_id
+        
+        from .models import Student, Mentorship, Faculty, FacultySubjectHistory
+        
+        try:
+            student = Student.objects.get(user__id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        # Get current mentor
+        mentor = student.current_mentor
+        if not mentor:
+            return JsonResponse({'message': 'You do not have an assigned mentor'}, status=404)
+        
+        # Get current subjects
+        current_subjects = []
+        for subject in mentor.current_subjects.all():
+            current_subjects.append({
+                'id': str(subject.id),
+                'subjectCode': subject.subjectCode,
+                'subjectName': subject.subjectName,
+                'credits': subject.credits,
+                'subjectType': subject.subject_type
+            })
+        
+        # Get past subjects
+        past_subjects = []
+        for subject in mentor.past_subjects.all():
+            past_subjects.append({
+                'id': str(subject.id),
+                'subjectCode': subject.subjectCode,
+                'subjectName': subject.subjectName,
+                'credits': subject.credits,
+                'subjectType': subject.subject_type
+            })
+        
+        return JsonResponse({
+            'mentor': {
+                'id': str(mentor.id),
+                'name': mentor.name,
+                'employeeId': mentor.employeeId,
+                'department': mentor.department,
+                'email': mentor.collegeEmail,
+                'office': mentor.office,
+                'officeHours': mentor.officeHours
+            },
+            'currentSubjects': current_subjects,
+            'pastSubjects': past_subjects
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get mentor subjects error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role(['HOD', 'ADMIN'])
+def assign_faculty_to_subject(request):
+    """
+    Assign a faculty to teach a subject (current or mark as past)
+    """
+    try:
+        user_id = request.user_id
+        role = request.user_role
+        
+        data = json.loads(request.body)
+        faculty_id = data.get('facultyId')
+        subject_id = data.get('subjectId')
+        academic_year = data.get('academicYear')
+        semester_type = data.get('semesterType')  # ODD or EVEN
+        is_current = data.get('isCurrent', True)
+        
+        if not all([faculty_id, subject_id, academic_year, semester_type]):
+            return JsonResponse({'message': 'Missing required fields'}, status=400)
+        
+        from .models import Faculty, Subject, FacultySubjectHistory, HOD
+        
+        try:
+            faculty = Faculty.objects.get(id=faculty_id)
+            subject = Subject.objects.get(id=subject_id)
+        except (Faculty.DoesNotExist, Subject.DoesNotExist) as e:
+            return JsonResponse({'message': str(e)}, status=404)
+        
+        # HOD can only assign to their department
+        if role == 'HOD':
+            try:
+                hod = HOD.objects.get(user__id=user_id)
+                if faculty.department != hod.department:
+                    return JsonResponse({'message': 'You can only assign faculty in your department'}, status=403)
+            except HOD.DoesNotExist:
+                return JsonResponse({'message': 'HOD profile not found'}, status=404)
+        
+        # Create or update faculty subject history
+        history, created = FacultySubjectHistory.objects.update_or_create(
+            faculty=faculty,
+            subject=subject,
+            academic_year=academic_year,
+            semester_type=semester_type,
+            defaults={'is_current': is_current}
+        )
+        
+        # Update ForeignKey and M2M relationships
+        if is_current:
+            # Move old current faculty to past (if exists and different)
+            if subject.current_faculty and subject.current_faculty != faculty:
+                subject.past_faculty.add(subject.current_faculty)
+            subject.current_faculty = faculty
+            subject.past_faculty.remove(faculty)  # Remove from past if exists
+            subject.save()
+        else:
+            # Remove as current faculty if currently assigned
+            if subject.current_faculty == faculty:
+                subject.current_faculty = None
+                subject.save()
+            subject.past_faculty.add(faculty)
+        
+        return JsonResponse({
+            'message': f"Faculty {'assigned to' if created else 'updated for'} subject successfully",
+            'history': {
+                'id': str(history.id),
+                'facultyName': faculty.name,
+                'subjectCode': subject.subjectCode,
+                'academicYear': academic_year,
+                'semesterType': semester_type,
+                'isCurrent': is_current
+            }
+        }, status=200 if not created else 201)
+        
+    except Exception as e:
+        print(f"Assign faculty to subject error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+# ==================== Student Grades API ====================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role(['STUDENT', 'FACULTY', 'HOD', 'ADMIN'])
+def get_student_grades(request, student_id=None):
+    """
+    Get student's grades with SG/CG calculations
+    Students can view their own, Faculty/HOD/Admin can view others
+    """
+    try:
+        user_id = request.user_id
+        role = request.user_role
+        
+        from .models import Student, Semester, StudentSubject, BacklogHistory, GRADE_POINTS
+        
+        # Determine which student to show
+        if not student_id:
+            if role == 'STUDENT':
+                try:
+                    student = Student.objects.get(user__id=user_id)
+                except Student.DoesNotExist:
+                    return JsonResponse({'message': 'Student profile not found'}, status=404)
+            else:
+                return JsonResponse({'message': 'Student ID required'}, status=400)
+        else:
+            try:
+                student = Student.objects.get(id=student_id)
+            except Student.DoesNotExist:
+                return JsonResponse({'message': 'Student not found'}, status=404)
+        
+        # Get all semesters with their grades
+        semesters_data = []
+        for semester in Semester.objects.filter(student=student).order_by('semester'):
+            subject_grades = []
+            for sg in StudentSubject.objects.filter(semester=semester).select_related('subject'):
+                subject_grades.append({
+                    'id': str(sg.id),
+                    'subject': {
+                        'id': str(sg.subject.id),
+                        'subjectCode': sg.subject.subjectCode,
+                        'subjectName': sg.subject.subjectName,
+                        'credits': sg.subject.credits,
+                        'subjectType': sg.subject.subject_type
+                    },
+                    'grade': sg.grade,
+                    'gradePoint': sg.grade_point,
+                    'attemptType': sg.attempt_type,
+                    'examYear': sg.exam_year,
+                    'examMonth': sg.exam_month,
+                    'isPassed': sg.is_passed
+                })
+            
+            semesters_data.append({
+                'semester': semester.semester,
+                'semesterType': semester.semester_type,
+                'academicYear': semester.academic_year,
+                'sgpa': semester.sgpa,
+                'cgpa': semester.cgpa,
+                'totalCredits': semester.total_credits,
+                'earnedCredits': semester.earned_credits,
+                'subjects': subject_grades
+            })
+        
+        # Get backlog history
+        backlogs = []
+        for backlog in BacklogHistory.objects.filter(student=student).select_related('subject'):
+            backlogs.append({
+                'id': str(backlog.id),
+                'subject': {
+                    'id': str(backlog.subject.id),
+                    'subjectCode': backlog.subject.subjectCode,
+                    'subjectName': backlog.subject.subjectName
+                },
+                'originalSemester': backlog.original_semester,
+                'attemptNumber': backlog.attempt_number,
+                'attemptType': backlog.attempt_type,
+                'semesterType': backlog.semester_type,
+                'examYear': backlog.exam_year,
+                'examMonth': backlog.exam_month,
+                'grade': backlog.grade,
+                'gradePoint': backlog.grade_point,
+                'isCleared': backlog.is_cleared
+            })
+        
+        # Calculate current CGPA
+        latest_cgpa = 0.0
+        if semesters_data:
+            latest_cgpa = semesters_data[-1]['cgpa']
+        
+        return JsonResponse({
+            'student': {
+                'id': str(student.id),
+                'name': student.name,
+                'rollNumber': student.rollNumber,
+                'registrationNumber': student.registrationNumber,
+                'program': student.program,
+                'branch': student.branch,
+                'year': student.year
+            },
+            'currentCGPA': latest_cgpa,
+            'semesters': semesters_data,
+            'backlogHistory': backlogs,
+            'gradePointMapping': GRADE_POINTS
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get student grades error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role(['HOD', 'ADMIN'])
+def update_student_grade(request):
+    """
+    Update or add a student's grade for a subject
+    """
+    try:
+        data = json.loads(request.body)
+        student_id = data.get('studentId')
+        subject_id = data.get('subjectId')
+        semester_number = data.get('semester')
+        grade = data.get('grade')
+        attempt_type = data.get('attemptType', 'REGULAR')
+        exam_year = data.get('examYear')
+        exam_month = data.get('examMonth')
+        
+        if not all([student_id, subject_id, semester_number, grade]):
+            return JsonResponse({'message': 'Missing required fields'}, status=400)
+        
+        from .models import Student, Subject, Semester, StudentSubject, BacklogHistory, YearTopper, GRADE_POINTS
+        
+        try:
+            student = Student.objects.get(id=student_id)
+            subject = Subject.objects.get(id=subject_id)
+        except (Student.DoesNotExist, Subject.DoesNotExist) as e:
+            return JsonResponse({'message': str(e)}, status=404)
+        
+        # Get or create semester
+        semester, _ = Semester.objects.get_or_create(
+            student=student,
+            semester=semester_number,
+            defaults={
+                'semester_type': 'ODD' if semester_number % 2 == 1 else 'EVEN',
+                'sgpa': 0.0,
+                'cgpa': 0.0
+            }
+        )
+        
+        # Check if this is a backlog attempt
+        existing_grade = StudentSubject.objects.filter(
+            student=student,
+            subject=subject
+        ).first()
+        
+        if existing_grade and attempt_type in ['BACKLOG', 'MAKEUP']:
+            # Record in backlog history
+            attempt_count = BacklogHistory.objects.filter(
+                student=student,
+                subject=subject
+            ).count() + 1
+            
+            BacklogHistory.objects.create(
+                student=student,
+                subject=subject,
+                original_semester=existing_grade.semester.semester,
+                attempt_number=attempt_count,
+                attempt_type=attempt_type,
+                semester_type='ODD' if semester_number % 2 == 1 else 'EVEN',
+                exam_year=exam_year or datetime.now().year,
+                exam_month=exam_month or datetime.now().strftime('%B'),
+                grade=grade.upper()
+            )
+            
+            # Update original grade if passed
+            grade_point = GRADE_POINTS.get(grade.upper(), 0)
+            if grade_point >= 5:
+                existing_grade.grade = grade.upper()
+                existing_grade.is_passed = True
+                existing_grade.passing_year = exam_year or datetime.now().year
+                existing_grade.save()
+        else:
+            # Create or update student subject grade
+            StudentSubject.objects.update_or_create(
+                student=student,
+                subject=subject,
+                semester=semester,
+                defaults={
+                    'grade': grade.upper(),
+                    'attempt_type': attempt_type,
+                    'exam_year': exam_year or datetime.now().year,
+                    'exam_month': exam_month or datetime.now().strftime('%B')
+                }
+            )
+        
+        # Recalculate SGPA for the semester
+        semester.calculate_sgpa()
+        
+        # Recalculate CGPA for all semesters
+        Semester.calculate_cgpa_for_student(student)
+        
+        # Update year toppers
+        YearTopper.update_toppers(student.branch)
+        
+        return JsonResponse({
+            'message': 'Grade updated successfully',
+            'sgpa': semester.sgpa,
+            'cgpa': semester.cgpa
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Update student grade error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+# ==================== Year Toppers API ====================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role(['HOD', 'ADMIN', 'FACULTY'])
+def get_year_toppers(request):
+    """
+    Get top 3 students by CGPA for each year in a department
+    """
+    try:
+        user_id = request.user_id
+        role = request.user_role
+        
+        department = request.GET.get('department')
+        year = request.GET.get('year')  # Optional: filter by specific year
+        
+        from .models import YearTopper, HOD, Faculty
+        
+        # Determine department based on role
+        if not department:
+            if role == 'HOD':
+                try:
+                    hod = HOD.objects.get(user__id=user_id)
+                    department = hod.department
+                except HOD.DoesNotExist:
+                    return JsonResponse({'message': 'HOD profile not found'}, status=404)
+            elif role == 'FACULTY':
+                try:
+                    faculty = Faculty.objects.get(user__id=user_id)
+                    department = faculty.department
+                except Faculty.DoesNotExist:
+                    return JsonResponse({'message': 'Faculty profile not found'}, status=404)
+            elif role == 'ADMIN':
+                return JsonResponse({'message': 'Department required for admin'}, status=400)
+        
+        # Build query
+        qs = YearTopper.objects.filter(department=department).select_related('student')
+        
+        if year:
+            qs = qs.filter(academic_year=int(year))
+        
+        toppers_data = {}
+        for topper in qs:
+            year_key = f"year_{topper.academic_year}"
+            if year_key not in toppers_data:
+                toppers_data[year_key] = []
+            
+            toppers_data[year_key].append({
+                'rank': topper.rank,
+                'student': {
+                    'id': str(topper.student.id),
+                    'name': topper.student.name,
+                    'rollNumber': topper.student.rollNumber,
+                    'registrationNumber': topper.student.registrationNumber
+                },
+                'cgpa': topper.cgpa,
+                'updatedAt': topper.updated_at.isoformat()
+            })
+        
+        return JsonResponse({
+            'department': department,
+            'toppers': toppers_data
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get year toppers error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role(['HOD', 'ADMIN'])
+def refresh_year_toppers(request):
+    """
+    Manually refresh the year toppers for a department
+    """
+    try:
+        user_id = request.user_id
+        role = request.user_role
+        
+        data = json.loads(request.body)
+        department = data.get('department')
+        
+        from .models import YearTopper, HOD
+        
+        if not department:
+            if role == 'HOD':
+                try:
+                    hod = HOD.objects.get(user__id=user_id)
+                    department = hod.department
+                except HOD.DoesNotExist:
+                    return JsonResponse({'message': 'HOD profile not found'}, status=404)
+            else:
+                return JsonResponse({'message': 'Department required'}, status=400)
+        
+        # Update toppers
+        YearTopper.update_toppers(department)
+        
+        return JsonResponse({
+            'message': f'Year toppers refreshed for {department}'
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Refresh year toppers error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+# ==================== Students List with Filters API ====================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role(['HOD', 'ADMIN', 'FACULTY'])
+def get_students_list(request):
+    """
+    Get list of students with filtering and sorting options
+    """
+    try:
+        user_id = request.user_id
+        role = request.user_role
+        
+        # Get query parameters
+        department = request.GET.get('department')
+        year = request.GET.get('year')
+        program = request.GET.get('program')
+        sort_by = request.GET.get('sortBy', 'rollNumber')  # rollNumber, cgpa, name
+        sort_order = request.GET.get('sortOrder', 'asc')  # asc, desc
+        page = int(request.GET.get('page', 1))
+        limit = int(request.GET.get('limit', 50))
+        search = request.GET.get('search', '')
+        
+        from .models import Student, Faculty, HOD, Semester
+        from django.db.models import Max, Q
+        
+        # Determine department based on role
+        if not department:
+            if role == 'HOD':
+                try:
+                    hod = HOD.objects.get(user__id=user_id)
+                    department = hod.department
+                except HOD.DoesNotExist:
+                    return JsonResponse({'message': 'HOD profile not found'}, status=404)
+            elif role == 'FACULTY':
+                try:
+                    faculty = Faculty.objects.get(user__id=user_id)
+                    department = faculty.department
+                except Faculty.DoesNotExist:
+                    return JsonResponse({'message': 'Faculty profile not found'}, status=404)
+        
+        # Build query
+        qs = Student.objects.all()
+        
+        if department:
+            qs = qs.filter(branch=department)
+        
+        if year:
+            qs = qs.filter(year=int(year))
+        
+        if program:
+            qs = qs.filter(program=program)
+        
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search) |
+                Q(rollNumber__icontains=search) |
+                Q(registrationNumber__icontains=search) |
+                Q(collegeEmail__icontains=search)
+            )
+        
+        # Annotate with latest CGPA
+        qs = qs.annotate(latest_cgpa=Max('semesters__cgpa'))
+        
+        # Sorting
+        if sort_by == 'cgpa':
+            order_field = 'latest_cgpa' if sort_order == 'asc' else '-latest_cgpa'
+        elif sort_by == 'name':
+            order_field = 'name' if sort_order == 'asc' else '-name'
+        else:
+            order_field = 'rollNumber' if sort_order == 'asc' else '-rollNumber'
+        
+        qs = qs.order_by(order_field)
+        
+        # Pagination
+        total_count = qs.count()
+        offset = (page - 1) * limit
+        students = qs[offset:offset + limit]
+        
+        students_data = []
+        for student in students:
+            students_data.append({
+                'id': str(student.id),
+                'name': student.name,
+                'rollNumber': student.rollNumber,
+                'registrationNumber': student.registrationNumber,
+                'collegeEmail': student.collegeEmail,
+                'program': student.program,
+                'branch': student.branch,
+                'year': student.year,
+                'status': student.status,
+                'cgpa': student.latest_cgpa or 0.0
+            })
+        
+        return JsonResponse({
+            'students': students_data,
+            'pagination': {
+                'page': page,
+                'limit': limit,
+                'totalCount': total_count,
+                'totalPages': (total_count + limit - 1) // limit
+            }
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get students list error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+# ==================== Subjects API ====================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role(['HOD', 'ADMIN', 'FACULTY'])
+def get_subjects_list(request):
+    """
+    Get list of all subjects with filtering options
+    """
+    try:
+        department = request.GET.get('department')
+        subject_type = request.GET.get('type')
+        semester = request.GET.get('semester')
+        
+        from .models import Subject
+        
+        qs = Subject.objects.all()
+        
+        if department:
+            qs = qs.filter(department=department)
+        
+        if subject_type:
+            qs = qs.filter(subject_type=subject_type)
+        
+        if semester:
+            qs = qs.filter(typical_semester=int(semester))
+        
+        subjects_data = []
+        for subject in qs:
+            # Handle ForeignKey for current_faculty
+            current_faculty_data = None
+            if subject.current_faculty:
+                current_faculty_data = {
+                    'id': str(subject.current_faculty.id),
+                    'name': subject.current_faculty.name,
+                    'employeeId': subject.current_faculty.employeeId
+                }
+            
+            subjects_data.append({
+                'id': str(subject.id),
+                'subjectCode': subject.subjectCode,
+                'subjectName': subject.subjectName,
+                'credits': subject.credits,
+                'subjectType': subject.subject_type,
+                'department': subject.department,
+                'typicalSemester': subject.typical_semester,
+                'currentFaculty': current_faculty_data
+            })
+        
+        return JsonResponse({
+            'subjects': subjects_data,
+            'count': len(subjects_data)
+        }, status=200)
+        
+    except Exception as e:
+        print(f"Get subjects list error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role(['HOD', 'ADMIN'])
+def create_subject(request):
+    """
+    Create a new subject
+    """
+    try:
+        data = json.loads(request.body)
+        subject_code = data.get('subjectCode')
+        subject_name = data.get('subjectName')
+        credits = data.get('credits', 3)
+        subject_type = data.get('subjectType')
+        department = data.get('department')
+        typical_semester = data.get('typicalSemester')
+        
+        if not subject_code or not subject_name:
+            return JsonResponse({'message': 'Subject code and name are required'}, status=400)
+        
+        from .models import Subject
+        
+        # Check if subject code already exists
+        if Subject.objects.filter(subjectCode=subject_code).exists():
+            return JsonResponse({'message': 'Subject code already exists'}, status=409)
+        
+        subject = Subject.objects.create(
+            subjectCode=subject_code,
+            subjectName=subject_name,
+            credits=credits,
+            subject_type=subject_type,
+            department=department,
+            typical_semester=typical_semester
+        )
+        
+        return JsonResponse({
+            'message': 'Subject created successfully',
+            'subject': {
+                'id': str(subject.id),
+                'subjectCode': subject.subjectCode,
+                'subjectName': subject.subjectName,
+                'credits': subject.credits,
+                'subjectType': subject.subject_type
+            }
+        }, status=201)
+        
+    except Exception as e:
+        print(f"Create subject error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)

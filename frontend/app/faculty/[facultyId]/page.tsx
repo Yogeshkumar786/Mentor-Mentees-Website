@@ -3,13 +3,27 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
-import { api, type FacultyByIdResponse, type StudentMentorProfileResponse } from "@/lib/api"
+import { api, type FacultyByIdResponse, type StudentMentorProfileResponse, type FacultySubjectsResponse, type Subject } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, User, Phone, Mail, Building, Clock, GraduationCap, Users, ArrowLeft } from "lucide-react"
+import { Loader2, User, Phone, Mail, Building, Clock, GraduationCap, Users, ArrowLeft, BookOpen, History } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+
+// Subject type labels
+const SUBJECT_TYPE_LABELS: Record<string, string> = {
+  BSC: 'Basic Science Core',
+  ESC: 'Engineering Science Core',
+  HSC: 'Humanities & Social Science',
+  PCC: 'Program Core',
+  DEC: 'Departmental Elective',
+  OPC: 'Open Elective',
+  MSC: 'Games & Sports',
+  MOE: 'MOOCs',
+  PRC: 'Project/Skill Dev.',
+}
 
 export default function FacultyProfilePage() {
   const { user, loading: authLoading } = useAuth()
@@ -19,6 +33,7 @@ export default function FacultyProfilePage() {
 
   const [faculty, setFaculty] = useState<FacultyByIdResponse | null>(null)
   const [studentMentorProfile, setStudentMentorProfile] = useState<StudentMentorProfileResponse | null>(null)
+  const [facultySubjects, setFacultySubjects] = useState<FacultySubjectsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -33,10 +48,28 @@ export default function FacultyProfilePage() {
           // Students use the mentor profile API
           const data = await api.getStudentMentorProfile(facultyId)
           setStudentMentorProfile(data)
+          
+          // Also fetch mentor's subjects
+          try {
+            const subjectsData = await api.getMentorSubjects()
+            setFacultySubjects(subjectsData)
+          } catch {
+            // Subjects API may not be available yet
+            console.log('Could not fetch mentor subjects')
+          }
         } else {
           // HOD/Admin use the regular faculty API
           const data = await api.getFacultyById(facultyId)
           setFaculty(data)
+          
+          // Also fetch faculty subjects
+          try {
+            const subjectsData = await api.getFacultySubjects(facultyId)
+            setFacultySubjects(subjectsData)
+          } catch {
+            // Subjects API may not be available yet
+            console.log('Could not fetch faculty subjects')
+          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to fetch faculty")
@@ -214,6 +247,89 @@ export default function FacultyProfilePage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Faculty Subjects - Full Width */}
+        {facultySubjects && (facultySubjects.currentSubjects.length > 0 || facultySubjects.pastSubjects.length > 0) && (
+          <div className="mt-6 space-y-6">
+            {/* Current Subjects */}
+            {facultySubjects.currentSubjects.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-green-600" /> Current Subjects
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Subject Code</TableHead>
+                          <TableHead>Subject Name</TableHead>
+                          <TableHead>Credits</TableHead>
+                          <TableHead>Type</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {facultySubjects.currentSubjects.map((subject) => (
+                          <TableRow key={subject.id}>
+                            <TableCell className="font-medium">{subject.subjectCode}</TableCell>
+                            <TableCell>{subject.subjectName}</TableCell>
+                            <TableCell>{subject.credits}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {subject.subjectType ? SUBJECT_TYPE_LABELS[subject.subjectType] || subject.subjectType : 'N/A'}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Past Subjects */}
+            {facultySubjects.pastSubjects.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                    <History className="h-5 w-5" /> Past Subjects
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Subject Code</TableHead>
+                          <TableHead>Subject Name</TableHead>
+                          <TableHead>Credits</TableHead>
+                          <TableHead>Type</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {facultySubjects.pastSubjects.map((subject) => (
+                          <TableRow key={subject.id} className="opacity-75">
+                            <TableCell className="font-medium">{subject.subjectCode}</TableCell>
+                            <TableCell>{subject.subjectName}</TableCell>
+                            <TableCell>{subject.credits}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">
+                                {subject.subjectType ? SUBJECT_TYPE_LABELS[subject.subjectType] || subject.subjectType : 'N/A'}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
       </div>
     )
   }
@@ -439,6 +555,85 @@ export default function FacultyProfilePage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Faculty Subjects Section */}
+      {facultySubjects && (
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Current Subjects */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-green-600" /> Current Subjects
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {facultySubjects.currentSubjects.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Subject Name</TableHead>
+                      <TableHead>Credits</TableHead>
+                      <TableHead>Type</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {facultySubjects.currentSubjects.map((subject) => (
+                      <TableRow key={subject.id}>
+                        <TableCell className="font-medium">{subject.code}</TableCell>
+                        <TableCell>{subject.name}</TableCell>
+                        <TableCell>{subject.credits}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{SUBJECT_TYPE_LABELS[subject.subjectType] || subject.subjectType}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-muted-foreground text-center py-4">No current subjects assigned</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Past Subjects */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5 text-muted-foreground" /> Past Subjects
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {facultySubjects.pastSubjects.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Subject Name</TableHead>
+                      <TableHead>Credits</TableHead>
+                      <TableHead>Type</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {facultySubjects.pastSubjects.map((subject) => (
+                      <TableRow key={subject.id} className="text-muted-foreground">
+                        <TableCell className="font-medium">{subject.code}</TableCell>
+                        <TableCell>{subject.name}</TableCell>
+                        <TableCell>{subject.credits}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{SUBJECT_TYPE_LABELS[subject.subjectType] || subject.subjectType}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-muted-foreground text-center py-4">No past subjects</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   )
