@@ -181,6 +181,7 @@ class Faculty(models.Model):
 
 class HOD(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(unique=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='hod', db_column='userId')
     faculty = models.OneToOneField(Faculty, on_delete=models.CASCADE, related_name='as_hod', db_column='facultyId')
     department = models.CharField(max_length=20, choices=Department.choices)
@@ -452,28 +453,42 @@ class Semester(models.Model):
         self.total_credits = total_credits
         self.sgpa = round(total_points / total_credits, 2) if total_credits > 0 else 0.0
         self.save()
+        
+        # After calculating SGPA, update CGPA for this and future semesters
+        self.calculate_cgpa_for_student(self.student)
+        
         return self.sgpa
     
     @staticmethod
     def calculate_cgpa_for_student(student):
-        """Calculate CGPA: average of all SGPAs weighted by credits"""
+        """Calculate cumulative CGPA for each semester
+        CGPA at semester N = Σ(SGPA * credits from sem 1 to N) / Σ(credits from sem 1 to N)"""
         semesters = Semester.objects.filter(student=student).order_by('semester')
-        total_weighted_sgpa = 0
-        total_credits = 0
+        
+        cumulative_weighted_sgpa = 0
+        cumulative_credits = 0
+        semesters_to_update = []
         
         for sem in semesters:
             if sem.sgpa > 0 and sem.total_credits > 0:
-                total_weighted_sgpa += sem.sgpa * sem.total_credits
-                total_credits += sem.total_credits
+                # Add this semester's contribution to cumulative totals
+                cumulative_weighted_sgpa += sem.sgpa * sem.total_credits
+                cumulative_credits += sem.total_credits
+                
+                # Calculate CGPA up to this semester
+                cgpa = round(cumulative_weighted_sgpa / cumulative_credits, 2) if cumulative_credits > 0 else 0.0
+                
+                # Only update if CGPA has changed
+                if sem.cgpa != cgpa:
+                    sem.cgpa = cgpa
+                    semesters_to_update.append(sem)
         
-        cgpa = round(total_weighted_sgpa / total_credits, 2) if total_credits > 0 else 0.0
+        # Bulk update changed semesters
+        if semesters_to_update:
+            Semester.objects.bulk_update(semesters_to_update, ['cgpa'])
         
-        # Update CGPA for all semesters
-        for sem in semesters:
-            sem.cgpa = cgpa
-            sem.save(update_fields=['cgpa'])
-        
-        return cgpa
+        # Return the latest CGPA
+        return semesters_to_update[-1].cgpa if semesters_to_update else 0.0
 
 
 class StudentSubject(models.Model):

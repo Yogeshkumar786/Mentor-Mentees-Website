@@ -266,6 +266,11 @@ export default function StudentPersonalChallengesPage() {
           const CategoryIcon = category.icon
           const activeInCategory = category.fields.filter(f => getFieldValue(f.key) === true).length
 
+          // Hide category if no active issues and user is faculty/HOD/admin
+          if (canEditSpecialIssues && activeInCategory === 0) {
+            return null
+          }
+
           return (
             <Card key={key}>
               <CardHeader>
@@ -281,7 +286,9 @@ export default function StudentPersonalChallengesPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {category.fields.map((field) => {
+                  {category.fields
+                    .filter(field => !canEditSpecialIssues || getFieldValue(field.key) === true)
+                    .map((field) => {
                     const value = getFieldValue(field.key)
                     const isActive = value === true
 
