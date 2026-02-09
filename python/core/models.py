@@ -470,7 +470,7 @@ class Semester(models.Model):
         semesters_to_update = []
         
         for sem in semesters:
-            if sem.sgpa > 0 and sem.total_credits > 0:
+            if sem.total_credits > 0:
                 # Add this semester's contribution to cumulative totals
                 cumulative_weighted_sgpa += sem.sgpa * sem.total_credits
                 cumulative_credits += sem.total_credits

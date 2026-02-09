@@ -1024,9 +1024,14 @@ def get_student_cocurricular_by_rollno(request, rollno):
         from .models import Student, CoCurricular
         
         # If student, verify they can only access their own data
-        if request.user_role == 'STUDENT':
-            if not hasattr(request, 'user_student') or request.user_student.rollNumber != rollno:
-                return JsonResponse({'message': 'You can only view your own co-curricular activities'}, status=403)
+        if hasattr(request, 'user_data') and request.user_data.get('role') == 'STUDENT':
+            # Get the student's roll number from database using entityId
+            try:
+                student_user = Student.objects.get(user__id=request.user_data['id'])
+                if student_user.rollNumber != rollno:
+                    return JsonResponse({'message': 'You can only view your own co-curricular activities'}, status=403)
+            except Student.DoesNotExist:
+                return JsonResponse({'message': 'Student profile not found'}, status=404)
         
         try:
             student = Student.objects.get(rollNumber=rollno)
@@ -1460,16 +1465,18 @@ def get_student_academic_by_rollno(request, rollno):
                     'grade': ss.grade
                 })
             
-            semesters_list.append({
+            semester_data = {
                 'semester': sem.semester,
                 'sgpa': float(sem.sgpa) if sem.sgpa else None,
                 'cgpa': float(sem.cgpa) if sem.cgpa else None,
                 'subjects': subjects_list,
                 'totalCredits': sum(s['credits'] for s in subjects_list)
-            })
+            }
+            semesters_list.append(semester_data)
             
-            if sem.cgpa:
-                latest_cgpa = float(sem.cgpa)
+            # Only update latest_cgpa if this semester has actual grades/credits
+            if semester_data['totalCredits'] > 0 and semester_data['cgpa'] is not None:
+                latest_cgpa = semester_data['cgpa']
         
         return JsonResponse({
             'studentId': str(student.id),
@@ -2572,6 +2579,22 @@ def get_student_academic(request):
         # Get all semesters with their subjects
         semesters = Semester.objects.filter(student=student).order_by('semester')
         
+        # First pass: ensure SGPA and CGPA are calculated for all semesters
+        for sem in semesters:
+            # Get all subjects for this semester
+            subject_grades = StudentSubject.objects.filter(
+                student=student,
+                semester=sem
+            ).select_related('subject')
+            
+            # If semester has no SGPA or CGPA calculated, calculate them
+            if sem.sgpa == 0 and subject_grades.exists():
+                sem.calculate_sgpa()
+        
+        # Second pass: recalculate CGPA to ensure all semesters have correct CGPA
+        if semesters.exists():
+            Semester.calculate_cgpa_for_student(student)
+        
         semesters_list = []
         for sem in semesters:
             # Get all subjects for this semester
@@ -2597,8 +2620,13 @@ def get_student_academic(request):
                 'totalCredits': sum(s['credits'] for s in subjects_list)
             })
         
-        # Calculate overall CGPA (latest semester's CGPA)
-        latest_cgpa = semesters_list[-1]['cgpa'] if semesters_list else None
+        # Calculate overall CGPA (latest semester with actual grades/CGPA)
+        # Find the last semester that has actual grades (totalCredits > 0)
+        latest_cgpa = None
+        for sem in reversed(semesters_list):
+            if sem['totalCredits'] > 0:
+                latest_cgpa = sem['cgpa']
+                break
         
         return JsonResponse({
             'studentId': str(student.id),
@@ -5815,7 +5843,7 @@ def update_student_special_issues(request, rollno):
             return JsonResponse({'message': 'Student not found'}, status=404)
         
         # Check if faculty is mentor of this student (for FACULTY role)
-        if request.user_role == 'FACULTY':
+        if hasattr(request, 'user_data') and request.user_data.get('role') == 'FACULTY':
             is_mentor = Mentorship.objects.filter(
                 faculty__user_id=request.user_id,
                 student=student,
@@ -6451,8 +6479,12 @@ def create_delete_internship_request(request):
         if not internship_id:
             return JsonResponse({'message': 'internshipId is required'}, status=400)
         
+        reason = data.get('reason', '').strip()
+        if not reason:
+            return JsonResponse({'message': 'Reason for deletion is required'}, status=400)
+        
         try:
-            internship = Internship.objects.get(id=internship_id, students=student)
+            internship = Internship.objects.get(id=internship_id, student=student)
         except Internship.DoesNotExist:
             return JsonResponse({'message': 'Internship not found or not owned by student'}, status=404)
         
@@ -6519,8 +6551,12 @@ def create_delete_project_request(request):
         if not project_id:
             return JsonResponse({'message': 'projectId is required'}, status=400)
         
+        reason = data.get('reason', '').strip()
+        if not reason:
+            return JsonResponse({'message': 'Reason for deletion is required'}, status=400)
+        
         try:
-            project = Project.objects.get(id=project_id, students=student)
+            project = Project.objects.get(id=project_id, student=student)
         except Project.DoesNotExist:
             return JsonResponse({'message': 'Project not found or not owned by student'}, status=404)
         

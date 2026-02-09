@@ -85,6 +85,15 @@ export default function InternshipsPage() {
   const handleDeleteRequest = async () => {
     if (!deleteDialog.internshipId) return
     
+    if (!deleteReason.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please provide a reason for deletion",
+        variant: "destructive"
+      })
+      return
+    }
+    
     try {
       setDeleting(true)
       await api.createDeleteInternshipRequest(deleteDialog.internshipId, deleteReason)
@@ -394,7 +403,7 @@ export default function InternshipsPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="py-4">
-              <Label htmlFor="deleteReason">Reason for deletion (optional)</Label>
+              <Label htmlFor="deleteReason">Reason for deletion <span className="text-red-500">*</span></Label>
               <Textarea
                 id="deleteReason"
                 placeholder="Explain why you want to delete this internship..."
@@ -408,7 +417,7 @@ export default function InternshipsPage() {
               <AlertDialogAction 
                 onClick={handleDeleteRequest}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                disabled={deleting}
+                disabled={deleting || !deleteReason.trim()}
               >
                 {deleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                 Submit Delete Request
