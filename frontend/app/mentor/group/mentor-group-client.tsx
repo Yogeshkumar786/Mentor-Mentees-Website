@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { formatDate, TIME_OPTIONS } from "@/lib/utils"
 import { api, MentorshipGroupResponse, MentorshipGroupMeeting, ScheduleMeetingItem, CompleteGroupMeetingsRequest, StudentReviewItem, FacultyListResponse } from "@/lib/api"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { generateHODFacultyMentorPDF } from "@/lib/pdf-generator"
 import { 
@@ -38,7 +40,6 @@ import {
   Download,
   RefreshCw
 } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 // Interface for meetings from API (now already grouped)
 interface GroupMeeting {
@@ -229,13 +230,7 @@ export default function MentorGroupClient() {
     }
   }
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    })
-  }
+  // Using centralized formatDate from @/lib/utils
 
   const formatTime = (timeStr: string | null) => {
     if (!timeStr) return 'Not set'
@@ -1298,11 +1293,21 @@ export default function MentorGroupClient() {
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Time</Label>
-                        <Input
-                          type="time"
+                        <Select
                           value={meeting.time}
-                          onChange={(e) => updateMeetingDate(index, 'time', e.target.value)}
-                        />
+                          onValueChange={(value) => updateMeetingDate(index, 'time', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select time" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIME_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Description</Label>
