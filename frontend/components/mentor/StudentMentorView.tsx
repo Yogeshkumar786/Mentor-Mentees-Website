@@ -92,6 +92,15 @@ export function StudentMentorView() {
       return
     }
 
+    if (!meetingForm.description || meetingForm.description.trim() === '') {
+      toast({
+        title: "Validation Error",
+        description: "Please provide a description for your meeting request",
+        variant: "destructive"
+      })
+      return
+    }
+
     try {
       setSubmitting(true)
       await api.createMeetingRequest(meetingForm)
@@ -352,13 +361,14 @@ export function StudentMentorView() {
                 </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="description">Description (Optional)</Label>
+                <Label htmlFor="description">Description *</Label>
                 <Textarea
                   id="description"
                   placeholder="What do you want to discuss in this meeting?"
                   rows={3}
                   value={meetingForm.description}
                   onChange={(e) => setMeetingForm({ ...meetingForm, description: e.target.value })}
+                  required
                 />
               </div>
             </div>

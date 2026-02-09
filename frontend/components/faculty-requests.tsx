@@ -211,6 +211,68 @@ export default function FacultyRequests() {
                             <p className="text-sm text-muted-foreground">{r.student.rollNumber} • {r.student.branch} • Year {r.student.year}</p>
                           </div>
                         </div>
+                        {r.type === 'INTERNSHIP' && (
+                          <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Type:</span>
+                              <span className="font-medium">{(r.requestData as Record<string, unknown>)?.type as string}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Organisation:</span>
+                              <span className="font-medium">{(r.requestData as Record<string, unknown>)?.organisation as string}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Semester:</span>
+                              <span className="font-medium">{(r.requestData as Record<string, unknown>)?.semester as string}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Duration:</span>
+                              <span className="font-medium">{(r.requestData as Record<string, unknown>)?.duration as string}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Location:</span>
+                              <span className="font-medium">{(r.requestData as Record<string, unknown>)?.location as string}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Stipend:</span>
+                              <span className="font-medium">₹{((r.requestData as Record<string, unknown>)?.stipend as number)?.toLocaleString() || 'Not specified'}</span>
+                            </div>
+                          </div>
+                        )}
+                        {r.type === 'PROJECT' && (
+                          <div className="p-3 bg-purple-50 dark:bg-purple-950 rounded space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Title:</span>
+                              <span className="font-medium">{(r.requestData as Record<string, unknown>)?.title as string}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Semester:</span>
+                              <span className="font-medium">{(r.requestData as Record<string, unknown>)?.semester as string}</span>
+                            </div>
+                            {(r.requestData as Record<string, unknown>)?.description && (
+                              <div>
+                                <span className="text-muted-foreground">Description:</span>
+                                <p className="mt-1">{(r.requestData as Record<string, unknown>)?.description as string}</p>
+                              </div>
+                            )}
+                            {(r.requestData as Record<string, unknown>)?.technologies && (
+                              <div>
+                                <span className="text-muted-foreground">Technologies:</span>
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                  {((r.requestData as Record<string, unknown>)?.technologies as string[]).map((tech) => (
+                                    <Badge key={tech} variant="outline" className="text-xs">{tech}</Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {(r.requestData as Record<string, unknown>)?.mentorName && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Mentor:</span>
+                                <span className="font-medium">{(r.requestData as Record<string, unknown>)?.mentorName as string}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                         {r.type === 'MEETING_REQUEST' && (
                           <div className="p-3 bg-green-50 dark:bg-green-950 rounded space-y-2 text-sm">
                             <div className="flex justify-between">
@@ -249,6 +311,154 @@ export default function FacultyRequests() {
                 <CardContent className="py-16 text-center">
                   <ClipboardList className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
                   <h3 className="text-lg font-semibold">No Pending Requests</h3>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="internships" className="space-y-4">
+            {internshipRequests.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {internshipRequests.map((r) => (
+                  <div key={r.id}>
+                    <Card className="hover:shadow-md border-blue-200">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            {getTypeIcon(r.type)}
+                            <div>
+                              <CardTitle className="text-lg">{getRequestTitle(r)}</CardTitle>
+                              <CardDescription className="flex items-center gap-2 mt-1"><CalendarDays className="h-3 w-3" />{new Date(r.createdAt).toLocaleDateString()}</CardDescription>
+                            </div>
+                          </div>
+                          {getTypeBadge(r.type)}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center"><User className="h-5 w-5 text-primary" /></div>
+                          <div>
+                            <p className="font-medium">{r.student.name}</p>
+                            <p className="text-sm text-muted-foreground">{r.student.rollNumber} • {r.student.branch} • Year {r.student.year}</p>
+                          </div>
+                        </div>
+                        <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Type:</span>
+                            <span className="font-medium">{(r.requestData as Record<string, unknown>)?.type as string}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Organisation:</span>
+                            <span className="font-medium">{(r.requestData as Record<string, unknown>)?.organisation as string}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Semester:</span>
+                            <span className="font-medium">{(r.requestData as Record<string, unknown>)?.semester as string}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Duration:</span>
+                            <span className="font-medium">{(r.requestData as Record<string, unknown>)?.duration as string}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Location:</span>
+                            <span className="font-medium">{(r.requestData as Record<string, unknown>)?.location as string}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Stipend:</span>
+                            <span className="font-medium">₹{((r.requestData as Record<string, unknown>)?.stipend as number)?.toLocaleString() || 'Not specified'}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="flex gap-2 pt-4 border-t">
+                        <Button className="flex-1" onClick={() => handleAction(r, 'approve')}><CheckCircle className="h-4 w-4 mr-2" />Approve</Button>
+                        <Button variant="destructive" className="flex-1" onClick={() => handleAction(r, 'reject')}><XCircle className="h-4 w-4 mr-2" />Reject</Button>
+                      </CardFooter>
+                    </Card>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-16 text-center">
+                  <Briefcase className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+                  <h3 className="text-lg font-semibold">No Internship Requests</h3>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="projects" className="space-y-4">
+            {projectRequests.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {projectRequests.map((r) => (
+                  <div key={r.id}>
+                    <Card className="hover:shadow-md border-purple-200">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            {getTypeIcon(r.type)}
+                            <div>
+                              <CardTitle className="text-lg">{getRequestTitle(r)}</CardTitle>
+                              <CardDescription className="flex items-center gap-2 mt-1"><CalendarDays className="h-3 w-3" />{new Date(r.createdAt).toLocaleDateString()}</CardDescription>
+                            </div>
+                          </div>
+                          {getTypeBadge(r.type)}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center"><User className="h-5 w-5 text-primary" /></div>
+                          <div>
+                            <p className="font-medium">{r.student.name}</p>
+                            <p className="text-sm text-muted-foreground">{r.student.rollNumber} • {r.student.branch} • Year {r.student.year}</p>
+                          </div>
+                        </div>
+                        <div className="p-3 bg-purple-50 dark:bg-purple-950 rounded space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Title:</span>
+                            <span className="font-medium">{(r.requestData as Record<string, unknown>)?.title as string}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Semester:</span>
+                            <span className="font-medium">{(r.requestData as Record<string, unknown>)?.semester as string}</span>
+                          </div>
+                          {(r.requestData as Record<string, unknown>)?.description && (
+                            <div>
+                              <span className="text-muted-foreground">Description:</span>
+                              <p className="mt-1">{(r.requestData as Record<string, unknown>)?.description as string}</p>
+                            </div>
+                          )}
+                          {(r.requestData as Record<string, unknown>)?.technologies && (
+                            <div>
+                              <span className="text-muted-foreground">Technologies:</span>
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {((r.requestData as Record<string, unknown>)?.technologies as string[]).map((tech) => (
+                                  <Badge key={tech} variant="outline" className="text-xs">{tech}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {(r.requestData as Record<string, unknown>)?.mentorName && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Mentor:</span>
+                              <span className="font-medium">{(r.requestData as Record<string, unknown>)?.mentorName as string}</span>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                      <CardFooter className="flex gap-2 pt-4 border-t">
+                        <Button className="flex-1" onClick={() => handleAction(r, 'approve')}><CheckCircle className="h-4 w-4 mr-2" />Approve</Button>
+                        <Button variant="destructive" className="flex-1" onClick={() => handleAction(r, 'reject')}><XCircle className="h-4 w-4 mr-2" />Reject</Button>
+                      </CardFooter>
+                    </Card>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-16 text-center">
+                  <FolderKanban className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+                  <h3 className="text-lg font-semibold">No Project Requests</h3>
                 </CardContent>
               </Card>
             )}
@@ -373,7 +583,11 @@ export default function FacultyRequests() {
               <DialogTitle>{actionType === 'approve' ? 'Approve Request' : 'Reject Request'}</DialogTitle>
               <DialogDescription>
                 {actionType === 'approve' 
-                  ? (selectedRequest?.type === 'MEETING_REQUEST' ? 'Approving will schedule the meeting.' : selectedRequest?.type.startsWith('DELETE_') ? 'Approving will delete the record.' : 'Approving will create the record.')
+                  ? (selectedRequest?.type === 'MEETING_REQUEST' ? 'Approving will schedule the meeting.' 
+                    : selectedRequest?.type === 'INTERNSHIP' ? 'Approving will add this internship to the record.'
+                    : selectedRequest?.type === 'PROJECT' ? 'Approving will add this project to the record.'
+                    : selectedRequest?.type.startsWith('DELETE_') ? 'Approving will delete the record.' 
+                    : 'Approving will create the record.')
                   : 'Provide reason for rejection.'
                 }
               </DialogDescription>
@@ -384,6 +598,68 @@ export default function FacultyRequests() {
                   <div className="flex items-center gap-2 mb-2">{getTypeIcon(selectedRequest.type)}<span className="font-medium">{getRequestTitle(selectedRequest)}</span></div>
                   <p className="text-sm text-muted-foreground">Student: {selectedRequest.student.name} ({selectedRequest.student.rollNumber})</p>
                 </div>
+                {selectedRequest.type === 'INTERNSHIP' && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Type:</span>
+                      <span className="font-medium">{(selectedRequest.requestData as Record<string, unknown>)?.type as string}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Organisation:</span>
+                      <span className="font-medium">{(selectedRequest.requestData as Record<string, unknown>)?.organisation as string}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Semester:</span>
+                      <span className="font-medium">{(selectedRequest.requestData as Record<string, unknown>)?.semester as string}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Duration:</span>
+                      <span className="font-medium">{(selectedRequest.requestData as Record<string, unknown>)?.duration as string}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Location:</span>
+                      <span className="font-medium">{(selectedRequest.requestData as Record<string, unknown>)?.location as string}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Stipend:</span>
+                      <span className="font-medium">₹{((selectedRequest.requestData as Record<string, unknown>)?.stipend as number)?.toLocaleString() || 'Not specified'}</span>
+                    </div>
+                  </div>
+                )}
+                {selectedRequest.type === 'PROJECT' && (
+                  <div className="p-3 bg-purple-50 dark:bg-purple-950 rounded space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Title:</span>
+                      <span className="font-medium">{(selectedRequest.requestData as Record<string, unknown>)?.title as string}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Semester:</span>
+                      <span className="font-medium">{(selectedRequest.requestData as Record<string, unknown>)?.semester as string}</span>
+                    </div>
+                    {(selectedRequest.requestData as Record<string, unknown>)?.description && (
+                      <div>
+                        <span className="text-muted-foreground">Description:</span>
+                        <p className="mt-1">{(selectedRequest.requestData as Record<string, unknown>)?.description as string}</p>
+                      </div>
+                    )}
+                    {(selectedRequest.requestData as Record<string, unknown>)?.technologies && (
+                      <div>
+                        <span className="text-muted-foreground">Technologies:</span>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {((selectedRequest.requestData as Record<string, unknown>)?.technologies as string[]).map((tech) => (
+                            <Badge key={tech} variant="outline" className="text-xs">{tech}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {(selectedRequest.requestData as Record<string, unknown>)?.mentorName && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Mentor:</span>
+                        <span className="font-medium">{(selectedRequest.requestData as Record<string, unknown>)?.mentorName as string}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {selectedRequest.type === 'MEETING_REQUEST' && (
                   <div className="p-3 bg-green-50 dark:bg-green-950 rounded space-y-2 text-sm">
                     <div className="flex justify-between">
