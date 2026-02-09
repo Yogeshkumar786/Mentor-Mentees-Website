@@ -1310,6 +1310,181 @@ export interface CreateSubjectRequest {
   typicalSemester?: number
 }
 
+// ==================== MEETING WINDOW WORKFLOW TYPES ====================
+
+export type MeetingWindowStatus = 'ACTIVE' | 'UPCOMING' | 'CLOSED' | 'CANCELLED'
+
+export interface MeetingWindow {
+  id: string
+  title: string
+  description: string | null
+  startDate: string
+  endDate: string
+  year: number | null
+  semester: number | null
+  status: MeetingWindowStatus
+  totalReports?: number
+  submittedReports?: number
+  createdAt: string
+}
+
+export interface MeetingWindowsResponse {
+  windows: MeetingWindow[]
+  department: string
+}
+
+export interface CreateMeetingWindowRequest {
+  title: string
+  startDate: string
+  endDate: string
+  description?: string
+  year?: number
+  semester?: number
+}
+
+export interface CreateMeetingWindowResponse {
+  message: string
+  window: MeetingWindow
+}
+
+export interface MeetingReportStudent {
+  id: string
+  rollNumber: number
+  name: string
+  attended: boolean
+  review: string | null
+}
+
+export interface MeetingReport {
+  id: string
+  year: number
+  semester: number
+  meetingDate: string | null
+  meetingTime: string | null
+  description: string | null
+  isSubmitted: boolean
+  submittedAt: string | null
+  students: MeetingReportStudent[]
+  faculty?: {
+    id: string
+    name: string
+    employeeId: string
+  }
+  studentCount?: number
+}
+
+export interface MeetingWindowDetailsResponse {
+  window: MeetingWindow
+  reports: MeetingReport[]
+  summary: {
+    totalReports: number
+    submittedReports: number
+    pendingReports: number
+  }
+}
+
+export interface UpdateMeetingWindowRequest {
+  title?: string
+  description?: string
+  endDate?: string
+}
+
+export interface UpdateMeetingWindowResponse {
+  message: string
+  window: MeetingWindow
+}
+
+export interface FacultyStatusItem {
+  faculty: {
+    id: string
+    name: string
+    employeeId: string
+  }
+  hasReport: boolean
+  isSubmitted: boolean
+  submittedAt: string | null
+  reportId: string | null
+}
+
+export interface MeetingWindowReportsResponse {
+  window: {
+    id: string
+    title: string
+    status: MeetingWindowStatus
+    endDate: string
+  }
+  facultyStatus: FacultyStatusItem[]
+  summary: {
+    totalFaculty: number
+    submitted: number
+    pending: number
+  }
+}
+
+export interface FacultyMeetingWindow extends MeetingWindow {
+  hasReport: boolean
+  isSubmitted: boolean
+  reportId: string | null
+}
+
+export interface FacultyMeetingWindowsResponse {
+  windows: FacultyMeetingWindow[]
+  department: string
+}
+
+export interface MeetingReportResponse {
+  message?: string
+  window?: {
+    id: string
+    title: string
+    description: string | null
+    startDate: string
+    endDate: string
+    status: MeetingWindowStatus
+  }
+  report?: MeetingReport
+  reports?: MeetingReport[]
+  availableGroups?: { year: number; semester: number }[]
+}
+
+export interface SaveMeetingReportRequest {
+  meetingDate?: string
+  meetingTime?: string
+  description?: string
+  students?: {
+    id: string
+    attended?: boolean
+    review?: string
+  }[]
+}
+
+export interface SaveMeetingReportResponse {
+  message: string
+  report: MeetingReport
+}
+
+export interface StudentMeetingReportItem {
+  id: string
+  meetingWindow: {
+    id: string
+    title: string
+  }
+  faculty: {
+    id: string
+    name: string
+  }
+  meetingDate: string | null
+  meetingTime: string | null
+  description: string | null
+  attended: boolean
+  review: string | null
+  submittedAt: string | null
+}
+
+export interface StudentMeetingReportsResponse {
+  reports: StudentMeetingReportItem[]
+}
+
 export interface FacultyMentorDetailsResponse {
   faculty: {
     id: string
@@ -2527,6 +2702,74 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(data),
     })
+  }
+
+  // ==================== MEETING WINDOW WORKFLOW APIs ====================
+
+  // HOD - Meeting Window Management
+  async getMeetingWindows(): Promise<MeetingWindowsResponse> {
+    return this.request<MeetingWindowsResponse>('/api/hod/meeting-windows')
+  }
+
+  async createMeetingWindow(data: CreateMeetingWindowRequest): Promise<CreateMeetingWindowResponse> {
+    return this.request<CreateMeetingWindowResponse>('/api/hod/meeting-windows/create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getMeetingWindowDetails(windowId: string): Promise<MeetingWindowDetailsResponse> {
+    return this.request<MeetingWindowDetailsResponse>(`/api/hod/meeting-windows/${windowId}`)
+  }
+
+  async updateMeetingWindow(windowId: string, data: UpdateMeetingWindowRequest): Promise<UpdateMeetingWindowResponse> {
+    return this.request<UpdateMeetingWindowResponse>(`/api/hod/meeting-windows/${windowId}/update`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async cancelMeetingWindow(windowId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/hod/meeting-windows/${windowId}/cancel`, {
+      method: 'POST',
+    })
+  }
+
+  async getMeetingWindowReports(windowId: string): Promise<MeetingWindowReportsResponse> {
+    return this.request<MeetingWindowReportsResponse>(`/api/hod/meeting-windows/${windowId}/reports`)
+  }
+
+  // Faculty - Meeting Report Submission
+  async getFacultyMeetingWindows(): Promise<FacultyMeetingWindowsResponse> {
+    return this.request<FacultyMeetingWindowsResponse>('/api/faculty/meeting-windows')
+  }
+
+  async getOrCreateMeetingReport(windowId: string, data?: { year: number; semester: number }): Promise<MeetingReportResponse> {
+    if (data) {
+      return this.request<MeetingReportResponse>(`/api/faculty/meeting-windows/${windowId}/report`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+    }
+    return this.request<MeetingReportResponse>(`/api/faculty/meeting-windows/${windowId}/report`)
+  }
+
+  async saveMeetingReport(reportId: string, data: SaveMeetingReportRequest): Promise<SaveMeetingReportResponse> {
+    return this.request<SaveMeetingReportResponse>(`/api/faculty/meeting-reports/${reportId}/save`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async submitMeetingReport(reportId: string): Promise<{ message: string; report: { id: string; isSubmitted: boolean; submittedAt: string } }> {
+    return this.request<{ message: string; report: { id: string; isSubmitted: boolean; submittedAt: string } }>(`/api/faculty/meeting-reports/${reportId}/submit`, {
+      method: 'POST',
+    })
+  }
+
+  // Student - View Meeting Reports
+  async getStudentMeetingReports(): Promise<StudentMeetingReportsResponse> {
+    return this.request<StudentMeetingReportsResponse>('/api/student/meeting-reports')
   }
 }
 

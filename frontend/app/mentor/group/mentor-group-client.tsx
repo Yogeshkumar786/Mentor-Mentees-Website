@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { formatDate, TIME_OPTIONS } from "@/lib/utils"
+import { formatDate, TIME_OPTIONS, validateMeetingSchedule } from "@/lib/utils"
 import { api, MentorshipGroupResponse, MentorshipGroupMeeting, ScheduleMeetingItem, CompleteGroupMeetingsRequest, StudentReviewItem, FacultyListResponse } from "@/lib/api"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -357,6 +357,17 @@ export default function MentorGroupClient() {
       toast({
         title: "Error",
         description: "Missing group information",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Validate that all meetings are scheduled in the future
+    const validation = validateMeetingSchedule(validMeetings)
+    if (!validation.valid) {
+      toast({
+        title: "Invalid meeting time",
+        description: validation.error,
         variant: "destructive"
       })
       return

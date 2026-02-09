@@ -275,6 +275,12 @@ export function FacultyDashboard({ user }: FacultyDashboardProps) {
                     Manage Meetings
                   </Link>
                 </Button>
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/faculty-meetings">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Submit Meeting Reports
+                  </Link>
+                </Button>
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">

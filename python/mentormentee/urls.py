@@ -125,4 +125,22 @@ urlpatterns = [
     # Subjects APIs
     path('api/subjects', views.get_subjects_list, name='get_subjects_list'),
     path('api/subjects/create', views.create_subject, name='create_subject'),
+    
+    # ==================== MEETING WINDOW WORKFLOW APIs ====================
+    # HOD - Meeting Window Management
+    path('api/hod/meeting-windows', views.get_meeting_windows, name='get_meeting_windows'),
+    path('api/hod/meeting-windows/create', views.create_meeting_window, name='create_meeting_window'),
+    path('api/hod/meeting-windows/<uuid:window_id>', views.get_meeting_window_details, name='get_meeting_window_details'),
+    path('api/hod/meeting-windows/<uuid:window_id>/update', views.update_meeting_window, name='update_meeting_window'),
+    path('api/hod/meeting-windows/<uuid:window_id>/cancel', views.cancel_meeting_window, name='cancel_meeting_window'),
+    path('api/hod/meeting-windows/<uuid:window_id>/reports', views.get_meeting_window_reports, name='get_meeting_window_reports'),
+    
+    # Faculty - Meeting Report Submission
+    path('api/faculty/meeting-windows', views.get_faculty_meeting_windows, name='get_faculty_meeting_windows'),
+    path('api/faculty/meeting-windows/<uuid:window_id>/report', views.get_or_create_meeting_report, name='get_or_create_meeting_report'),
+    path('api/faculty/meeting-reports/<uuid:report_id>/save', views.save_meeting_report, name='save_meeting_report'),
+    path('api/faculty/meeting-reports/<uuid:report_id>/submit', views.submit_meeting_report, name='submit_meeting_report'),
+    
+    # Student - View Meeting Reports
+    path('api/student/meeting-reports', views.get_student_meeting_reports, name='get_student_meeting_reports'),
 ]

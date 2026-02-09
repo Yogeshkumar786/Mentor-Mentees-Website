@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { TimeSelect } from "@/components/ui/time-select"
 import {
   UserCheck,
   Calendar,
@@ -187,12 +188,9 @@ export default function MenteeMeetingsPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="preferredTime">Preferred Time</Label>
-                      <Input
-                        id="preferredTime"
-                        type="time"
+                      <TimeSelect
                         value={formData.preferredTime}
-                        onChange={(e) => setFormData({ ...formData, preferredTime: e.target.value })}
-                        required
+                        onChange={(value) => setFormData({ ...formData, preferredTime: value })}
                       />
                     </div>
                   </div>

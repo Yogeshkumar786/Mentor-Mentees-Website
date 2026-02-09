@@ -1826,6 +1826,9 @@ def schedule_meetings(request):
         created_meetings = []
         failed_meetings = []
         
+        from django.utils import timezone
+        now = timezone.now()
+        
         for idx, meeting_data in enumerate(meetings_data):
             try:
                 meeting_date = meeting_data.get('date')
@@ -1847,6 +1850,18 @@ def schedule_meetings(request):
                     failed_meetings.append({
                         'index': idx,
                         'reason': 'Invalid date/time format. Use YYYY-MM-DD for date and HH:MM for time'
+                    })
+                    continue
+                
+                # Validate that meeting is scheduled in the future
+                meeting_datetime = datetime.combine(parsed_date, parsed_time)
+                if timezone.is_naive(meeting_datetime):
+                    meeting_datetime = timezone.make_aware(meeting_datetime)
+                
+                if meeting_datetime <= now:
+                    failed_meetings.append({
+                        'index': idx,
+                        'reason': 'Meeting must be scheduled in the future'
                     })
                     continue
                 
@@ -1987,9 +2002,13 @@ def schedule_group_meetings(request):
                 status=404
             )
         
-        # Parse meeting dates
+        # Parse meeting dates and validate they are in the future
+        from django.utils import timezone
+        now = timezone.now()
+        
         parsed_meetings = []
-        for meeting_data in meetings_data:
+        invalid_meetings = []
+        for idx, meeting_data in enumerate(meetings_data):
             meeting_date = meeting_data.get('date')
             meeting_time = meeting_data.get('time')
             description = meeting_data.get('description', '')
@@ -2000,6 +2019,16 @@ def schedule_group_meetings(request):
             try:
                 parsed_date = datetime.strptime(meeting_date, '%Y-%m-%d').date()
                 parsed_time = datetime.strptime(meeting_time, '%H:%M').time()
+                
+                # Validate that meeting is scheduled in the future
+                meeting_datetime = datetime.combine(parsed_date, parsed_time)
+                if timezone.is_naive(meeting_datetime):
+                    meeting_datetime = timezone.make_aware(meeting_datetime)
+                
+                if meeting_datetime <= now:
+                    invalid_meetings.append(f"Meeting {idx + 1}: Must be scheduled in the future ({meeting_date} {meeting_time})")
+                    continue
+                
                 parsed_meetings.append({
                     'date': parsed_date,
                     'time': parsed_time,
@@ -2009,8 +2038,11 @@ def schedule_group_meetings(request):
                 continue
         
         if not parsed_meetings:
+            error_message = 'No valid meetings to schedule'
+            if invalid_meetings:
+                error_message = invalid_meetings[0]  # Return the first validation error
             return JsonResponse(
-                {'message': 'No valid meetings to schedule'},
+                {'message': error_message},
                 status=400
             )
         
@@ -3829,8 +3861,21 @@ def create_mentorship_meeting(request):
                 status=400
             )
         
-        # Determine status based on date
+        # Validate that meeting is scheduled in the future
         from django.utils import timezone
+        now = timezone.now()
+        meeting_datetime = datetime.combine(parsed_date, parsed_time)
+        # Make it timezone aware
+        if timezone.is_naive(meeting_datetime):
+            meeting_datetime = timezone.make_aware(meeting_datetime)
+        
+        if meeting_datetime <= now:
+            return JsonResponse(
+                {'message': 'Meeting must be scheduled in the future'},
+                status=400
+            )
+        
+        # Determine status based on date
         today = timezone.now().date()
         
         if parsed_date > today:
@@ -4722,6 +4767,7 @@ def faculty_schedule_meetings(request):
         failed_meetings = []
         
         from django.utils import timezone
+        now = timezone.now()
         today = timezone.now().date()
         
         for idx, meeting_data in enumerate(meetings_data):
@@ -4744,6 +4790,18 @@ def faculty_schedule_meetings(request):
                     failed_meetings.append({
                         'index': idx,
                         'reason': 'Invalid date/time format'
+                    })
+                    continue
+                
+                # Validate that meeting is scheduled in the future
+                meeting_datetime = datetime.combine(parsed_date, parsed_time)
+                if timezone.is_naive(meeting_datetime):
+                    meeting_datetime = timezone.make_aware(meeting_datetime)
+                
+                if meeting_datetime <= now:
+                    failed_meetings.append({
+                        'index': idx,
+                        'reason': 'Meeting must be scheduled in the future'
                     })
                     continue
                 
@@ -4836,6 +4894,7 @@ def faculty_schedule_group_meetings(request):
         from datetime import datetime
         
         user_id = request.user_id
+        now = timezone.now()
         today = timezone.now().date()
         
         # Get faculty profile
@@ -4858,9 +4917,10 @@ def faculty_schedule_group_meetings(request):
                 status=404
             )
         
-        # Parse meeting dates
+        # Parse meeting dates and validate they are in the future
         parsed_meetings = []
-        for meeting_data in meetings_data:
+        invalid_meetings = []
+        for idx, meeting_data in enumerate(meetings_data):
             meeting_date = meeting_data.get('date')
             meeting_time = meeting_data.get('time')
             description = meeting_data.get('description', '')
@@ -4871,6 +4931,15 @@ def faculty_schedule_group_meetings(request):
             try:
                 parsed_date = datetime.strptime(meeting_date, '%Y-%m-%d').date()
                 parsed_time = datetime.strptime(meeting_time, '%H:%M').time()
+                
+                # Validate that meeting is scheduled in the future
+                meeting_datetime = datetime.combine(parsed_date, parsed_time)
+                if timezone.is_naive(meeting_datetime):
+                    meeting_datetime = timezone.make_aware(meeting_datetime)
+                
+                if meeting_datetime <= now:
+                    invalid_meetings.append(f"Meeting {idx + 1}: Must be scheduled in the future ({meeting_date} {meeting_time})")
+                    continue
                 
                 # Determine status based on date
                 if parsed_date > today:
@@ -4888,7 +4957,10 @@ def faculty_schedule_group_meetings(request):
                 continue
         
         if not parsed_meetings:
-            return JsonResponse({'message': 'No valid meetings to schedule'}, status=400)
+            error_message = 'No valid meetings to schedule'
+            if invalid_meetings:
+                error_message = invalid_meetings[0]  # Return the first validation error
+            return JsonResponse({'message': error_message}, status=400)
         
         # Create GroupMeeting(s) and attach all students once per meeting
         students = [m.student for m in mentorships]
@@ -7692,6 +7764,917 @@ def create_subject(request):
         
     except Exception as e:
         print(f"Create subject error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+# ==================== MEETING WINDOW WORKFLOW APIs ====================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role('HOD')
+def get_meeting_windows(request):
+    """
+    Get all meeting windows for the HOD's department.
+    Returns active, upcoming, and past windows.
+    """
+    try:
+        from .models import MeetingWindow, MeetingWindowStatus, HOD, MeetingReport
+        from django.utils import timezone
+        
+        hod_user_id = request.user_id
+        
+        # Get HOD's department
+        try:
+            hod = HOD.objects.get(user_id=hod_user_id, endDate__isnull=True)
+        except HOD.DoesNotExist:
+            return JsonResponse({'message': 'HOD profile not found'}, status=404)
+        
+        # Auto-update status of windows based on current time
+        now = timezone.now()
+        MeetingWindow.objects.filter(
+            department=hod.department,
+            status=MeetingWindowStatus.UPCOMING,
+            startDate__lte=now
+        ).update(status=MeetingWindowStatus.ACTIVE)
+        
+        MeetingWindow.objects.filter(
+            department=hod.department,
+            status=MeetingWindowStatus.ACTIVE,
+            endDate__lt=now
+        ).update(status=MeetingWindowStatus.CLOSED)
+        
+        # Get all windows
+        windows = MeetingWindow.objects.filter(
+            department=hod.department
+        ).order_by('-createdAt')
+        
+        windows_data = []
+        for window in windows:
+            # Count reports
+            total_reports = MeetingReport.objects.filter(meeting_window=window).count()
+            submitted_reports = MeetingReport.objects.filter(meeting_window=window, isSubmitted=True).count()
+            
+            windows_data.append({
+                'id': str(window.id),
+                'title': window.title,
+                'description': window.description,
+                'startDate': window.startDate.isoformat(),
+                'endDate': window.endDate.isoformat(),
+                'year': window.year,
+                'semester': window.semester,
+                'status': window.status,
+                'totalReports': total_reports,
+                'submittedReports': submitted_reports,
+                'createdAt': window.createdAt.isoformat()
+            })
+        
+        return JsonResponse({
+            'windows': windows_data,
+            'department': hod.department
+        })
+        
+    except Exception as e:
+        print(f"Get meeting windows error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role('HOD')
+def create_meeting_window(request):
+    """
+    HOD creates a new meeting window with a time frame for faculty to submit reports.
+    Required fields:
+        - title: Name of the meeting window
+        - startDate: When the window opens (ISO format)
+        - endDate: Deadline for submissions (ISO format)
+    Optional fields:
+        - description: Instructions for faculty
+        - year: Filter by academic year
+        - semester: Filter by semester
+    """
+    try:
+        from .models import MeetingWindow, MeetingWindowStatus, HOD
+        from django.utils import timezone
+        
+        data = json.loads(request.body)
+        title = data.get('title')
+        start_date_str = data.get('startDate')
+        end_date_str = data.get('endDate')
+        description = data.get('description', '')
+        year = data.get('year')
+        semester = data.get('semester')
+        
+        # Validate required fields
+        if not title:
+            return JsonResponse({'message': 'Title is required'}, status=400)
+        if not start_date_str or not end_date_str:
+            return JsonResponse({'message': 'Start date and end date are required'}, status=400)
+        
+        hod_user_id = request.user_id
+        
+        # Get HOD
+        try:
+            hod = HOD.objects.get(user_id=hod_user_id, endDate__isnull=True)
+        except HOD.DoesNotExist:
+            return JsonResponse({'message': 'HOD profile not found'}, status=404)
+        
+        # Parse dates
+        try:
+            start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
+            end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
+        except ValueError:
+            return JsonResponse({'message': 'Invalid date format. Use ISO format.'}, status=400)
+        
+        # Validate dates
+        now = timezone.now()
+        if start_date >= end_date:
+            return JsonResponse({'message': 'End date must be after start date'}, status=400)
+        if end_date <= now:
+            return JsonResponse({'message': 'End date must be in the future'}, status=400)
+        
+        # Determine initial status
+        if start_date <= now:
+            status = MeetingWindowStatus.ACTIVE
+        else:
+            status = MeetingWindowStatus.UPCOMING
+        
+        # Create meeting window
+        window = MeetingWindow.objects.create(
+            hod=hod,
+            department=hod.department,
+            title=title,
+            description=description,
+            startDate=start_date,
+            endDate=end_date,
+            year=year,
+            semester=semester,
+            status=status
+        )
+        
+        return JsonResponse({
+            'message': 'Meeting window created successfully',
+            'window': {
+                'id': str(window.id),
+                'title': window.title,
+                'description': window.description,
+                'startDate': window.startDate.isoformat(),
+                'endDate': window.endDate.isoformat(),
+                'year': window.year,
+                'semester': window.semester,
+                'status': window.status
+            }
+        }, status=201)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Create meeting window error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role('HOD')
+def get_meeting_window_details(request, window_id):
+    """
+    Get detailed information about a specific meeting window including all reports.
+    """
+    try:
+        from .models import MeetingWindow, MeetingReport, MeetingReportStudent, HOD, Faculty
+        
+        hod_user_id = request.user_id
+        
+        # Get HOD
+        try:
+            hod = HOD.objects.get(user_id=hod_user_id, endDate__isnull=True)
+        except HOD.DoesNotExist:
+            return JsonResponse({'message': 'HOD profile not found'}, status=404)
+        
+        # Get window
+        try:
+            window = MeetingWindow.objects.get(id=window_id, department=hod.department)
+        except MeetingWindow.DoesNotExist:
+            return JsonResponse({'message': 'Meeting window not found'}, status=404)
+        
+        # Get all reports for this window
+        reports = MeetingReport.objects.filter(meeting_window=window).select_related('faculty')
+        
+        reports_data = []
+        for report in reports:
+            student_reports = MeetingReportStudent.objects.filter(
+                meeting_report=report
+            ).select_related('student')
+            
+            reports_data.append({
+                'id': str(report.id),
+                'faculty': {
+                    'id': str(report.faculty.id),
+                    'name': report.faculty.name,
+                    'employeeId': report.faculty.employeeId
+                },
+                'year': report.year,
+                'semester': report.semester,
+                'meetingDate': report.meetingDate.isoformat() if report.meetingDate else None,
+                'meetingTime': report.meetingTime.strftime('%H:%M') if report.meetingTime else None,
+                'description': report.description,
+                'isSubmitted': report.isSubmitted,
+                'submittedAt': report.submittedAt.isoformat() if report.submittedAt else None,
+                'studentCount': student_reports.count(),
+                'students': [{
+                    'rollNumber': sr.student.rollNumber,
+                    'name': sr.student.name,
+                    'attended': sr.attended,
+                    'review': sr.review
+                } for sr in student_reports]
+            })
+        
+        return JsonResponse({
+            'window': {
+                'id': str(window.id),
+                'title': window.title,
+                'description': window.description,
+                'startDate': window.startDate.isoformat(),
+                'endDate': window.endDate.isoformat(),
+                'year': window.year,
+                'semester': window.semester,
+                'status': window.status,
+                'createdAt': window.createdAt.isoformat()
+            },
+            'reports': reports_data,
+            'summary': {
+                'totalReports': len(reports_data),
+                'submittedReports': sum(1 for r in reports_data if r['isSubmitted']),
+                'pendingReports': sum(1 for r in reports_data if not r['isSubmitted'])
+            }
+        })
+        
+    except Exception as e:
+        print(f"Get meeting window details error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "PATCH"])
+@require_role('HOD')
+def update_meeting_window(request, window_id):
+    """
+    Update a meeting window (only if not closed).
+    """
+    try:
+        from .models import MeetingWindow, MeetingWindowStatus, HOD
+        from django.utils import timezone
+        
+        hod_user_id = request.user_id
+        
+        # Get HOD
+        try:
+            hod = HOD.objects.get(user_id=hod_user_id, endDate__isnull=True)
+        except HOD.DoesNotExist:
+            return JsonResponse({'message': 'HOD profile not found'}, status=404)
+        
+        # Get window
+        try:
+            window = MeetingWindow.objects.get(id=window_id, department=hod.department)
+        except MeetingWindow.DoesNotExist:
+            return JsonResponse({'message': 'Meeting window not found'}, status=404)
+        
+        if window.status == MeetingWindowStatus.CLOSED:
+            return JsonResponse({'message': 'Cannot update a closed window'}, status=400)
+        
+        data = json.loads(request.body)
+        
+        # Update fields
+        if 'title' in data:
+            window.title = data['title']
+        if 'description' in data:
+            window.description = data['description']
+        if 'endDate' in data:
+            try:
+                new_end_date = datetime.fromisoformat(data['endDate'].replace('Z', '+00:00'))
+                if new_end_date <= timezone.now():
+                    return JsonResponse({'message': 'End date must be in the future'}, status=400)
+                window.endDate = new_end_date
+            except ValueError:
+                return JsonResponse({'message': 'Invalid date format'}, status=400)
+        
+        window.save()
+        
+        return JsonResponse({
+            'message': 'Meeting window updated successfully',
+            'window': {
+                'id': str(window.id),
+                'title': window.title,
+                'description': window.description,
+                'startDate': window.startDate.isoformat(),
+                'endDate': window.endDate.isoformat(),
+                'status': window.status
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Update meeting window error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role('HOD')
+def cancel_meeting_window(request, window_id):
+    """
+    Cancel a meeting window.
+    """
+    try:
+        from .models import MeetingWindow, MeetingWindowStatus, HOD
+        
+        hod_user_id = request.user_id
+        
+        # Get HOD
+        try:
+            hod = HOD.objects.get(user_id=hod_user_id, endDate__isnull=True)
+        except HOD.DoesNotExist:
+            return JsonResponse({'message': 'HOD profile not found'}, status=404)
+        
+        # Get window
+        try:
+            window = MeetingWindow.objects.get(id=window_id, department=hod.department)
+        except MeetingWindow.DoesNotExist:
+            return JsonResponse({'message': 'Meeting window not found'}, status=404)
+        
+        if window.status == MeetingWindowStatus.CLOSED:
+            return JsonResponse({'message': 'Cannot cancel a closed window'}, status=400)
+        
+        window.status = MeetingWindowStatus.CANCELLED
+        window.save()
+        
+        return JsonResponse({
+            'message': 'Meeting window cancelled successfully',
+            'window': {
+                'id': str(window.id),
+                'title': window.title,
+                'status': window.status
+            }
+        })
+        
+    except Exception as e:
+        print(f"Cancel meeting window error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role('HOD')
+def get_meeting_window_reports(request, window_id):
+    """
+    Get all reports for a specific meeting window with detailed faculty submission status.
+    """
+    try:
+        from .models import MeetingWindow, MeetingReport, MeetingReportStudent, HOD, Faculty, Mentorship
+        
+        hod_user_id = request.user_id
+        
+        # Get HOD
+        try:
+            hod = HOD.objects.get(user_id=hod_user_id, endDate__isnull=True)
+        except HOD.DoesNotExist:
+            return JsonResponse({'message': 'HOD profile not found'}, status=404)
+        
+        # Get window
+        try:
+            window = MeetingWindow.objects.get(id=window_id, department=hod.department)
+        except MeetingWindow.DoesNotExist:
+            return JsonResponse({'message': 'Meeting window not found'}, status=404)
+        
+        # Get all faculty with active mentorships in this department
+        active_faculty_ids = Mentorship.objects.filter(
+            department=hod.department,
+            is_active=True
+        ).values_list('faculty_id', flat=True).distinct()
+        
+        all_faculty = Faculty.objects.filter(
+            id__in=active_faculty_ids,
+            department=hod.department
+        )
+        
+        # Get submitted reports
+        reports = MeetingReport.objects.filter(meeting_window=window).select_related('faculty')
+        reports_by_faculty = {str(r.faculty.id): r for r in reports}
+        
+        faculty_status = []
+        for faculty in all_faculty:
+            report = reports_by_faculty.get(str(faculty.id))
+            faculty_status.append({
+                'faculty': {
+                    'id': str(faculty.id),
+                    'name': faculty.name,
+                    'employeeId': faculty.employeeId
+                },
+                'hasReport': report is not None,
+                'isSubmitted': report.isSubmitted if report else False,
+                'submittedAt': report.submittedAt.isoformat() if report and report.submittedAt else None,
+                'reportId': str(report.id) if report else None
+            })
+        
+        return JsonResponse({
+            'window': {
+                'id': str(window.id),
+                'title': window.title,
+                'status': window.status,
+                'endDate': window.endDate.isoformat()
+            },
+            'facultyStatus': faculty_status,
+            'summary': {
+                'totalFaculty': len(faculty_status),
+                'submitted': sum(1 for f in faculty_status if f['isSubmitted']),
+                'pending': sum(1 for f in faculty_status if not f['isSubmitted'])
+            }
+        })
+        
+    except Exception as e:
+        print(f"Get meeting window reports error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+# ==================== FACULTY MEETING REPORT APIs ====================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role('FACULTY', 'HOD')
+def get_faculty_meeting_windows(request):
+    """
+    Get all active/upcoming meeting windows for the faculty's department.
+    """
+    try:
+        from .models import MeetingWindow, MeetingWindowStatus, Faculty, MeetingReport
+        from django.utils import timezone
+        
+        user_id = request.user_id
+        
+        # Get faculty
+        try:
+            faculty = Faculty.objects.get(user_id=user_id)
+        except Faculty.DoesNotExist:
+            return JsonResponse({'message': 'Faculty profile not found'}, status=404)
+        
+        # Auto-update status of windows
+        now = timezone.now()
+        MeetingWindow.objects.filter(
+            department=faculty.department,
+            status=MeetingWindowStatus.UPCOMING,
+            startDate__lte=now
+        ).update(status=MeetingWindowStatus.ACTIVE)
+        
+        MeetingWindow.objects.filter(
+            department=faculty.department,
+            status=MeetingWindowStatus.ACTIVE,
+            endDate__lt=now
+        ).update(status=MeetingWindowStatus.CLOSED)
+        
+        # Get windows (active and upcoming, plus recent closed ones)
+        windows = MeetingWindow.objects.filter(
+            department=faculty.department,
+            status__in=[MeetingWindowStatus.ACTIVE, MeetingWindowStatus.UPCOMING, MeetingWindowStatus.CLOSED]
+        ).order_by('-endDate')[:20]  # Last 20 windows
+        
+        windows_data = []
+        for window in windows:
+            # Check if faculty has submitted a report
+            report = MeetingReport.objects.filter(
+                meeting_window=window,
+                faculty=faculty
+            ).first()
+            
+            windows_data.append({
+                'id': str(window.id),
+                'title': window.title,
+                'description': window.description,
+                'startDate': window.startDate.isoformat(),
+                'endDate': window.endDate.isoformat(),
+                'year': window.year,
+                'semester': window.semester,
+                'status': window.status,
+                'hasReport': report is not None,
+                'isSubmitted': report.isSubmitted if report else False,
+                'reportId': str(report.id) if report else None
+            })
+        
+        return JsonResponse({
+            'windows': windows_data,
+            'department': faculty.department
+        })
+        
+    except Exception as e:
+        print(f"Get faculty meeting windows error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@require_role('FACULTY', 'HOD')
+def get_or_create_meeting_report(request, window_id):
+    """
+    GET: Get faculty's report for a meeting window (creates draft if doesn't exist)
+    POST: Create/initialize a report for a specific year/semester group
+    """
+    try:
+        from .models import MeetingWindow, MeetingWindowStatus, MeetingReport, MeetingReportStudent, Faculty, Mentorship
+        from django.utils import timezone
+        
+        user_id = request.user_id
+        
+        # Get faculty
+        try:
+            faculty = Faculty.objects.get(user_id=user_id)
+        except Faculty.DoesNotExist:
+            return JsonResponse({'message': 'Faculty profile not found'}, status=404)
+        
+        # Get window
+        try:
+            window = MeetingWindow.objects.get(id=window_id, department=faculty.department)
+        except MeetingWindow.DoesNotExist:
+            return JsonResponse({'message': 'Meeting window not found'}, status=404)
+        
+        if request.method == "POST":
+            data = json.loads(request.body)
+            year = data.get('year')
+            semester = data.get('semester')
+            
+            if not year or not semester:
+                return JsonResponse({'message': 'Year and semester are required'}, status=400)
+            
+            # Check if report already exists
+            existing_report = MeetingReport.objects.filter(
+                meeting_window=window,
+                faculty=faculty,
+                year=year,
+                semester=semester
+            ).first()
+            
+            if existing_report:
+                return JsonResponse({'message': 'Report already exists for this group'}, status=409)
+            
+            # Get students in this mentorship group
+            mentorships = Mentorship.objects.filter(
+                faculty=faculty,
+                year=year,
+                semester=semester,
+                is_active=True
+            ).select_related('student')
+            
+            if not mentorships.exists():
+                return JsonResponse({'message': 'No active mentorships found for this group'}, status=404)
+            
+            # Create report
+            report = MeetingReport.objects.create(
+                meeting_window=window,
+                faculty=faculty,
+                year=year,
+                semester=semester,
+                meetingDate=timezone.now().date()
+            )
+            
+            # Create student entries
+            for mentorship in mentorships:
+                MeetingReportStudent.objects.create(
+                    meeting_report=report,
+                    student=mentorship.student,
+                    attended=True,
+                    review=''
+                )
+            
+            # Fetch created data
+            student_reports = MeetingReportStudent.objects.filter(
+                meeting_report=report
+            ).select_related('student')
+            
+            return JsonResponse({
+                'message': 'Report initialized successfully',
+                'report': {
+                    'id': str(report.id),
+                    'year': report.year,
+                    'semester': report.semester,
+                    'meetingDate': report.meetingDate.isoformat() if report.meetingDate else None,
+                    'meetingTime': report.meetingTime.strftime('%H:%M') if report.meetingTime else None,
+                    'description': report.description,
+                    'isSubmitted': report.isSubmitted,
+                    'students': [{
+                        'id': str(sr.id),
+                        'rollNumber': sr.student.rollNumber,
+                        'name': sr.student.name,
+                        'attended': sr.attended,
+                        'review': sr.review
+                    } for sr in student_reports]
+                }
+            }, status=201)
+        
+        else:  # GET request
+            # Get all reports for this faculty in this window
+            reports = MeetingReport.objects.filter(
+                meeting_window=window,
+                faculty=faculty
+            )
+            
+            reports_data = []
+            for report in reports:
+                student_reports = MeetingReportStudent.objects.filter(
+                    meeting_report=report
+                ).select_related('student')
+                
+                reports_data.append({
+                    'id': str(report.id),
+                    'year': report.year,
+                    'semester': report.semester,
+                    'meetingDate': report.meetingDate.isoformat() if report.meetingDate else None,
+                    'meetingTime': report.meetingTime.strftime('%H:%M') if report.meetingTime else None,
+                    'description': report.description,
+                    'isSubmitted': report.isSubmitted,
+                    'submittedAt': report.submittedAt.isoformat() if report.submittedAt else None,
+                    'students': [{
+                        'id': str(sr.id),
+                        'rollNumber': sr.student.rollNumber,
+                        'name': sr.student.name,
+                        'attended': sr.attended,
+                        'review': sr.review
+                    } for sr in student_reports]
+                })
+            
+            # Get mentorship groups that don't have reports yet
+            existing_groups = [(r.year, r.semester) for r in reports]
+            mentorship_groups = Mentorship.objects.filter(
+                faculty=faculty,
+                is_active=True
+            ).values('year', 'semester').distinct()
+            
+            available_groups = [
+                {'year': g['year'], 'semester': g['semester']}
+                for g in mentorship_groups
+                if (g['year'], g['semester']) not in existing_groups
+            ]
+            
+            return JsonResponse({
+                'window': {
+                    'id': str(window.id),
+                    'title': window.title,
+                    'description': window.description,
+                    'startDate': window.startDate.isoformat(),
+                    'endDate': window.endDate.isoformat(),
+                    'status': window.status
+                },
+                'reports': reports_data,
+                'availableGroups': available_groups
+            })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Get/create meeting report error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT", "PATCH"])
+@require_role('FACULTY', 'HOD')
+def save_meeting_report(request, report_id):
+    """
+    Save/update a meeting report (draft mode - not submitted yet).
+    """
+    try:
+        from .models import MeetingReport, MeetingReportStudent, MeetingWindowStatus, Faculty
+        
+        user_id = request.user_id
+        
+        # Get faculty
+        try:
+            faculty = Faculty.objects.get(user_id=user_id)
+        except Faculty.DoesNotExist:
+            return JsonResponse({'message': 'Faculty profile not found'}, status=404)
+        
+        # Get report
+        try:
+            report = MeetingReport.objects.select_related('meeting_window').get(
+                id=report_id,
+                faculty=faculty
+            )
+        except MeetingReport.DoesNotExist:
+            return JsonResponse({'message': 'Report not found'}, status=404)
+        
+        if report.isSubmitted:
+            return JsonResponse({'message': 'Cannot edit a submitted report'}, status=400)
+        
+        if report.meeting_window.status == MeetingWindowStatus.CLOSED:
+            return JsonResponse({'message': 'Meeting window has closed'}, status=400)
+        
+        data = json.loads(request.body)
+        
+        # Update report fields
+        if 'meetingDate' in data:
+            report.meetingDate = datetime.strptime(data['meetingDate'], '%Y-%m-%d').date()
+        if 'meetingTime' in data:
+            report.meetingTime = datetime.strptime(data['meetingTime'], '%H:%M').time()
+        if 'description' in data:
+            report.description = data['description']
+        
+        report.save()
+        
+        # Update student reports
+        if 'students' in data:
+            for student_data in data['students']:
+                student_report_id = student_data.get('id')
+                if student_report_id:
+                    try:
+                        sr = MeetingReportStudent.objects.get(id=student_report_id, meeting_report=report)
+                        if 'attended' in student_data:
+                            sr.attended = student_data['attended']
+                        if 'review' in student_data:
+                            sr.review = student_data['review']
+                        sr.save()
+                    except MeetingReportStudent.DoesNotExist:
+                        pass
+        
+        # Fetch updated data
+        student_reports = MeetingReportStudent.objects.filter(
+            meeting_report=report
+        ).select_related('student')
+        
+        return JsonResponse({
+            'message': 'Report saved successfully',
+            'report': {
+                'id': str(report.id),
+                'year': report.year,
+                'semester': report.semester,
+                'meetingDate': report.meetingDate.isoformat() if report.meetingDate else None,
+                'meetingTime': report.meetingTime.strftime('%H:%M') if report.meetingTime else None,
+                'description': report.description,
+                'isSubmitted': report.isSubmitted,
+                'students': [{
+                    'id': str(sr.id),
+                    'rollNumber': sr.student.rollNumber,
+                    'name': sr.student.name,
+                    'attended': sr.attended,
+                    'review': sr.review
+                } for sr in student_reports]
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f"Save meeting report error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_role('FACULTY', 'HOD')
+def submit_meeting_report(request, report_id):
+    """
+    Submit/finalize a meeting report. Cannot be edited after submission.
+    """
+    try:
+        from .models import MeetingReport, MeetingReportStudent, MeetingWindowStatus, Faculty
+        from django.utils import timezone
+        
+        user_id = request.user_id
+        
+        # Get faculty
+        try:
+            faculty = Faculty.objects.get(user_id=user_id)
+        except Faculty.DoesNotExist:
+            return JsonResponse({'message': 'Faculty profile not found'}, status=404)
+        
+        # Get report
+        try:
+            report = MeetingReport.objects.select_related('meeting_window').get(
+                id=report_id,
+                faculty=faculty
+            )
+        except MeetingReport.DoesNotExist:
+            return JsonResponse({'message': 'Report not found'}, status=404)
+        
+        if report.isSubmitted:
+            return JsonResponse({'message': 'Report already submitted'}, status=400)
+        
+        window = report.meeting_window
+        now = timezone.now()
+        
+        if window.status == MeetingWindowStatus.CLOSED:
+            return JsonResponse({'message': 'Meeting window has closed. Cannot submit report.'}, status=400)
+        
+        if window.status == MeetingWindowStatus.CANCELLED:
+            return JsonResponse({'message': 'Meeting window was cancelled.'}, status=400)
+        
+        # Validate report has required data
+        if not report.meetingDate:
+            return JsonResponse({'message': 'Meeting date is required'}, status=400)
+        
+        # Check that meeting date is within the window
+        if report.meetingDate < window.startDate.date() or report.meetingDate > window.endDate.date():
+            return JsonResponse({
+                'message': f'Meeting date must be between {window.startDate.date()} and {window.endDate.date()}'
+            }, status=400)
+        
+        # Submit the report
+        report.isSubmitted = True
+        report.submittedAt = now
+        report.save()
+        
+        return JsonResponse({
+            'message': 'Report submitted successfully',
+            'report': {
+                'id': str(report.id),
+                'isSubmitted': report.isSubmitted,
+                'submittedAt': report.submittedAt.isoformat()
+            }
+        })
+        
+    except Exception as e:
+        print(f"Submit meeting report error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'message': 'Server error'}, status=500)
+
+
+# ==================== STUDENT MEETING REPORT VIEW APIs ====================
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_role('STUDENT')
+def get_student_meeting_reports(request):
+    """
+    Get all meeting reports that include this student.
+    """
+    try:
+        from .models import MeetingReportStudent, Student
+        
+        user_id = request.user_id
+        
+        # Get student
+        try:
+            student = Student.objects.get(user_id=user_id)
+        except Student.DoesNotExist:
+            return JsonResponse({'message': 'Student profile not found'}, status=404)
+        
+        # Get all reports for this student
+        student_reports = MeetingReportStudent.objects.filter(
+            student=student,
+            meeting_report__isSubmitted=True
+        ).select_related(
+            'meeting_report',
+            'meeting_report__meeting_window',
+            'meeting_report__faculty'
+        ).order_by('-meeting_report__meetingDate')
+        
+        reports_data = []
+        for sr in student_reports:
+            report = sr.meeting_report
+            window = report.meeting_window
+            
+            reports_data.append({
+                'id': str(sr.id),
+                'meetingWindow': {
+                    'id': str(window.id),
+                    'title': window.title
+                },
+                'faculty': {
+                    'id': str(report.faculty.id),
+                    'name': report.faculty.name
+                },
+                'meetingDate': report.meetingDate.isoformat() if report.meetingDate else None,
+                'meetingTime': report.meetingTime.strftime('%H:%M') if report.meetingTime else None,
+                'description': report.description,
+                'attended': sr.attended,
+                'review': sr.review,
+                'submittedAt': report.submittedAt.isoformat() if report.submittedAt else None
+            })
+        
+        return JsonResponse({
+            'reports': reports_data
+        })
+        
+    except Exception as e:
+        print(f"Get student meeting reports error: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({'message': 'Server error'}, status=500)

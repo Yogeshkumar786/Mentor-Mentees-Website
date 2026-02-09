@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { TimeSelect } from "@/components/ui/time-select"
 import { useToast } from "@/hooks/use-toast"
 import { 
   UserCheck, 
@@ -352,11 +353,9 @@ export function StudentMentorView() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="time">Time</Label>
-                  <Input
-                    id="time"
-                    type="time"
+                  <TimeSelect
                     value={meetingForm.time}
-                    onChange={(e) => setMeetingForm({ ...meetingForm, time: e.target.value })}
+                    onChange={(value) => setMeetingForm({ ...meetingForm, time: value })}
                   />
                 </div>
               </div>

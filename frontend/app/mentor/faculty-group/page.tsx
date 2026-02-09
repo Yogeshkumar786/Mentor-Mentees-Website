@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { api, FacultyMentorshipGroupResponse, FacultyMentorshipGroupMentee, ScheduleMeetingItem, GroupMeeting } from "@/lib/api"
+import { validateMeetingSchedule } from "@/lib/utils"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { useAuth } from "@/components/auth-provider"
 import { generateFacultyGroupPDF } from "@/lib/pdf-generator"
@@ -14,6 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { TimeSelect } from "@/components/ui/time-select"
 import { useToast } from "@/hooks/use-toast"
 import {
   ArrowLeft,
@@ -309,6 +311,17 @@ function FacultyGroupContent() {
       toast({
         title: "No meetings to schedule",
         description: "Please add at least one meeting with date and time",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Validate that all meetings are scheduled in the future
+    const validation = validateMeetingSchedule(validMeetings)
+    if (!validation.valid) {
+      toast({
+        title: "Invalid meeting time",
+        description: validation.error,
         variant: "destructive"
       })
       return
@@ -992,10 +1005,9 @@ function FacultyGroupContent() {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Time</Label>
-                      <Input
-                        type="time"
+                      <TimeSelect
                         value={meeting.time}
-                        onChange={(e) => updateMeetingDate(index, 'time', e.target.value)}
+                        onChange={(value) => updateMeetingDate(index, 'time', value)}
                       />
                     </div>
                     <div className="space-y-1">

@@ -53,3 +53,104 @@ export const TIME_OPTIONS: TimeOption[] = [
   { value: '20:30', label: '8:30 PM' },
   { value: '21:00', label: '9:00 PM' }
 ]
+
+export interface MeetingValidationResult {
+  valid: boolean
+  error?: string
+}
+
+/**
+ * Validates that a meeting date/time is in the future
+ * @param date - Date string in YYYY-MM-DD format
+ * @param time - Time string in HH:mm format
+ * @returns Validation result with error message if invalid
+ */
+export function validateMeetingDateTime(date: string, time: string): MeetingValidationResult {
+  if (!date || !time) {
+    return { valid: false, error: 'Date and time are required' }
+  }
+
+  const meetingDateTime = new Date(`${date}T${time}`)
+  const now = new Date()
+
+  if (isNaN(meetingDateTime.getTime())) {
+    return { valid: false, error: 'Invalid date or time format' }
+  }
+
+  if (meetingDateTime <= now) {
+    return { valid: false, error: 'Meeting must be scheduled in the future' }
+  }
+
+  return { valid: true }
+}
+
+/**
+ * Validates that start time is before end time (for meetings with duration)
+ * @param startDate - Start date string in YYYY-MM-DD format
+ * @param startTime - Start time string in HH:mm format
+ * @param endDate - End date string in YYYY-MM-DD format (optional, defaults to startDate)
+ * @param endTime - End time string in HH:mm format
+ * @returns Validation result with error message if invalid
+ */
+export function validateMeetingTimeRange(
+  startDate: string,
+  startTime: string,
+  endDate: string | undefined,
+  endTime: string
+): MeetingValidationResult {
+  if (!startDate || !startTime || !endTime) {
+    return { valid: false, error: 'Start date, start time, and end time are required' }
+  }
+
+  const effectiveEndDate = endDate || startDate
+  const startDateTime = new Date(`${startDate}T${startTime}`)
+  const endDateTime = new Date(`${effectiveEndDate}T${endTime}`)
+
+  if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+    return { valid: false, error: 'Invalid date or time format' }
+  }
+
+  if (startDateTime >= endDateTime) {
+    return { valid: false, error: 'End time must be after start time' }
+  }
+
+  return { valid: true }
+}
+
+export interface MeetingItemValidation {
+  date: string
+  time: string
+  index?: number
+}
+
+/**
+ * Validates multiple meeting items for scheduling
+ * @param meetings - Array of meeting items with date and time
+ * @returns Validation result with detailed error message if any meeting is invalid
+ */
+export function validateMeetingSchedule(meetings: MeetingItemValidation[]): MeetingValidationResult {
+  const now = new Date()
+  
+  for (let i = 0; i < meetings.length; i++) {
+    const meeting = meetings[i]
+    if (!meeting.date || !meeting.time) continue // Skip incomplete entries
+    
+    const meetingDateTime = new Date(`${meeting.date}T${meeting.time}`)
+    
+    if (isNaN(meetingDateTime.getTime())) {
+      return { 
+        valid: false, 
+        error: `Meeting ${i + 1}: Invalid date or time format` 
+      }
+    }
+    
+    if (meetingDateTime <= now) {
+      return { 
+        valid: false, 
+        error: `Meeting ${i + 1}: Must be scheduled in the future (${meeting.date} ${meeting.time})` 
+      }
+    }
+  }
+  
+  return { valid: true }
+}

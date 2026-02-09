@@ -13,6 +13,8 @@ import {
   HeartPulse,
   Shield,
   Trophy,
+  CalendarClock,
+  FileText,
 } from "lucide-react"
 import type { UserRole } from "@/lib/api"
 import type { ReactNode } from "react"
@@ -36,6 +38,7 @@ export const roleNavigations: Record<UserRole, NavItem[]> = {
   HOD: [
     { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
     { id: "mentor", label: "Mentorship", href: "/mentor", icon: <UserCheck className="w-4 h-4" /> },
+    { id: "meeting-windows", label: "Meeting Windows", href: "/meeting-windows", icon: <CalendarClock className="w-4 h-4" /> },
     { id: "students", label: "Students", href: "/students", icon: <GraduationCap className="w-4 h-4" /> },
     { id: "faculty", label: "Faculty", href: "/faculty", icon: <UserCheck className="w-4 h-4" /> },
     { id: "approvals", label: "Requests", href: "/requests", icon: <FileCheck className="w-4 h-4" /> },
@@ -44,6 +47,7 @@ export const roleNavigations: Record<UserRole, NavItem[]> = {
   FACULTY: [
     { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
     { id: "mentor", label: "My Mentees", href: "/mentor", icon: <UserCheck className="w-4 h-4" /> },
+    { id: "meeting-reports", label: "Meeting Reports", href: "/faculty-meetings", icon: <FileText className="w-4 h-4" /> },
     { id: "students", label: "Students", href: "/students", icon: <GraduationCap className="w-4 h-4" /> },
     { id: "requests", label: "Requests", href: "/requests", icon: <ClipboardList className="w-4 h-4" /> },
     { id: "settings", label: "Settings", href: "/dashboard/settings", icon: <Settings className="w-4 h-4" /> },
@@ -75,6 +79,9 @@ export const routeAccess: Record<string, UserRole[]> = {
   '/faculty': ['ADMIN', 'HOD'],
   '/hods': ['ADMIN'],
   '/requests': ['ADMIN', 'HOD', 'FACULTY', 'STUDENT'],
+  // Meeting windows routes
+  '/meeting-windows': ['HOD'],
+  '/faculty-meetings': ['HOD', 'FACULTY'],
   // Student routes (root level)
   '/about': ['STUDENT'],
   '/mentor': ['HOD', 'FACULTY', 'STUDENT'],

@@ -3,12 +3,14 @@
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { api, FacultyMenteesResponse, FacultyMenteeGroup, ScheduleMeetingItem } from "@/lib/api"
+import { validateMeetingSchedule } from "@/lib/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { TimeSelect } from "@/components/ui/time-select"
 import { useToast } from "@/hooks/use-toast"
 import { 
   Users, 
@@ -107,6 +109,17 @@ export function FacultyMentorView({ user }: FacultyMentorViewProps) {
       toast({
         title: "No meetings to schedule",
         description: "Please add at least one meeting with date and time",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Validate that all meetings are scheduled in the future
+    const validation = validateMeetingSchedule(validMeetings)
+    if (!validation.valid) {
+      toast({
+        title: "Invalid meeting time",
+        description: validation.error,
         variant: "destructive"
       })
       return
@@ -459,10 +472,9 @@ export function FacultyMentorView({ user }: FacultyMentorViewProps) {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Time</Label>
-                      <Input
-                        type="time"
+                      <TimeSelect
                         value={meeting.time}
-                        onChange={(e) => updateMeetingDate(index, 'time', e.target.value)}
+                        onChange={(value) => updateMeetingDate(index, 'time', value)}
                       />
                     </div>
                     <div className="space-y-1">

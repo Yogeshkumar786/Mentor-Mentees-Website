@@ -54,6 +54,13 @@ class MeetingStatus(models.TextChoices):
     REQUESTED = 'REQUESTED'
 
 
+class MeetingWindowStatus(models.TextChoices):
+    ACTIVE = 'ACTIVE'          # Window is currently open for submissions
+    UPCOMING = 'UPCOMING'      # Window hasn't started yet
+    CLOSED = 'CLOSED'          # Window deadline has passed
+    CANCELLED = 'CANCELLED'    # Window was cancelled by HOD
+
+
 class AccountStatus(models.TextChoices):
     ACTIVE = 'ACTIVE'
     INACTIVE = 'INACTIVE'
@@ -349,6 +356,83 @@ class MeetingStudentReview(models.Model):
     class Meta:
         db_table = 'meeting_student_reviews'
         unique_together = [['meeting', 'student']]
+
+
+# ==================== NEW MEETING WORKFLOW MODELS ====================
+# HOD creates a MeetingWindow with a deadline
+# Faculty submit MeetingReports within the window for their mentee groups
+
+class MeetingWindow(models.Model):
+    """
+    A time frame set by HOD for mentors to conduct meetings and submit reports.
+    HOD specifies a deadline by which all meetings must be completed.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    hod = models.ForeignKey(HOD, on_delete=models.CASCADE, related_name='meeting_windows', db_column='hodId')
+    department = models.CharField(max_length=20, choices=Department.choices)
+    title = models.CharField(max_length=255)  # e.g., "Mid-Semester Meeting", "End Semester Review"
+    description = models.TextField(null=True, blank=True)  # Instructions for faculty
+    startDate = models.DateTimeField()  # When the window opens
+    endDate = models.DateTimeField()    # Deadline for submitting reports
+    year = models.IntegerField(null=True, blank=True)  # Optional: filter by academic year
+    semester = models.IntegerField(null=True, blank=True)  # Optional: filter by semester
+    status = models.CharField(max_length=20, choices=MeetingWindowStatus.choices, default=MeetingWindowStatus.UPCOMING)
+    createdAt = models.DateTimeField(auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'meeting_windows'
+        indexes = [
+            models.Index(fields=['department', 'status']),
+            models.Index(fields=['startDate', 'endDate']),
+        ]
+    
+    def __str__(self):
+        return f"{self.title} ({self.department}) - {self.startDate.date()} to {self.endDate.date()}"
+
+
+class MeetingReport(models.Model):
+    """
+    Report submitted by faculty for a meeting conducted within a MeetingWindow.
+    Each faculty submits one report per window for their mentee group.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    meeting_window = models.ForeignKey(MeetingWindow, on_delete=models.CASCADE, related_name='reports', db_column='meetingWindowId')
+    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='meeting_reports', db_column='facultyId')
+    year = models.IntegerField()  # Academic year of the mentee group
+    semester = models.IntegerField()  # Semester of the mentee group
+    meetingDate = models.DateField()  # When the meeting was actually conducted
+    meetingTime = models.TimeField(null=True, blank=True)  # Time of meeting
+    description = models.TextField(null=True, blank=True)  # General meeting notes/agenda
+    isSubmitted = models.BooleanField(default=False)  # Whether report is finalized
+    submittedAt = models.DateTimeField(null=True, blank=True)  # When report was submitted
+    createdAt = models.DateTimeField(auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'meeting_reports'
+        unique_together = [['meeting_window', 'faculty', 'year', 'semester']]  # One report per faculty per group per window
+        indexes = [
+            models.Index(fields=['faculty', 'isSubmitted']),
+            models.Index(fields=['meeting_window', 'isSubmitted']),
+        ]
+
+
+class MeetingReportStudent(models.Model):
+    """
+    Individual student attendance and review within a MeetingReport.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    meeting_report = models.ForeignKey(MeetingReport, on_delete=models.CASCADE, related_name='student_reports', db_column='meetingReportId')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='meeting_report_reviews', db_column='studentId')
+    attended = models.BooleanField(default=True)
+    review = models.TextField(null=True, blank=True)  # Individual feedback for student
+    createdAt = models.DateTimeField(auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'meeting_report_students'
+        unique_together = [['meeting_report', 'student']]
 
 
 class Internship(models.Model):

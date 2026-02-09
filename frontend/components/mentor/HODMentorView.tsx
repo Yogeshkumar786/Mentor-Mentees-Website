@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { api, HODMentorshipsResponse, FacultyMentorshipData, UnassignedStudent, FacultyMember, MenteeData } from "@/lib/api"
+import { validateMeetingDateTime } from "@/lib/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { TimeSelect } from "@/components/ui/time-select"
 import { useToast } from "@/hooks/use-toast"
 import { 
   Users, 
@@ -171,6 +173,17 @@ export function HODMentorView({ user }: HODMentorViewProps) {
       toast({
         title: "Missing fields",
         description: "Please fill in all required fields",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Validate that the meeting is scheduled in the future
+    const validation = validateMeetingDateTime(meetingDate, meetingTime)
+    if (!validation.valid) {
+      toast({
+        title: "Invalid meeting time",
+        description: validation.error,
         variant: "destructive"
       })
       return
@@ -965,10 +978,9 @@ export function HODMentorView({ user }: HODMentorViewProps) {
             </div>
             <div className="space-y-2">
               <Label>Time</Label>
-              <Input 
-                type="time" 
+              <TimeSelect
                 value={meetingTime}
-                onChange={(e) => setMeetingTime(e.target.value)}
+                onChange={(value) => setMeetingTime(value)}
               />
             </div>
             <div className="space-y-2">

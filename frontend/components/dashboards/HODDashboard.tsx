@@ -229,6 +229,15 @@ export function HODDashboard({ user }: HODDashboardProps) {
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </div>
             </Link>
+            <Link href="/meeting-windows" className="block">
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                <div>
+                  <p className="text-sm font-medium">Meeting Windows</p>
+                  <p className="text-xs text-muted-foreground">Create and manage meeting time frames</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </Link>
           </CardContent>
         </Card>
       </div>
