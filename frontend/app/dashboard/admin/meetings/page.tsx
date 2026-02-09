@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { formatDate } from "@/lib/utils"
 import { Users, Calendar, FileCheck, Settings, LayoutDashboard, FileText, Clock, MapPin } from "lucide-react"
 import { useEffect, useState } from "react"
 import { storage } from "@/lib/storage"
@@ -129,7 +130,7 @@ export default function AdminMeetingsPage() {
                   <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
-                      {new Date(meeting.scheduledAt).toLocaleDateString()}
+                      {formatDate(meeting.scheduledAt)}
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4" />

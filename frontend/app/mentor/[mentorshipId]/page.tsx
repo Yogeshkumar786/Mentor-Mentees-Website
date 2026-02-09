@@ -7,6 +7,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { useAuth } from "@/components/auth-provider"
 import { api, MentorshipMeetingsResponse, MeetingData } from "@/lib/api"
 import { generateStudentMentorPDF } from "@/lib/pdf-generator"
+import { formatDate, formatDateLong } from "@/lib/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -55,13 +56,13 @@ export default function MentorshipMeetingsPage() {
     }
   }, [mentorshipId])
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      weekday: 'long',
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    })
+  const formatDateFull = (dateStr: string) => {
+    const d = new Date(dateStr)
+    const weekday = d.toLocaleDateString('en-GB', { weekday: 'long' })
+    const day = d.getDate().toString().padStart(2, '0')
+    const month = (d.getMonth() + 1).toString().padStart(2, '0')
+    const year = d.getFullYear()
+    return `${weekday}, ${day}/${month}/${year}`
   }
 
   const formatTime = (timeStr: string | null) => {
@@ -201,9 +202,9 @@ export default function MentorshipMeetingsPage() {
               <div>
                 <span className="text-muted-foreground">Period: </span>
                 <span className="font-medium">
-                  {meetingsData?.startDate ? new Date(meetingsData.startDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'N/A'}
+                  {formatDate(meetingsData?.startDate)}
                   {' - '}
-                  {meetingsData?.endDate ? new Date(meetingsData.endDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : 'Present'}
+                  {meetingsData?.endDate ? formatDate(meetingsData.endDate) : 'Present'}
                 </span>
               </div>
             </div>

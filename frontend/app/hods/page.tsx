@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { api, HODMember, FacultyMember } from "@/lib/api"
+import { formatDate } from "@/lib/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -446,7 +447,7 @@ export default function HodsPage() {
                       <TableCell>{hod.email}</TableCell>
                       <TableCell>{hod.phone || "-"}</TableCell>
                       <TableCell>
-                        {hod.startDate ? new Date(hod.startDate).toLocaleDateString() : "-"}
+                        {hod.startDate ? formatDate(hod.startDate) : "-"}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -526,10 +527,10 @@ export default function HodsPage() {
                       </TableCell>
                       <TableCell>{hod.email}</TableCell>
                       <TableCell>
-                        {hod.startDate ? new Date(hod.startDate).toLocaleDateString() : "-"}
+                        {hod.startDate ? formatDate(hod.startDate) : "-"}
                       </TableCell>
                       <TableCell>
-                        {hod.endDate ? new Date(hod.endDate).toLocaleDateString() : "-"}
+                        {hod.endDate ? formatDate(hod.endDate) : "-"}
                       </TableCell>
                     </TableRow>
                   ))}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import { api, type StudentCoCurricularByRollno } from "@/lib/api"
+import { formatDate } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -123,7 +124,7 @@ export default function StudentCoCurricularPage() {
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm">
                         <Calendar className="h-3 w-3" />
-                        {activity.date ? new Date(activity.date).toLocaleDateString() : 'N/A'}
+                        {formatDate(activity.date)}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -179,7 +180,7 @@ export default function StudentCoCurricularPage() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{activity.eventDetails}</p>
                           <p className="text-xs text-muted-foreground">
-                            {activity.date ? new Date(activity.date).toLocaleDateString() : 'N/A'} • {activity.participationDetails}
+                            {formatDate(activity.date)} • {activity.participationDetails}
                           </p>
                           {activity.awards && activity.awards.trim() !== '' && activity.awards.toLowerCase() !== 'none' && (
                             <Badge variant="secondary" className="mt-1 text-xs">

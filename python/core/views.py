@@ -18,6 +18,36 @@ from django.utils import timezone
 JWT_SECRET = os.environ.get('JWT_SECRET', settings.SECRET_KEY)
 JWT_EXPIRY_DAYS = 15
 
+# Date format constants (DD/MM/YYYY)
+DATE_FORMAT = '%d/%m/%Y'
+DATETIME_FORMAT = '%d/%m/%Y %H:%M:%S'
+# Accepted input formats (DD/MM/YYYY preferred, YYYY-MM-DD for backward compatibility)
+DATE_INPUT_FORMATS = ['%d/%m/%Y', '%d-%m-%Y', '%Y-%m-%d']
+
+
+def parse_date(date_str):
+    """
+    Parse a date string in multiple formats (DD/MM/YYYY preferred).
+    Returns a date object or None if parsing fails.
+    """
+    if not date_str:
+        return None
+    for fmt in DATE_INPUT_FORMATS:
+        try:
+            return datetime.strptime(date_str, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def format_date(date_obj):
+    """
+    Format a date object to DD/MM/YYYY string.
+    """
+    if not date_obj:
+        return None
+    return date_obj.strftime(DATE_FORMAT)
+
 
 def generate_token(user_id, response):
     """
@@ -1767,8 +1797,9 @@ def schedule_meetings(request):
     HOD schedules multiple meetings for a mentorship
     Required fields:
         - mentorshipId: UUID of the mentorship
-        - meetings: Array of {date: "YYYY-MM-DD", time: "HH:MM", description: "optional"}
+        - meetings: Array of {date: "DD/MM/YYYY", time: "HH:MM", description: "optional"}
     Each meeting will be created with status 'YET_TO_DONE'
+    Note: Also accepts YYYY-MM-DD format for backward compatibility
     """
     try:
         data = json.loads(request.body)
@@ -1831,15 +1862,17 @@ def schedule_meetings(request):
                     })
                     continue
                 
-                # Parse date and time
-                from datetime import datetime
+                # Parse date and time (accepts DD/MM/YYYY or YYYY-MM-DD)
+                parsed_date = parse_date(meeting_date)
                 try:
-                    parsed_date = datetime.strptime(meeting_date, '%Y-%m-%d').date()
                     parsed_time = datetime.strptime(meeting_time, '%H:%M').time()
                 except ValueError:
+                    parsed_time = None
+                
+                if not parsed_date or not parsed_time:
                     failed_meetings.append({
                         'index': idx,
-                        'reason': 'Invalid date/time format. Use YYYY-MM-DD for date and HH:MM for time'
+                        'reason': 'Invalid date/time format. Use DD/MM/YYYY for date and HH:MM for time'
                     })
                     continue
                 
@@ -1920,7 +1953,8 @@ def schedule_group_meetings(request):
         - facultyId: UUID of the faculty
         - year: Academic year (1-4)
         - semester: Semester (1-8)
-        - meetings: Array of {date: "YYYY-MM-DD", time: "HH:MM", description: "optional"}
+        - meetings: Array of {date: "DD/MM/YYYY", time: "HH:MM", description: "optional"}
+    Note: Also accepts YYYY-MM-DD format for backward compatibility
     """
     try:
         data = json.loads(request.body)
@@ -1990,16 +2024,19 @@ def schedule_group_meetings(request):
             if not meeting_date or not meeting_time:
                 continue
             
+            # Parse date (accepts DD/MM/YYYY or YYYY-MM-DD)
+            parsed_date = parse_date(meeting_date)
             try:
-                parsed_date = datetime.strptime(meeting_date, '%Y-%m-%d').date()
                 parsed_time = datetime.strptime(meeting_time, '%H:%M').time()
+            except ValueError:
+                parsed_time = None
+            
+            if parsed_date and parsed_time:
                 parsed_meetings.append({
                     'date': parsed_date,
                     'time': parsed_time,
                     'description': description
                 })
-            except ValueError:
-                continue
         
         if not parsed_meetings:
             return JsonResponse(
@@ -2971,12 +3008,11 @@ def approve_request(request, request_id):
                 try:
                     mentorship = Mentorship.objects.get(id=mentorship_id)
                     
-                    # Parse date and time from request data
-                    from datetime import datetime
+                    # Parse date and time from request data (accepts DD/MM/YYYY or YYYY-MM-DD)
                     meeting_date_str = request_data.get('date')
                     meeting_time_str = request_data.get('time', '10:00')
                     
-                    meeting_date = datetime.strptime(meeting_date_str, '%Y-%m-%d').date() if meeting_date_str else datetime.now().date()
+                    meeting_date = parse_date(meeting_date_str) if meeting_date_str else datetime.now().date()
                     meeting_time = datetime.strptime(meeting_time_str, '%H:%M').time() if meeting_time_str else datetime.now().time()
                     
                     # Create the meeting
@@ -3667,7 +3703,7 @@ def create_mentorship_meeting(request):
     HOD creates a single meeting for a specific mentorship
     Required fields:
         - mentorshipId: UUID of the mentorship
-        - date: "YYYY-MM-DD" format
+        - date: "DD/MM/YYYY" format (also accepts YYYY-MM-DD)
         - time: "HH:MM" format
         - description: Optional meeting description/agenda
     """
@@ -3709,13 +3745,16 @@ def create_mentorship_meeting(request):
                 status=403
             )
         
-        # Parse date and time
+        # Parse date and time (accepts DD/MM/YYYY or YYYY-MM-DD)
+        parsed_date = parse_date(meeting_date)
         try:
-            parsed_date = datetime.strptime(meeting_date, '%Y-%m-%d').date()
             parsed_time = datetime.strptime(meeting_time, '%H:%M').time()
         except ValueError:
+            parsed_time = None
+        
+        if not parsed_date or not parsed_time:
             return JsonResponse(
-                {'message': 'Invalid date/time format. Use YYYY-MM-DD for date and HH:MM for time'},
+                {'message': 'Invalid date/time format. Use DD/MM/YYYY for date and HH:MM for time'},
                 status=400
             )
         
@@ -4332,7 +4371,8 @@ def faculty_schedule_meetings(request):
     Faculty schedules multiple meetings for a mentorship
     Required fields:
         - mentorshipId: UUID of the mentorship
-        - meetings: Array of {date: "YYYY-MM-DD", time: "HH:MM", description: "optional"}
+        - meetings: Array of {date: "DD/MM/YYYY", time: "HH:MM", description: "optional"}
+    Note: Also accepts YYYY-MM-DD format for backward compatibility
     """
     try:
         data = json.loads(request.body)
@@ -4384,13 +4424,17 @@ def faculty_schedule_meetings(request):
                     })
                     continue
                 
+                # Parse date (accepts DD/MM/YYYY or YYYY-MM-DD)
+                parsed_date = parse_date(meeting_date)
                 try:
-                    parsed_date = datetime.strptime(meeting_date, '%Y-%m-%d').date()
                     parsed_time = datetime.strptime(meeting_time, '%H:%M').time()
                 except ValueError:
+                    parsed_time = None
+                
+                if not parsed_date or not parsed_time:
                     failed_meetings.append({
                         'index': idx,
-                        'reason': 'Invalid date/time format'
+                        'reason': 'Invalid date/time format. Use DD/MM/YYYY for date and HH:MM for time'
                     })
                     continue
                 
@@ -4464,7 +4508,8 @@ def faculty_schedule_group_meetings(request):
     Required fields:
         - year: Academic year (1-4)
         - semester: Semester (1-2)
-        - meetings: Array of {date: "YYYY-MM-DD", time: "HH:MM", description: "optional"}
+        - meetings: Array of {date: "DD/MM/YYYY", time: "HH:MM", description: "optional"}
+    Note: Also accepts YYYY-MM-DD format for backward compatibility
     """
     try:
         data = json.loads(request.body)
@@ -4515,10 +4560,14 @@ def faculty_schedule_group_meetings(request):
             if not meeting_date or not meeting_time:
                 continue
             
+            # Parse date (accepts DD/MM/YYYY or YYYY-MM-DD)
+            parsed_date = parse_date(meeting_date)
             try:
-                parsed_date = datetime.strptime(meeting_date, '%Y-%m-%d').date()
                 parsed_time = datetime.strptime(meeting_time, '%H:%M').time()
-                
+            except ValueError:
+                parsed_time = None
+            
+            if parsed_date and parsed_time:
                 # Determine status based on date
                 if parsed_date > today:
                     status = MeetingStatus.UPCOMING
@@ -4531,8 +4580,6 @@ def faculty_schedule_group_meetings(request):
                     'description': description,
                     'status': status
                 })
-            except ValueError:
-                continue
         
         if not parsed_meetings:
             return JsonResponse({'message': 'No valid meetings to schedule'}, status=400)
@@ -6346,7 +6393,7 @@ def get_student_dashboard_stats(request):
             if upcoming.exists():
                 next_m = upcoming.first()
                 next_meeting = {
-                    'date': next_m.date.strftime('%b %d'),
+                    'date': next_m.date.strftime('%d/%m'),
                     'time': next_m.time.strftime('%H:%M')
                 }
         

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import { api, type StudentMentoringByRollno } from "@/lib/api"
+import { formatDate } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -159,7 +160,7 @@ export default function StudentMentoringPage() {
                   </div>
                   <div className="text-right text-sm">
                     <p className="text-muted-foreground">Started</p>
-                    <p className="font-medium">{data.activeMentorship.startDate ? new Date(data.activeMentorship.startDate).toLocaleDateString() : 'N/A'}</p>
+                    <p className="font-medium">{formatDate(data.activeMentorship.startDate)}</p>
                   </div>
                 </div>
                 <div className="mt-4 flex gap-4 text-sm">
@@ -199,7 +200,7 @@ export default function StudentMentoringPage() {
               <TableBody>
                 {allMeetings.map((meeting) => (
                   <TableRow key={meeting.id}>
-                    <TableCell>{meeting.date ? new Date(meeting.date).toLocaleDateString() : 'N/A'}</TableCell>
+                    <TableCell>{formatDate(meeting.date)}</TableCell>
                     <TableCell>{meeting.time || 'N/A'}</TableCell>
                     <TableCell>{getMeetingStatusBadge(meeting.status)}</TableCell>
                     <TableCell className="max-w-50 truncate">{meeting.description || "-"}</TableCell>
@@ -235,7 +236,7 @@ export default function StudentMentoringPage() {
                     <TableCell className="font-medium">{mentorship.faculty.name}</TableCell>
                     <TableCell>{mentorship.faculty.department}</TableCell>
                     <TableCell>
-                      {mentorship.startDate ? new Date(mentorship.startDate).toLocaleDateString() : 'N/A'} - {mentorship.endDate ? new Date(mentorship.endDate).toLocaleDateString() : 'Present'}
+                      {formatDate(mentorship.startDate)} - {mentorship.endDate ? formatDate(mentorship.endDate) : 'Present'}
                     </TableCell>
                     <TableCell>{mentorship.totalMeetings}</TableCell>
                   </TableRow>

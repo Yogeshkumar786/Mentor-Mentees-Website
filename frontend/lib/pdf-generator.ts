@@ -73,14 +73,14 @@ interface HODFacultyMentorPDFData {
   }>
 }
 
-// Helper function to format date
+// Helper function to format date in DD/MM/YYYY format
 const formatDate = (dateStr: string): string => {
   try {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    })
+    const date = new Date(dateStr)
+    const day = date.getDate().toString().padStart(2, '0')
+    const month = (date.getMonth() + 1).toString().padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}/${month}/${year}`
   } catch {
     return dateStr
   }
@@ -177,12 +177,14 @@ export function generateStudentMentorPDF(data: StudentMeetingPDFData): void {
 
   // Footer
   const pageCount = doc.getNumberOfPages()
+  const today = new Date()
+  const generatedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
     doc.text(
-      `Generated on ${new Date().toLocaleDateString('en-IN')} | Page ${i} of ${pageCount}`,
+      `Generated on ${generatedDate} | Page ${i} of ${pageCount}`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: 'center' }
@@ -313,12 +315,14 @@ export function generateFacultyGroupPDF(data: FacultyGroupPDFData): void {
 
   // Footer
   const pageCount = doc.getNumberOfPages()
+  const today = new Date()
+  const generatedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
     doc.text(
-      `Generated on ${new Date().toLocaleDateString('en-IN')} | Page ${i} of ${pageCount}`,
+      `Generated on ${generatedDate} | Page ${i} of ${pageCount}`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: 'center' }
@@ -471,12 +475,14 @@ export function generateHODFacultyMentorPDF(data: HODFacultyMentorPDFData): void
 
   // Footer
   const pageCount = doc.getNumberOfPages()
+  const today = new Date()
+  const generatedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
     doc.text(
-      `Generated on ${new Date().toLocaleDateString('en-IN')} | Page ${i} of ${pageCount}`,
+      `Generated on ${generatedDate} | Page ${i} of ${pageCount}`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: 'center' }

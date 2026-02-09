@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { api, StudentMentorsResponse, MentorData, StudentMeetingRequest } from "@/lib/api"
+import { formatDate, TIME_OPTIONS } from "@/lib/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -110,14 +112,7 @@ export function StudentMentorView() {
     }
   }
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return 'N/A'
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    })
-  }
+  // Using centralized formatDate from @/lib/utils
 
   const formatPhone = (phone: string | null) => {
     if (!phone) return 'Not available'
@@ -330,12 +325,21 @@ export function StudentMentorView() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="time">Time</Label>
-                  <Input
-                    id="time"
-                    type="time"
+                  <Select
                     value={meetingForm.time}
-                    onChange={(e) => setMeetingForm({ ...meetingForm, time: e.target.value })}
-                  />
+                    onValueChange={(value) => setMeetingForm({ ...meetingForm, time: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIME_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="grid gap-2">

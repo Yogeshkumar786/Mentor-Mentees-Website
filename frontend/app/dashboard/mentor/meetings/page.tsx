@@ -6,6 +6,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { formatDate } from "@/lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -311,7 +312,7 @@ export default function MentorMeetingsPage() {
                   <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
-                      {new Date(meeting.scheduledAt).toLocaleDateString()}
+                      {formatDate(meeting.scheduledAt)}
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4" />

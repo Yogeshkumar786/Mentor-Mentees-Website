@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
 import { api, type StudentDetails, type UpdateStudentRequest } from "@/lib/api"
+import { formatDate } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -171,7 +172,7 @@ export default function StudentProfilePage() {
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div><Label className="text-muted-foreground">Gender</Label><p className="font-medium">{student.gender}</p></div>
-                  <div><Label className="text-muted-foreground">Date of Birth</Label><p className="font-medium">{student.dob ? new Date(student.dob).toLocaleDateString() : "N/A"}</p></div>
+                  <div><Label className="text-muted-foreground">Date of Birth</Label><p className="font-medium">{formatDate(student.dob)}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div><Label className="text-muted-foreground">Blood Group</Label><p className="font-medium">{student.bloodGroup}</p></div>

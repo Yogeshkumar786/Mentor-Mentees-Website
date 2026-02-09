@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
 import { api, type FacultyMentorDetailsResponse } from "@/lib/api"
 import { generateHODFacultyMentorPDF } from "@/lib/pdf-generator"
+import { formatDate } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -196,10 +197,10 @@ export default function FacultyMentorPage() {
                           </div>
                           <div className="text-right text-sm text-muted-foreground">
                             {student.startDate && (
-                              <p>Started: {new Date(student.startDate).toLocaleDateString()}</p>
+                              <p>Started: {formatDate(student.startDate)}</p>
                             )}
                             {student.endDate && (
-                              <p>Ended: {new Date(student.endDate).toLocaleDateString()}</p>
+                              <p>Ended: {formatDate(student.endDate)}</p>
                             )}
                           </div>
                         </div>
@@ -230,7 +231,7 @@ export default function FacultyMentorPage() {
                   <AccordionTrigger>
                     <div className="flex items-center gap-4 flex-1">
                       <span className="font-semibold">
-                        {new Date(meeting.date).toLocaleDateString()}
+                        {formatDate(meeting.date)}
                         {meeting.time && ` at ${meeting.time}`}
                       </span>
                       {getStatusBadge(meeting.status)}

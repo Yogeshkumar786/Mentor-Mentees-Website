@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard-layout"
+<<<<<<< Updated upstream
 import { api, MentorshipGroupResponse, MentorshipGroupMeeting, ScheduleMeetingItem, CompleteGroupMeetingsRequest, StudentReviewItem } from "@/lib/api"
+=======
+import { formatDate, TIME_OPTIONS } from "@/lib/utils"
+import { api, MentorshipGroupResponse, MentorshipGroupMeeting, ScheduleMeetingItem, CompleteGroupMeetingsRequest, StudentReviewItem, FacultyListResponse } from "@/lib/api"
+>>>>>>> Stashed changes
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -12,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { generateHODFacultyMentorPDF } from "@/lib/pdf-generator"
 import { 
@@ -117,6 +123,7 @@ export default function MentorGroupClient() {
     fetchData()
   }, [facultyId, year, semester, isActive])
 
+<<<<<<< Updated upstream
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-IN', {
       day: 'numeric',
@@ -124,6 +131,108 @@ export default function MentorGroupClient() {
       year: 'numeric'
     })
   }
+=======
+  // Fetch faculty list when change mentor dialog opens
+  const openChangeMentorDialog = async () => {
+    setChangeMentorDialogOpen(true)
+    setSelectedFacultyId('')
+    
+    if (facultyList.length === 0) {
+      setLoadingFaculty(true)
+      try {
+        const response = await api.getFacultyList()
+        // Filter out current faculty
+        const filteredFaculty = response.faculty.filter(f => f.id !== facultyId)
+        setFacultyList(filteredFaculty)
+      } catch (err) {
+        toast({
+          title: "Error",
+          description: "Failed to load faculty list",
+          variant: "destructive"
+        })
+      } finally {
+        setLoadingFaculty(false)
+      }
+    }
+  }
+
+  // Handle transfer mentorship group
+  const handleTransferMentorship = async () => {
+    if (!selectedFacultyId || !facultyId || !year || !semester) {
+      toast({
+        title: "Error",
+        description: "Please select a faculty member",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const selectedFaculty = facultyList.find(f => f.id === selectedFacultyId)
+    if (!selectedFaculty) return
+
+    setTransferring(true)
+    try {
+      const result = await api.transferMentorshipGroup({
+        fromFacultyId: facultyId,
+        toFacultyEmployeeId: selectedFaculty.employeeId,
+        year: parseInt(year),
+        semester: parseInt(semester)
+      })
+
+      toast({
+        title: "Success",
+        description: `Transferred ${result.transferCount} student(s) to ${result.toFaculty.name}`,
+      })
+
+      setChangeMentorDialogOpen(false)
+      
+      // Navigate to the new mentor's group
+      router.push(`/mentor/group?faculty=${result.toFaculty.id}&year=${year}&semester=${semester}&active=true`)
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to transfer mentorship",
+        variant: "destructive"
+      })
+    } finally {
+      setTransferring(false)
+    }
+  }
+
+  // Handle remove/end mentorship group (students become unassigned)
+  const handleRemoveGroup = async () => {
+    if (!facultyId || !year || !semester) return
+
+    setRemovingGroup(true)
+    try {
+      const result = await api.endMentorshipGroup(
+        facultyId,
+        parseInt(year),
+        parseInt(semester)
+      )
+
+      toast({
+        title: "Success",
+        description: `${result.endedCount} student(s) are now unassigned and can be assigned to new mentors.`,
+      })
+
+      setRemoveGroupDialogOpen(false)
+      
+      // Navigate back to mentor list
+      router.push('/mentor')
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to remove mentorship group",
+        variant: "destructive"
+      })
+    } finally {
+      setRemovingGroup(false)
+    }
+  }
+
+  // Using centralized formatDate from @/lib/utils
+>>>>>>> Stashed changes
 
   const formatTime = (timeStr: string | null) => {
     if (!timeStr) return 'Not set'
@@ -1170,11 +1279,21 @@ export default function MentorGroupClient() {
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Time</Label>
-                        <Input
-                          type="time"
+                        <Select
                           value={meeting.time}
-                          onChange={(e) => updateMeetingDate(index, 'time', e.target.value)}
-                        />
+                          onValueChange={(value) => updateMeetingDate(index, 'time', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select time" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIME_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Description</Label>

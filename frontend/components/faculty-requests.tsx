@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { api, PendingRequest, PendingRequestsResponse } from "@/lib/api"
+import { formatDate } from "@/lib/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -197,7 +198,7 @@ export default function FacultyRequests() {
                             {getTypeIcon(r.type)}
                             <div>
                               <CardTitle className="text-lg">{getRequestTitle(r)}</CardTitle>
-                              <CardDescription className="flex items-center gap-2 mt-1"><CalendarDays className="h-3 w-3" />{new Date(r.createdAt).toLocaleDateString()}</CardDescription>
+                              <CardDescription className="flex items-center gap-2 mt-1"><CalendarDays className="h-3 w-3" />{formatDate(r.createdAt)}</CardDescription>
                             </div>
                           </div>
                           {getTypeBadge(r.type)}
@@ -266,7 +267,7 @@ export default function FacultyRequests() {
                             {getTypeIcon(r.type)}
                             <div>
                               <CardTitle className="text-lg">{getRequestTitle(r)}</CardTitle>
-                              <CardDescription className="flex items-center gap-2 mt-1"><CalendarDays className="h-3 w-3" />{new Date(r.createdAt).toLocaleDateString()}</CardDescription>
+                              <CardDescription className="flex items-center gap-2 mt-1"><CalendarDays className="h-3 w-3" />{formatDate(r.createdAt)}</CardDescription>
                             </div>
                           </div>
                           {getTypeBadge(r.type)}
@@ -327,7 +328,7 @@ export default function FacultyRequests() {
                             {getTypeIcon(r.type)}
                             <div>
                               <CardTitle className="text-lg">{getRequestTitle(r)}</CardTitle>
-                              <CardDescription className="flex items-center gap-2 mt-1"><CalendarDays className="h-3 w-3" />{new Date(r.createdAt).toLocaleDateString()}</CardDescription>
+                              <CardDescription className="flex items-center gap-2 mt-1"><CalendarDays className="h-3 w-3" />{formatDate(r.createdAt)}</CardDescription>
                             </div>
                           </div>
                           {getTypeBadge(r.type)}

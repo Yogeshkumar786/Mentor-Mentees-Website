@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { formatDate } from "@/lib/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -321,7 +322,7 @@ export default function MenteeGoalsPage() {
                     {goal.targetDate && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="w-4 h-4" />
-                        Target: {new Date(goal.targetDate).toLocaleDateString()}
+                        Target: {formatDate(goal.targetDate)}
                       </div>
                     )}
 
@@ -354,7 +355,7 @@ export default function MenteeGoalsPage() {
                                 </p>
                                 {milestone.completedAt && (
                                   <p className="text-xs text-muted-foreground">
-                                    Completed {new Date(milestone.completedAt).toLocaleDateString()}
+                                    Completed {formatDate(milestone.completedAt)}
                                   </p>
                                 )}
                               </div>

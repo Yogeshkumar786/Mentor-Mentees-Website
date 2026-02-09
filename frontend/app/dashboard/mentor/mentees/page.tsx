@@ -3,6 +3,7 @@
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { formatDate } from "@/lib/utils"
 import { Users, Calendar, FileCheck, MessageSquare, LayoutDashboard, Settings, Target, Mail } from "lucide-react"
 import { useEffect, useState } from "react"
 import { storage } from "@/lib/storage"
@@ -51,8 +52,8 @@ export default function MentorMenteesPage() {
         year: mentee?.year,
         bio: mentee?.bio,
         totalMeetings: menteeMeetings.length,
-        lastMeeting: lastMeeting ? new Date(lastMeeting.scheduledAt).toLocaleDateString() : "No meetings yet",
-        nextMeeting: nextMeeting ? new Date(nextMeeting.scheduledAt).toLocaleDateString() : "None scheduled",
+        lastMeeting: lastMeeting ? formatDate(lastMeeting.scheduledAt) : "No meetings yet",
+        nextMeeting: nextMeeting ? formatDate(nextMeeting.scheduledAt) : "None scheduled",
       }
     })
 

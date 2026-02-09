@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
+import { formatDate } from "@/lib/utils"
 import { 
   Calendar,
   BookOpen,
@@ -473,7 +474,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                       <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                      <p className="font-medium">{new Date(meeting.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</p>
+                      <p className="font-medium">{formatDate(meeting.date)}</p>
                       <p className="text-sm text-muted-foreground">{meeting.time || 'Time TBD'}</p>
                     </div>
                   </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { formatDate } from "@/lib/utils"
 import { 
   Users, 
   UserPlus, 
@@ -175,7 +176,7 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
                 {user.accountStatus || 'ACTIVE'}
               </Badge>
               <span className="text-xs text-muted-foreground">
-                Member since {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                Member since {formatDate(user.createdAt)}
               </span>
             </div>
           </CardContent>

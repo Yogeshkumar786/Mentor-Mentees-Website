@@ -6,6 +6,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { formatDate, TIME_OPTIONS } from "@/lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -35,16 +36,6 @@ import { storage } from "@/lib/storage"
 import { useAuth } from "@/components/auth-provider"
 import type { Request } from "@/lib/types"
 
-const navigation = [
-  { label: "Overview", href: "/dashboard/mentee", icon: <LayoutDashboard className="w-4 h-4" /> },
-  { label: "My Mentor", href: "/dashboard/mentee/mentor", icon: <UserCheck className="w-4 h-4" /> },
-  { label: "Meetings", href: "/dashboard/mentee/meetings", icon: <Calendar className="w-4 h-4" /> },
-  { label: "Goals", href: "/dashboard/mentee/goals", icon: <Target className="w-4 h-4" /> },
-  { label: "Academic Records", href: "/dashboard/mentee/academics", icon: <BookOpen className="w-4 h-4" /> },
-  { label: "Messages", href: "/dashboard/mentee/messages", icon: <MessageSquare className="w-4 h-4" /> },
-  { label: "Profile", href: "/dashboard/mentee/profile", icon: <Settings className="w-4 h-4" /> },
-]
-
 export default function MenteeMeetingsPage() {
   const { user } = useAuth()
   const [meetings, setMeetings] = useState<any[]>([])
@@ -72,7 +63,7 @@ export default function MenteeMeetingsPage() {
     const users = storage.getUsers()
     const relationships = storage.getRelationships()
 
-    const myRelationship = relationships.find((r) => r.menteeId === user.id && r.status === "active")
+    const myRelationship = relationships.find((r) => r.studentId === user.id && r.status === "active")
     const mentorData = myRelationship ? users.find((u) => u.id === myRelationship.mentorId) : null
 
     if (mentorData) {
@@ -82,7 +73,7 @@ export default function MenteeMeetingsPage() {
       })
     }
 
-    const myMeetings = allMeetings.filter((m) => m.menteeId === user.id)
+    const myMeetings = allMeetings.filter((m) => m.studentId === user.id)
 
     const meetingsList = myMeetings.map((m) => {
       const mentorData = users.find((u) => u.id === m.mentorId)
@@ -129,7 +120,7 @@ export default function MenteeMeetingsPage() {
   const filteredMeetings = meetings.filter((m) => (filter === "all" ? true : m.status === filter))
 
   return (
-    <DashboardLayout navigation={navigation} requiredRole="mentee">
+    <DashboardLayout requiredRoles={['STUDENT']}>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -187,13 +178,21 @@ export default function MenteeMeetingsPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="preferredTime">Preferred Time</Label>
-                      <Input
-                        id="preferredTime"
-                        type="time"
+                      <Select
                         value={formData.preferredTime}
-                        onChange={(e) => setFormData({ ...formData, preferredTime: e.target.value })}
-                        required
-                      />
+                        onValueChange={(value) => setFormData({ ...formData, preferredTime: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select time" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TIME_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -316,7 +315,7 @@ export default function MenteeMeetingsPage() {
                       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4" />
-                          {new Date(meeting.scheduledAt).toLocaleDateString()}
+                          {formatDate(meeting.scheduledAt)}
                         </div>
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4" />

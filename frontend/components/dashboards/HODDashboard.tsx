@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { formatDate } from "@/lib/utils"
 import { 
   Users, 
   UserCheck, 
@@ -172,7 +173,7 @@ export function HODDashboard({ user }: HODDashboardProps) {
                 <p className="text-sm text-muted-foreground">Start Date</p>
                 <p className="font-medium">
                   {user.hod?.startDate 
-                    ? new Date(user.hod.startDate).toLocaleDateString() 
+                    ? formatDate(user.hod.startDate) 
                     : 'Not set'}
                 </p>
               </div>

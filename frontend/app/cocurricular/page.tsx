@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/components/auth-provider"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { api, type StudentCoCurricularByRollno } from "@/lib/api"
+import { formatDate } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -142,7 +143,7 @@ export default function CoCurricularPage() {
                       <TableCell>
                         <div className="flex items-center gap-1 text-sm">
                           <Calendar className="h-3 w-3" />
-                          {activity.date ? new Date(activity.date).toLocaleDateString() : 'N/A'}
+                          {formatDate(activity.date)}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -195,7 +196,7 @@ export default function CoCurricularPage() {
                         <p className="font-medium">{activity.awards}</p>
                         <p className="text-sm text-muted-foreground">{activity.eventDetails}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Semester {activity.semester} • {activity.date ? new Date(activity.date).toLocaleDateString() : 'N/A'}
+                          Semester {activity.semester} • {formatDate(activity.date)}
                         </p>
                       </div>
                     </div>

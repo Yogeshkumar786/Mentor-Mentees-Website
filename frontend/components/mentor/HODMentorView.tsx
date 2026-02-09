@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { api, HODMentorshipsResponse, FacultyMentorshipData, UnassignedStudent, FacultyMember, MenteeData } from "@/lib/api"
+import { TIME_OPTIONS } from "@/lib/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -830,11 +831,21 @@ export function HODMentorView({ user }: HODMentorViewProps) {
             </div>
             <div className="space-y-2">
               <Label>Time</Label>
-              <Input 
-                type="time" 
+              <Select
                 value={meetingTime}
-                onChange={(e) => setMeetingTime(e.target.value)}
-              />
+                onValueChange={(value) => setMeetingTime(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select time" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIME_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Description (Optional)</Label>

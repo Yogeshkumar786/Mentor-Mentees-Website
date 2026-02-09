@@ -3,12 +3,14 @@
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { api, FacultyMenteesResponse, FacultyMenteeGroup, ScheduleMeetingItem } from "@/lib/api"
+import { TIME_OPTIONS } from "@/lib/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { 
   Users, 
@@ -459,11 +461,21 @@ export function FacultyMentorView({ user }: FacultyMentorViewProps) {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Time</Label>
-                      <Input
-                        type="time"
+                      <Select
                         value={meeting.time}
-                        onChange={(e) => updateMeetingDate(index, 'time', e.target.value)}
-                      />
+                        onValueChange={(value) => updateMeetingDate(index, 'time', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select time" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TIME_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Description</Label>

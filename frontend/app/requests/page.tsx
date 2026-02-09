@@ -6,6 +6,7 @@ import { useAuth } from "@/components/auth-provider"
 import FacultyRequests from "@/components/faculty-requests"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { api, StudentRequestsResponse, StudentRequest } from "@/lib/api"
+import { formatDate } from "@/lib/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -168,14 +169,14 @@ export default function RequestsPage() {
     }
   }
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+  const formatDateWithTime = (dateStr: string) => {
+    const d = new Date(dateStr)
+    const day = d.getDate().toString().padStart(2, '0')
+    const month = (d.getMonth() + 1).toString().padStart(2, '0')
+    const year = d.getFullYear()
+    const hours = d.getHours().toString().padStart(2, '0')
+    const minutes = d.getMinutes().toString().padStart(2, '0')
+    return `${day}/${month}/${year} ${hours}:${minutes}`
   }
 
   const renderRequestCard = (request: StudentRequest) => {
